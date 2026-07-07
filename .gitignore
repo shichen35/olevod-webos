@@ -1,0 +1,34 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# build output
+app/dist/
+dist/
+*.ipk
+
+# vite cache
+**/.vite/
+.vite/
+
+# logs
+*.log
+npm-debug.log*
+
+# env / secrets (Dev Mode passphrase, TV host, SSH keys — never commit)
+.env
+.env.*
+*.pem
+tv-key*
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# local Claude Code tooling (never committed)
+.claude/
+
+# local reference implementation (not part of the project)
+bkp/

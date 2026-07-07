@@ -1,0 +1,109 @@
+/*
+ * Global reset + baseline rules. Depends on tokens.css.
+ *
+ * The animation/transition ban is enforced here with a !important guard so it
+ * cannot be accidentally reintroduced by a page style later. Focus is expressed
+ * as instant border/color swaps only — never scale, shadow, or transition.
+ */
+
+/* --- Reset --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Global ban guard: no motion of any kind, anywhere. */
+*,
+*::before,
+*::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+html,
+body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;               /* the 1080p frame never scrolls as a whole */
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.35;
+  /* No text smoothing tricks; keep it cheap for the weak TV GPU. */
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+img {
+  display: block;
+  border: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: default;
+}
+
+/* A focused element must never sit flush against the screen/container edge:
+   scrollIntoView({block:'nearest'}) will honor this margin. */
+[data-focus-id] {
+  scroll-margin: 120px var(--safe-x);
+}
+
+/* Card containers: skip layout/paint work for off-screen cards. Applied by the
+   card component classes (T09); declared here so the rule lives with the reset. */
+.cv-auto {
+  content-visibility: auto;
+  contain: content;
+}
+
+/*
+ * --- Focus-state conventions (defined once, reused as classes everywhere) ---
+ * The focus engine (T03) toggles `.focused` imperatively; these rules give it
+ * a consistent look with zero layout shift and zero motion.
+ */
+
+/* Cards: reserve the border slot up front (transparent) so adding the focus
+   border never shifts layout. */
+.focusable-card {
+  border: var(--focus-border) solid transparent;
+}
+.focusable-card.focused {
+  border-color: var(--focus);
+}
+
+/* Buttons / chips: unfocused is an elevated opaque fill; focused inverts to a
+   solid white fill with dark text, switched instantly. */
+.focusable-chip {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: var(--focus-border) solid transparent;
+}
+.focusable-chip.focused {
+  background: var(--focus);
+  color: var(--focus-text);
+  border-color: var(--focus);
+}
+
+/* List rows: focused row gets an elevated opaque background. */
+.focusable-row {
+  background: transparent;
+  color: var(--text-2);
+}
+.focusable-row.focused {
+  background: var(--bg-elev-2);
+  color: var(--text);
+}

@@ -1,0 +1,49 @@
+/*
+ * Design tokens — the single source of truth for color, type, and spacing.
+ * Every downstream page style consumes ONLY these variables.
+ *
+ * Hard constraints baked in here (see doc/README.md "Hard Constraints"):
+ *   - All colors are opaque hex. No rgba(), no opacity layering, no gradients.
+ *   - No shadows, no blur, no translucency. A "dimmed" look is achieved with a
+ *     darker opaque surface token, never with alpha.
+ * Sizes are annotated directly in real 1920x1080 px (no logical stage + scale).
+ */
+:root {
+  /* --- Surfaces (opaque, darkest -> lightest elevation) --- */
+  --bg: #0e0e11;          /* global background */
+  --bg-elev: #1c1c21;     /* panels / dialogs */
+  --bg-elev-2: #2a2a31;   /* unfocused button / chip background, focused row */
+
+  /* --- Text (three fixed grayscale tiers, no white-with-opacity) --- */
+  --text: #f5f5f7;        /* primary */
+  --text-2: #9d9da3;      /* secondary */
+  --text-3: #6b6b72;      /* tertiary / disabled */
+
+  /* --- Accents (used sparingly, never as a background wash) --- */
+  --accent: #23c8b6;      /* progress bars / ratings / selection indicator */
+  --uhd: #ffcf6b;         /* "UHD" badge */
+
+  /* --- Focus --- */
+  --focus: #f5f5f7;       /* focus border / fill */
+  --focus-text: #111111;  /* text on a focused (filled) button/chip */
+
+  /* --- Type scale (actual 1080p px, minimum 22px for 10-foot legibility) --- */
+  --fs-display: 60px;
+  --fs-title: 45px;
+  --fs-heading: 32px;
+  --fs-body: 26px;
+  --fs-label: 24px;
+  --fs-caption: 22px;
+
+  --font-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei",
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* --- Layout / safe area --- */
+  --safe-x: 84px;         /* left/right safe margin */
+  --tabbar-h: 84px;       /* top tab bar height */
+  --content-top: 108px;   /* content start offset from the top */
+  --content-bottom: 60px; /* bottom padding */
+
+  /* --- Focus geometry --- */
+  --focus-border: 3px;    /* opaque focus border width */
+}

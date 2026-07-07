@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sim": "vite build && cp -r webos-meta/. dist/ && ares-launch -s 25 -sp /Applications dist"
   },
   "dependencies": {
     "hls.js": "^1.6.16",

@@ -1,0 +1,60 @@
+/* Category page: filter row + 6-column poster grid. */
+
+.category {
+  padding-top: 16px;
+}
+
+/* --- Filter bar (row 0) --- */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.filter-chips {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: 1 1 auto;
+}
+.filter-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: 0 0 auto;
+  font-size: var(--fs-label);
+  padding: 8px 22px;
+  border-radius: 8px;
+}
+/* Selected is distinct from focus: an accent underline bar via border-bottom. */
+.chip-selected {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.filter-summary {
+  flex: 0 0 auto;
+  color: var(--text-3);
+  font-size: var(--fs-caption);
+  white-space: nowrap;
+}
+
+/* --- Grid --- */
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 20px;
+}
+
+.grid-sentinel {
+  width: 100%;
+  height: 1px;
+}
+
+.grid-status {
+  padding: 32px 0;
+  color: var(--text-2);
+  font-size: var(--fs-body);
+}

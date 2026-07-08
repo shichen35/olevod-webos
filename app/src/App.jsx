@@ -24,6 +24,7 @@ import {
 import { TABS } from './config/nav.js'
 import TabBar from './components/TabBar.jsx'
 import HomePage from './pages/HomePage.jsx'
+import CategoryPage from './pages/CategoryPage.jsx'
 
 // --- Placeholder content for not-yet-built tabs (category page = T11) -------
 function ContentPlaceholder({ tab, onOpenDetail }) {
@@ -136,6 +137,12 @@ export default function App() {
             {activated.has(tab.key) &&
               (tab.kind === 'home' ? (
                 <HomePage onOpenDetail={openDetail} refreshNonce={refreshNonce[tab.key]} />
+              ) : tab.kind === 'category' ? (
+                <CategoryPage
+                  category={tab.categoryId}
+                  onOpenDetail={openDetail}
+                  refreshNonce={refreshNonce[tab.key]}
+                />
               ) : (
                 <ContentPlaceholder tab={tab} onOpenDetail={openDetail} />
               ))}

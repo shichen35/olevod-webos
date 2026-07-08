@@ -25,6 +25,11 @@ import { TABS } from './config/nav.js'
 import TabBar from './components/TabBar.jsx'
 import HomePage from './pages/HomePage.jsx'
 import CategoryPage from './pages/CategoryPage.jsx'
+import FilterPanel from './components/FilterPanel.jsx'
+import { getFilter, setFilter } from './store/filters.js'
+import { DEFAULT_SORT } from './config/taxonomy.js'
+
+const DEFAULT_FILTER = { genre: '0', area: '0', year: '0', sort: DEFAULT_SORT }
 
 // --- Placeholder content for not-yet-built tabs (category page = T11) -------
 function ContentPlaceholder({ tab, onOpenDetail }) {
@@ -69,6 +74,10 @@ export default function App() {
   // Tabs mount on first activation and then stay mounted (state/scroll survive),
   // so switching back is instant and no tab fetches until it's first visited.
   const [activated, setActivated] = useState(() => new Set(['home']))
+  // Filter panel (T12): which category's panel is open, and the applied filter
+  // override that pushes changes down into that CategoryPage.
+  const [filterPanel, setFilterPanel] = useState({ open: false, category: null })
+  const [filterOverrides, setFilterOverrides] = useState({})
 
   const activeTabRef = useRef(activeTab)
   activeTabRef.current = activeTab
@@ -81,6 +90,13 @@ export default function App() {
 
   const openDetail = useCallback((id) => setStack((s) => [...s, { type: 'detail', id }]), [])
   const openPlayer = useCallback((payload) => setStack((s) => [...s, { type: 'player', ...payload }]), [])
+
+  const openFilterFor = useCallback((category) => setFilterPanel({ open: true, category }), [])
+  const closeFilter = useCallback(() => setFilterPanel({ open: false, category: null }), [])
+  const applyFilterFor = useCallback((category, f) => {
+    setFilter(category, f)
+    setFilterOverrides((prev) => ({ ...prev, [category]: f }))
+  }, [])
 
   useEffect(() => {
     initFocusEngine()
@@ -141,6 +157,8 @@ export default function App() {
                 <CategoryPage
                   category={tab.categoryId}
                   onOpenDetail={openDetail}
+                  onOpenFilter={() => openFilterFor(tab.categoryId)}
+                  filterOverride={filterOverrides[tab.categoryId]}
                   refreshNonce={refreshNonce[tab.key]}
                 />
               ) : (
@@ -149,6 +167,16 @@ export default function App() {
           </div>
         ))}
       </div>
+
+      {filterPanel.open && (
+        <FilterPanel
+          category={filterPanel.category}
+          filter={filterOverrides[filterPanel.category] || getFilter(filterPanel.category) || DEFAULT_FILTER}
+          onChange={(f) => applyFilterFor(filterPanel.category, f)}
+          onReset={() => applyFilterFor(filterPanel.category, { ...DEFAULT_FILTER })}
+          onClose={closeFilter}
+        />
+      )}
 
       {hasDetail && (
         <OverlayPlaceholder

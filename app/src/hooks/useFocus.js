@@ -163,12 +163,16 @@ function nearestColInRow(layer, group, row, preferCol) {
 // navigation — O(1) arithmetic + a Map.has() probe, never a registry scan
 // ---------------------------------------------------------------------------
 function navigate(dir) {
-  const fromId = currentFocusId
-  const from = fromId && registry.get(fromId)
-  if (!from) return
-
   const layer = activeLayer()
-  if (from.layer !== layer) return // focus is not in the active layer; ignore
+  const from = currentFocusId && registry.get(currentFocusId)
+  if (!from || from.layer !== layer) {
+    // Focus is stale (its element was removed) or not in the active layer —
+    // land on the active layer's remembered/first cell instead of dead-ending.
+    const remembered = lastFocusByLayer.get(layer)
+    const target = remembered && registry.has(remembered) ? remembered : firstInLayer(layer)
+    if (target) setFocus(target)
+    return
+  }
 
   const { group, row, col } = from
 
@@ -307,7 +311,11 @@ export function useFocusable({ layer = DEFAULT_LAYER, group = 'content', row = 0
     })
     return () => {
       registry.delete(id)
-      if (currentFocusId === id) currentFocusId = null
+      // Intentionally DO NOT null currentFocusId here. A focused element can
+      // transiently unmount/remount (React re-render, StrictMode) and would
+      // otherwise leave focus dangling; keeping the id means the re-register +
+      // self-heal restore it. A genuinely removed cell is handled by navigate's
+      // stale-focus fallback and by popFocusLayer's memory restore.
     }
   }, [id, layer, group, row, col]) // deliberately NOT the callbacks
 

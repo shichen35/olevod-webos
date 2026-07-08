@@ -26,6 +26,7 @@ import TabBar from './components/TabBar.jsx'
 import HomePage from './pages/HomePage.jsx'
 import CategoryPage from './pages/CategoryPage.jsx'
 import FilterPanel from './components/FilterPanel.jsx'
+import DetailPage from './pages/DetailPage.jsx'
 import { getFilter, setFilter } from './store/filters.js'
 import { DEFAULT_SORT } from './config/taxonomy.js'
 
@@ -179,11 +180,9 @@ export default function App() {
       )}
 
       {hasDetail && (
-        <OverlayPlaceholder
-          layer="detail"
-          title="详情占位"
-          actionLabel="播放占位"
-          onAction={() => openPlayer({ id: top.id })}
+        <DetailPage
+          id={stack.find((f) => f.type === 'detail').id}
+          onPlay={(episodeIndex) => openPlayer({ id: stack.find((f) => f.type === 'detail').id, episodeIndex })}
           style={vis('detail')}
         />
       )}

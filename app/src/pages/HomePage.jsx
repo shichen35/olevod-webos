@@ -9,19 +9,12 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Shelf from '../components/Shelf.jsx'
-import { categoryList } from '../api/olevod.js'
+import { loadHomePopular, POPULAR } from '../api/feeds.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { historyStore } from '../store/history.js'
 import { favoritesStore } from '../store/favorites.js'
 import { useFocusable } from '../hooks/useFocus.js'
 import * as pageCache from '../store/pageCache.js'
-
-const CACHE_KEY = 'home:popular'
-const POPULAR = [
-  { key: 'movie', title: '热门电影', category: 1 },
-  { key: 'variety', title: '热门综艺', category: 3 },
-  { key: 'series', title: '热门连续剧', category: 2 },
-]
 
 function RetryButton({ group, onRetry }) {
   const { props } = useFocusable({ layer: 'home', group, row: 0, col: 0, onSelect: onRetry })
@@ -37,18 +30,11 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
   const favorites = useStoreValue(favoritesStore)
   const [popular, setPopular] = useState(null) // null while loading; array once resolved
 
-  const load = useCallback(() => {
-    setPopular(null)
-    pageCache
-      .loadOnce(CACHE_KEY, async () => {
-        const results = await Promise.allSettled(
-          POPULAR.map((p) => categoryList({ category: p.category, sort: 'hot', size: 12 })),
-        )
-        return POPULAR.map((p, i) => ({
-          ...p,
-          items: results[i].status === 'fulfilled' ? results[i].value.items : [],
-        }))
-      })
+  // `clear` blanks to a loading state (initial load / retry); a refresh keeps
+  // the old rows on screen until the new data lands (no blank flash).
+  const load = useCallback((clear = true) => {
+    if (clear) setPopular(null)
+    loadHomePopular()
       .then(setPopular)
       .catch(() => setPopular(POPULAR.map((p) => ({ ...p, items: [] }))))
   }, [])
@@ -57,14 +43,14 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
     load()
   }, [load])
 
-  // refreshNonce bump (tab Enter, T15): drop the cache and refetch. Skip the
-  // initial value so mount doesn't double-load.
+  // refreshNonce bump (tab Enter, T15): drop the cache and refetch WITHOUT
+  // clearing. Skip the initial value so mount doesn't double-load.
   const firstNonce = useRef(refreshNonce)
   useEffect(() => {
     if (refreshNonce === firstNonce.current) return
     firstNonce.current = refreshNonce
     pageCache.invalidate('home:')
-    load()
+    load(false)
   }, [refreshNonce, load])
 
   const retry = useCallback(() => {

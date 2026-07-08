@@ -34,6 +34,7 @@ import FilterPanel from './components/FilterPanel.jsx'
 import DetailPage from './pages/DetailPage.jsx'
 import LibraryPage from './pages/LibraryPage.jsx'
 import { getFilter, setFilter } from './store/filters.js'
+import { prefetchAll } from './api/feeds.js'
 import { DEFAULT_SORT } from './config/taxonomy.js'
 
 const DEFAULT_FILTER = { genre: '0', area: '0', year: '0', sort: DEFAULT_SORT }
@@ -94,6 +95,16 @@ export default function App() {
     initFocusEngine()
     setActiveContentGroup(contentGroup('home'))
     focusTo('home/tabbar-0-0') // land on Home in the tab bar
+  }, [])
+
+  // Background prefetch: warm every tab's cache sequentially so switching tabs
+  // is spinner-free. Shares pageCache keys with the pages (no duplicate fetch).
+  useEffect(() => {
+    let stopped = false
+    prefetchAll(() => stopped)
+    return () => {
+      stopped = true
+    }
   }, [])
 
   // Remember every tab that has been shown so it stays mounted afterwards, and

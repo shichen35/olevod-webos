@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
 import { categoryList } from '../api/olevod.js'
-import { DEFAULT_SORT } from '../config/taxonomy.js'
+import { defaultFilter, loadCategoryFirstPage } from '../api/feeds.js'
 import { getFilter, setFilter } from '../store/filters.js'
 import { useFocusable } from '../hooks/useFocus.js'
 import * as pageCache from '../store/pageCache.js'
@@ -21,14 +21,6 @@ import * as pageCache from '../store/pageCache.js'
 const COLS = 6
 const PAGE_SIZE = 24
 const FILTER_ROWS = 1
-
-function defaultFilter() {
-  return { genre: '0', area: '0', year: '0', sort: DEFAULT_SORT }
-}
-
-function firstPageKey(category, f) {
-  return `cat:${category}:${f.genre}:${f.area}:${f.year}:${f.sort}:p1`
-}
 
 export default function CategoryPage({ category, group = 'content', onOpenDetail, onOpenFilter, refreshNonce, filterOverride }) {
   const [filter, setFilterState] = useState(() => getFilter(category) || defaultFilter())
@@ -43,14 +35,17 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
   const sentinelRef = useRef(null)
 
   // Load the first page for a filter (cached so tab-return / restart is instant).
+  // `clear` blanks to a loading state; a refresh passes clear=false so the old
+  // grid stays until new data lands (no blank flash).
   const load = useCallback(
-    (f) => {
+    (f, clear = true) => {
       const token = ++genRef.current
       pageRef.current = 1
-      setStatus('loading')
-      setItems([])
-      pageCache
-        .loadOnce(firstPageKey(category, f), () => categoryList({ category, ...f, page: 1, size: PAGE_SIZE }))
+      if (clear) {
+        setStatus('loading')
+        setItems([])
+      }
+      loadCategoryFirstPage(category, f, PAGE_SIZE)
         .then((res) => {
           if (token !== genRef.current) return // superseded by a newer filter
           setItems(res.items)
@@ -58,7 +53,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
           setStatus('ok')
         })
         .catch(() => {
-          if (token === genRef.current) setStatus('error')
+          if (token === genRef.current && clear) setStatus('error')
         })
     },
     [category],
@@ -106,7 +101,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
     if (refreshNonce === firstNonce.current) return
     firstNonce.current = refreshNonce
     pageCache.invalidate(`cat:${category}:`)
-    load(filter)
+    load(filter, false) // refresh without blanking the current grid
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshNonce])
 

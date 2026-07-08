@@ -23,8 +23,8 @@ const POPULAR = [
   { key: 'series', title: '热门连续剧', category: 2 },
 ]
 
-function RetryButton({ onRetry }) {
-  const { props } = useFocusable({ layer: 'home', group: 'content', row: 0, col: 0, onSelect: onRetry })
+function RetryButton({ group, onRetry }) {
+  const { props } = useFocusable({ layer: 'home', group, row: 0, col: 0, onSelect: onRetry })
   return (
     <span className="focusable-chip" {...props}>
       重试
@@ -32,7 +32,7 @@ function RetryButton({ onRetry }) {
   )
 }
 
-export default function HomePage({ onOpenDetail, refreshNonce }) {
+export default function HomePage({ group = 'content', onOpenDetail, refreshNonce }) {
   const history = useStoreValue(historyStore)
   const favorites = useStoreValue(favoritesStore)
   const [popular, setPopular] = useState(null) // null while loading; array once resolved
@@ -88,7 +88,7 @@ export default function HomePage({ onOpenDetail, refreshNonce }) {
     return (
       <div className="home-error">
         <div>内容加载失败</div>
-        <RetryButton onRetry={retry} />
+        <RetryButton group={group} onRetry={retry} />
       </div>
     )
   }
@@ -101,7 +101,7 @@ export default function HomePage({ onOpenDetail, refreshNonce }) {
           title={r.title}
           items={r.items}
           layer="home"
-          group="content"
+          group={group}
           row={i}
           onSelectItem={(it) => onOpenDetail(it.id)}
           cardExtras={

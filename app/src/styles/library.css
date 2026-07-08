@@ -1,0 +1,104 @@
+/* Library page: segment control + card grids / settings list, plus the shared
+   confirm dialog. */
+
+.library {
+  padding-top: 16px;
+}
+
+/* --- Segment control (row 0) --- */
+.segments {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.seg {
+  font-size: var(--fs-label);
+  color: var(--text-2);
+  padding: 8px 28px;
+  border: var(--focus-border) solid transparent;
+  border-radius: 8px;
+}
+.seg-active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.seg.focused {
+  background: var(--focus);
+  color: var(--focus-text);
+  border-color: var(--focus);
+}
+
+.library-empty {
+  padding: 80px 0;
+  text-align: center;
+  color: var(--text-3);
+  font-size: var(--fs-body);
+}
+
+/* --- Settings list --- */
+.settings-list {
+  max-width: 900px;
+}
+.settings-row {
+  font-size: var(--fs-body);
+  padding: 20px 24px;
+  border-radius: 8px;
+  border: var(--focus-border) solid transparent;
+}
+.settings-row-danger {
+  color: var(--text);
+}
+.settings-about {
+  padding: 16px 24px;
+  color: var(--text-3);
+  font-size: var(--fs-caption);
+}
+
+/* --- Confirm dialog (centered opaque card, no scrim) --- */
+.dialog-wrap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dialog {
+  width: 640px;
+  background: var(--bg-elev);
+  border: 2px solid var(--bg-elev-2);
+  border-radius: 16px;
+  padding: 44px 40px 32px;
+}
+.dialog-title {
+  font-size: var(--fs-title);
+  color: var(--text);
+  margin-bottom: 16px;
+}
+.dialog-desc {
+  font-size: var(--fs-body);
+  color: var(--text-2);
+  line-height: 1.5;
+  margin-bottom: 32px;
+}
+.dialog-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dlg-btn {
+  width: 100%;
+  font-size: var(--fs-label);
+  padding: 18px 0;
+  border-radius: 10px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: var(--focus-border) solid transparent;
+}
+.dlg-btn-danger {
+  color: var(--uhd);
+}
+.dlg-btn.focused {
+  background: var(--focus);
+  color: var(--focus-text);
+  border-color: var(--focus);
+}

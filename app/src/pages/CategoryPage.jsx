@@ -30,7 +30,7 @@ function firstPageKey(category, f) {
   return `cat:${category}:${f.genre}:${f.area}:${f.year}:${f.sort}:p1`
 }
 
-export default function CategoryPage({ category, onOpenDetail, onOpenFilter, refreshNonce, filterOverride }) {
+export default function CategoryPage({ category, group = 'content', onOpenDetail, onOpenFilter, refreshNonce, filterOverride }) {
   const [filter, setFilterState] = useState(() => getFilter(category) || defaultFilter())
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
@@ -140,10 +140,10 @@ export default function CategoryPage({ category, onOpenDetail, onOpenFilter, ref
 
   return (
     <div className="category" ref={rootRef}>
-      <FilterBar category={category} filter={filter} onSelectGenre={selectGenre} onOpenFilter={onOpenFilter} />
+      <FilterBar category={category} group={group} filter={filter} onSelectGenre={selectGenre} onOpenFilter={onOpenFilter} />
 
       {status === 'error' && items.length === 0 ? (
-        <RetryRow onRetry={() => load(filter)} />
+        <RetryRow group={group} onRetry={() => load(filter)} />
       ) : (
         <div className="grid">
           {items.map((item, i) => (
@@ -151,7 +151,7 @@ export default function CategoryPage({ category, onOpenDetail, onOpenFilter, ref
               key={`${item.id}-${i}`}
               item={item}
               layer="home"
-              group="content"
+              group={group}
               row={FILTER_ROWS + Math.floor(i / COLS)}
               col={i % COLS}
               onSelect={() => onOpenDetail(item.id)}
@@ -167,8 +167,8 @@ export default function CategoryPage({ category, onOpenDetail, onOpenFilter, ref
   )
 }
 
-function RetryRow({ onRetry }) {
-  const { props } = useFocusable({ layer: 'home', group: 'content', row: FILTER_ROWS, col: 0, onSelect: onRetry })
+function RetryRow({ group, onRetry }) {
+  const { props } = useFocusable({ layer: 'home', group, row: FILTER_ROWS, col: 0, onSelect: onRetry })
   return (
     <div className="grid-status">
       <span className="focusable-chip" {...props}>

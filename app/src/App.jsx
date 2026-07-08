@@ -19,35 +19,26 @@ import {
   pushFocusLayer,
   popFocusLayer,
   getCurrentFocus,
+  setActiveContentGroup,
   useFocusable,
 } from './hooks/useFocus.js'
+
+// Each tab's content lives in its own focus group so all tabs can stay mounted
+// without their focus ids colliding.
+const contentGroup = (tabKey) => `content:${tabKey}`
 import { TABS } from './config/nav.js'
 import TabBar from './components/TabBar.jsx'
 import HomePage from './pages/HomePage.jsx'
 import CategoryPage from './pages/CategoryPage.jsx'
 import FilterPanel from './components/FilterPanel.jsx'
 import DetailPage from './pages/DetailPage.jsx'
+import LibraryPage from './pages/LibraryPage.jsx'
 import { getFilter, setFilter } from './store/filters.js'
 import { DEFAULT_SORT } from './config/taxonomy.js'
 
 const DEFAULT_FILTER = { genre: '0', area: '0', year: '0', sort: DEFAULT_SORT }
 
-// --- Placeholder content for not-yet-built tabs (category page = T11) -------
-function ContentPlaceholder({ tab, onOpenDetail }) {
-  const open = useFocusable({ layer: 'home', group: 'content', row: 0, col: 0, onSelect: () => onOpenDetail(1) })
-  const other = useFocusable({ layer: 'home', group: 'content', row: 0, col: 1 })
-  return (
-    <div>
-      <div className="placeholder-heading">{tab.label}</div>
-      <div className="placeholder-row">
-        <span className="focusable-chip" {...open.props}>打开详情占位</span>
-        <span className="focusable-chip" {...other.props}>占位项</span>
-      </div>
-    </div>
-  )
-}
-
-// --- Placeholder overlays (replaced by DetailPage/PlayerPage in T13/T16) ----
+// --- Placeholder overlay (player is replaced by PlayerPage in T16) ----------
 function OverlayPlaceholder({ layer, title, actionLabel, onAction, style }) {
   const act = useFocusable({ layer, group: 'content', row: 0, col: 0, onSelect: onAction })
   useEffect(() => {
@@ -101,11 +92,14 @@ export default function App() {
 
   useEffect(() => {
     initFocusEngine()
+    setActiveContentGroup(contentGroup('home'))
     focusTo('home/tabbar-0-0') // land on Home in the tab bar
   }, [])
 
-  // Remember every tab that has been shown so it stays mounted afterwards.
+  // Remember every tab that has been shown so it stays mounted afterwards, and
+  // point the tab bar's down-bridge at the active tab's content group.
   useEffect(() => {
+    setActiveContentGroup(contentGroup(activeTab))
     setActivated((prev) => {
       if (prev.has(activeTab)) return prev
       const next = new Set(prev)
@@ -126,7 +120,7 @@ export default function App() {
       // At the shell: if focus is in the content area, return it to the tab bar;
       // if it is already on the tab bar, exit the app (no confirmation prompt).
       const cur = getCurrentFocus() || ''
-      if (cur.startsWith('home/content-')) {
+      if (cur.startsWith('home/content:')) {
         const idx = Math.max(0, TABS.findIndex((t) => t.key === activeTabRef.current))
         focusTo(`home/tabbar-0-${idx}`)
         return
@@ -153,17 +147,18 @@ export default function App() {
           <div key={tab.key} className="tab-content" style={{ display: tab.key === activeTab ? 'block' : 'none' }}>
             {activated.has(tab.key) &&
               (tab.kind === 'home' ? (
-                <HomePage onOpenDetail={openDetail} refreshNonce={refreshNonce[tab.key]} />
+                <HomePage group={contentGroup(tab.key)} onOpenDetail={openDetail} refreshNonce={refreshNonce[tab.key]} />
               ) : tab.kind === 'category' ? (
                 <CategoryPage
                   category={tab.categoryId}
+                  group={contentGroup(tab.key)}
                   onOpenDetail={openDetail}
                   onOpenFilter={() => openFilterFor(tab.categoryId)}
                   filterOverride={filterOverrides[tab.categoryId]}
                   refreshNonce={refreshNonce[tab.key]}
                 />
               ) : (
-                <ContentPlaceholder tab={tab} onOpenDetail={openDetail} />
+                <LibraryPage group={contentGroup(tab.key)} onOpenDetail={openDetail} />
               ))}
           </div>
         ))}

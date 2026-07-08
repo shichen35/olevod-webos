@@ -9,8 +9,8 @@
 import { useFocusable } from '../hooks/useFocus.js'
 import { getCategory, SORTS } from '../config/taxonomy.js'
 
-function Chip({ col, label, selected, onSelect }) {
-  const { props } = useFocusable({ layer: 'home', group: 'content', row: 0, col, onSelect })
+function Chip({ group, col, label, selected, onSelect }) {
+  const { props } = useFocusable({ layer: 'home', group, row: 0, col, onSelect })
   return (
     <span className={`chip focusable-chip${selected ? ' chip-selected' : ''}`} {...props}>
       {label}
@@ -27,7 +27,7 @@ function summaryText(cfg, filter) {
   return parts.join(' · ')
 }
 
-export default function FilterBar({ category, filter, onSelectGenre, onOpenFilter }) {
+export default function FilterBar({ category, group = 'content', filter, onSelectGenre, onOpenFilter }) {
   const cfg = getCategory(category)
   const genres = cfg.genres
 
@@ -37,13 +37,14 @@ export default function FilterBar({ category, filter, onSelectGenre, onOpenFilte
         {genres.map((g, i) => (
           <Chip
             key={g.value}
+            group={group}
             col={i}
             label={g.label}
             selected={filter.genre === g.value}
             onSelect={() => onSelectGenre(g.value)}
           />
         ))}
-        <Chip col={genres.length} label="筛选" onSelect={onOpenFilter} />
+        <Chip group={group} col={genres.length} label="筛选" onSelect={onOpenFilter} />
       </div>
       <div className="filter-summary">{summaryText(cfg, filter)}</div>
     </div>

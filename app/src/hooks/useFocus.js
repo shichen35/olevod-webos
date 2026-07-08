@@ -33,6 +33,14 @@ const rowMemory = new Map()        // "{layer}/{group}-{row}" -> col (last colum
 // track focus without owning a focusable (e.g. header state).
 const focusChangeListeners = new Set()
 
+// Which content group the tab bar bridges to. Each tab uses a distinct content
+// group (e.g. "content:home") so that keeping every tab mounted never collides
+// on focus ids; the shell updates this to the active tab's group.
+let activeContentGroup = 'content'
+export function setActiveContentGroup(group) {
+  activeContentGroup = group
+}
+
 // ---------------------------------------------------------------------------
 // id helpers
 // ---------------------------------------------------------------------------
@@ -184,12 +192,12 @@ function navigate(dir) {
       setFocus(within)
       return
     }
-    // Cross-group: content top-row Up -> tabbar; tabbar Down -> content.
-    if (dir === 'up' && group === 'content') {
+    // Cross-group: active-content top-row Up -> tabbar; tabbar Down -> content.
+    if (dir === 'up' && group === activeContentGroup) {
       const t = firstInGroup(layer, 'tabbar')
       if (t) setFocus(t)
     } else if (dir === 'down' && group === 'tabbar') {
-      const t = firstInGroup(layer, 'content')
+      const t = firstInGroup(layer, activeContentGroup)
       if (t) setFocus(t)
     }
     return

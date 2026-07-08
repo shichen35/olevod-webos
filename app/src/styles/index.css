@@ -12,6 +12,7 @@
 @import "./category.css";
 @import "./filter.css";
 @import "./detail.css";
+@import "./library.css";
 
 /* Page styles are appended here as later tasks add them, e.g.:
    @import "../pages/home.css";

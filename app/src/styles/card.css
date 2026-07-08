@@ -1,0 +1,123 @@
+/* Card system: Thumb / VideoCard / Shelf. All opaque, no motion. */
+
+.shelf {
+  margin-bottom: 44px;
+}
+.shelf-title {
+  font-size: var(--fs-heading);
+  color: var(--text);
+  font-weight: 600;
+  margin: 0 0 18px;
+}
+
+/* One horizontal row. The right padding creates the "more to scroll" bleed at
+   the viewport edge; the scrollbar is hidden (focus drives scrolling). */
+.shelf-row {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-right: 160px;
+  scrollbar-width: none;
+}
+.shelf-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* Card. Border slot comes from .focusable-card (T02); here we only size it and
+   make off-screen cards cheap to skip. */
+.card {
+  flex: 0 0 auto;
+  width: 240px;
+  contain: content;
+  content-visibility: auto;
+  contain-intrinsic-size: 240px 430px;
+}
+
+.card-poster {
+  position: relative;
+  width: 240px;
+  height: 360px;
+  background: var(--bg-elev);
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-elev);
+  color: var(--text-3);
+  font-size: var(--fs-display);
+}
+
+.card-title {
+  font-size: var(--fs-label);
+  color: var(--text-2);
+  margin-top: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card.focused .card-title {
+  color: var(--text);
+}
+
+.card-meta {
+  display: flex;
+  gap: 12px;
+  font-size: var(--fs-caption);
+  color: var(--text-3);
+  margin-top: 4px;
+}
+
+/* Badges */
+.badge {
+  position: absolute;
+  font-size: var(--fs-caption);
+  line-height: 1;
+  padding: 5px 8px;
+  border-radius: 4px;
+}
+.badge-score {
+  top: 8px;
+  left: 8px;
+  background: var(--bg-elev);
+  color: var(--accent);
+  font-weight: 600;
+}
+.badge-uhd {
+  top: 8px;
+  right: 8px;
+  background: var(--uhd);
+  color: #111111;
+  font-weight: 600;
+}
+.badge-ep {
+  bottom: 14px;
+  left: 8px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+}
+
+/* Bottom watch-progress bar: opaque accent fill on an elevated track, 6px. */
+.card-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: var(--bg-elev-2);
+}
+.card-progress > div {
+  height: 100%;
+  background: var(--accent);
+}

@@ -23,8 +23,9 @@ import {
 } from './hooks/useFocus.js'
 import { TABS } from './config/nav.js'
 import TabBar from './components/TabBar.jsx'
+import HomePage from './pages/HomePage.jsx'
 
-// --- Placeholder content (replaced by real pages in T10-T14) ---------------
+// --- Placeholder content for not-yet-built tabs (category page = T11) -------
 function ContentPlaceholder({ tab, onOpenDetail }) {
   const open = useFocusable({ layer: 'home', group: 'content', row: 0, col: 0, onSelect: () => onOpenDetail(1) })
   const other = useFocusable({ layer: 'home', group: 'content', row: 0, col: 1 })
@@ -62,8 +63,11 @@ function OverlayPlaceholder({ layer, title, actionLabel, onAction, style }) {
 export default function App() {
   const [activeTab, setActiveTab] = useState('home')
   const [stack, setStack] = useState([{ type: 'shell' }])
-  // Per-tab refresh nonce — bumped on tab Enter/click; consumed by pages in T15.
-  const [, setRefreshNonce] = useState({})
+  // Per-tab refresh nonce — bumped on tab Enter/click; consumed by pages (T15).
+  const [refreshNonce, setRefreshNonce] = useState({})
+  // Tabs mount on first activation and then stay mounted (state/scroll survive),
+  // so switching back is instant and no tab fetches until it's first visited.
+  const [activated, setActivated] = useState(() => new Set(['home']))
 
   const activeTabRef = useRef(activeTab)
   activeTabRef.current = activeTab
@@ -81,6 +85,16 @@ export default function App() {
     initFocusEngine()
     focusTo('home/tabbar-0-0') // land on Home in the tab bar
   }, [])
+
+  // Remember every tab that has been shown so it stays mounted afterwards.
+  useEffect(() => {
+    setActivated((prev) => {
+      if (prev.has(activeTab)) return prev
+      const next = new Set(prev)
+      next.add(activeTab)
+      return next
+    })
+  }, [activeTab])
 
   // Back-navigation chain: player -> detail -> content(->tabbar) -> exit.
   useEffect(() => {
@@ -119,7 +133,12 @@ export default function App() {
         />
         {TABS.map((tab) => (
           <div key={tab.key} className="tab-content" style={{ display: tab.key === activeTab ? 'block' : 'none' }}>
-            {tab.key === activeTab && <ContentPlaceholder tab={tab} onOpenDetail={openDetail} />}
+            {activated.has(tab.key) &&
+              (tab.kind === 'home' ? (
+                <HomePage onOpenDetail={openDetail} refreshNonce={refreshNonce[tab.key]} />
+              ) : (
+                <ContentPlaceholder tab={tab} onOpenDetail={openDetail} />
+              ))}
           </div>
         ))}
       </div>

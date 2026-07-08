@@ -8,6 +8,7 @@
 @import "./base.css";
 @import "./app.css";
 @import "./card.css";
+@import "./home.css";
 
 /* Page styles are appended here as later tasks add them, e.g.:
    @import "../pages/home.css";

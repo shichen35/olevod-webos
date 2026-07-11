@@ -148,6 +148,10 @@ export function mediaUrl(rawUrl) {
  * never leaks outside this module.
  */
 export function exitApp() {
-  if (window.webOS?.platformBack) window.webOS.platformBack()
+  // PalmSystem.platformBack hands Back to the system (exit confirmation and
+  // all); window.webOS only exists when webOSTV.js is loaded, which this app
+  // deliberately doesn't ship — probing it always fell through to
+  // window.close(), killing the app with no prompt.
+  if (window.PalmSystem?.platformBack) window.PalmSystem.platformBack()
   else window.close?.()
 }

@@ -1,17 +1,28 @@
 /*
  * Full-screen HLS player (the "player" focus layer, above "detail").
  *
- * T16 scope: enter -> play -> back only. No control bar or progress UI (T17),
- * no resume (T18), no autoplay-next (T19). The page is a solid-black
- * full-screen <video>; loading/error states are centered static text on
- * opaque black (no scrim, no spinner animation).
+ * T16 gave it enter -> play -> back; T17 adds the control bar and the full
+ * remote-key state machine. Still to come: resume (T18), autoplay-next (T19),
+ * bottom panel (T20 — the bar-shown Down key is its reserved hook).
+ *
+ * Key machine (all keys intercepted at the player layer via
+ * setCustomKeyHandler; Back unwinds one level at a time):
+ *   bar hidden: Down = show bar · Left/Right = ±15s step (long-press repeats)
+ *               OK = play/pause (pausing shows the bar) · Back = exit
+ *   bar shown:  Up = hide bar · Down = panel (T20) · Left/Right = ±60s drag
+ *               OK = play/pause · Back = hide bar
+ *   Seeks accumulate into a pending target and only commit after the key has
+ *   settled for ~500ms — no burst of segment requests while stepping.
+ *
+ * Performance: progress/timecode updates go straight to the DOM via refs on
+ * `timeupdate` — playback must not re-render the component every second.
  *
  * hls.js arrives via dynamic import() so it never enters the startup bundle
  * (PlayerPage itself is lazy() — see App.jsx). On the real device the webOS
  * webview plays HLS natively (canPlayType), so the TV path never downloads
  * the hls.js chunk at all.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { detail as fetchDetail, streamUrl } from '../api/olevod.js'
 import * as pageCache from '../store/pageCache.js'
 import {
@@ -23,6 +34,28 @@ import {
 } from '../hooks/useFocus.js'
 
 const LAYER = 'player'
+
+const STEP_HIDDEN_S = 15 // tap step with the bar hidden
+const STEP_SHOWN_S = 60 // drag step with the bar shown
+const SEEK_SETTLE_MS = 500 // commit the pending seek once input settles
+const SEEK_REPEAT_MS = 200 // long-press step cadence (native key repeat, throttled)
+const BADGE_LINGER_MS = 800 // keep the target badge up briefly after committing
+const BAR_HIDE_MS = 5000
+
+function fmtTime(s) {
+  if (!Number.isFinite(s) || s < 0) s = 0
+  s = Math.floor(s)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  const mm = String(m).padStart(2, '0')
+  const ss = String(sec).padStart(2, '0')
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
+}
+
+function isBackKey(e) {
+  return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
+}
 
 // Highest quality below the 1440p tier — the UHD tier is reserved for manual
 // switching (T20). Returns -1 when the master has no such level; then hls.js
@@ -66,42 +99,220 @@ function RetryButton({ onRetry }) {
 
 export default function PlayerPage({ id, episodeIndex }) {
   const videoRef = useRef(null)
+  const [data, setData] = useState(null) // normalized detail (title + episodes)
+  const [curEp, setCurEp] = useState(episodeIndex)
   const [status, setStatus] = useState('loading') // loading | ok | error
   const [attempt, setAttempt] = useState(0) // bump to tear down and retry
+  const [barVisible, setBarVisible] = useState(false)
+
   const statusRef = useRef(status)
   statusRef.current = status
+  const barRef = useRef(barVisible)
+  barRef.current = barVisible
 
-  // Own the player focus layer for this overlay's lifetime, and intercept keys
-  // in place: OK toggles play/pause; arrows are swallowed until T17 gives them
-  // meaning. The error state falls through to normal navigation so the Retry
-  // focusable receives OK.
+  // High-frequency playback feedback goes straight to these DOM nodes.
+  const playedRef = useRef(null)
+  const bufferedRef = useRef(null)
+  const curTimeRef = useRef(null)
+  const remainRef = useRef(null)
+  const badgeRef = useRef(null)
+
+  const pendingSeekRef = useRef(null) // accumulated target while stepping
+  const seekTimerRef = useRef(null) // settle timer
+  const badgeTimerRef = useRef(null)
+  const lastStepAtRef = useRef(0)
+  const hideTimerRef = useRef(null)
+
+  // ---------------------------------------------------------------------
+  // control bar visibility + auto-hide
+  // ---------------------------------------------------------------------
+  const armHideTimer = useCallback(() => {
+    clearTimeout(hideTimerRef.current)
+    hideTimerRef.current = setTimeout(function tick() {
+      const v = videoRef.current
+      if (v && v.paused) {
+        // Stays visible while paused; check again later.
+        hideTimerRef.current = setTimeout(tick, BAR_HIDE_MS)
+        return
+      }
+      setBarVisible(false)
+    }, BAR_HIDE_MS)
+  }, [])
+
+  const showBar = useCallback(() => {
+    setBarVisible(true)
+    armHideTimer()
+  }, [armHideTimer])
+
+  const hideBar = useCallback(() => {
+    clearTimeout(hideTimerRef.current)
+    setBarVisible(false)
+  }, [])
+
+  useEffect(() => () => clearTimeout(hideTimerRef.current), [])
+
+  // ---------------------------------------------------------------------
+  // seeking — accumulate, preview, commit on settle
+  // ---------------------------------------------------------------------
+  const showBadge = useCallback((dir, target) => {
+    const el = badgeRef.current
+    if (!el) return
+    el.textContent = `${dir < 0 ? '«' : '»'} ${fmtTime(target)}`
+    el.style.display = 'block'
+    clearTimeout(badgeTimerRef.current)
+  }, [])
+
+  const stepSeek = useCallback(
+    (deltaS, isRepeat) => {
+      const v = videoRef.current
+      const dur = v?.duration
+      if (!v || !Number.isFinite(dur) || dur <= 0) return
+      const now = Date.now()
+      if (isRepeat && now - lastStepAtRef.current < SEEK_REPEAT_MS) return
+      lastStepAtRef.current = now
+
+      const base = pendingSeekRef.current ?? v.currentTime
+      const target = Math.min(Math.max(base + deltaS, 0), Math.max(dur - 2, 0))
+      pendingSeekRef.current = target
+      showBadge(deltaS, target)
+      // Preview cursor: while the bar is up, the played track follows the target.
+      if (barRef.current && playedRef.current) {
+        playedRef.current.style.width = `${(target / dur) * 100}%`
+      }
+
+      clearTimeout(seekTimerRef.current)
+      seekTimerRef.current = setTimeout(() => {
+        const t = pendingSeekRef.current
+        pendingSeekRef.current = null
+        const vid = videoRef.current
+        if (t != null && vid) vid.currentTime = t
+        badgeTimerRef.current = setTimeout(() => {
+          if (badgeRef.current) badgeRef.current.style.display = 'none'
+        }, BADGE_LINGER_MS)
+      }, SEEK_SETTLE_MS)
+    },
+    [showBadge],
+  )
+
+  useEffect(
+    () => () => {
+      clearTimeout(seekTimerRef.current)
+      clearTimeout(badgeTimerRef.current)
+    },
+    [],
+  )
+
+  const togglePlay = useCallback(() => {
+    const v = videoRef.current
+    if (!v) return
+    if (v.paused) {
+      v.play().catch(() => {})
+      armHideTimer()
+    } else {
+      v.pause()
+      showBar() // pausing brings the bar up
+    }
+  }, [armHideTimer, showBar])
+
+  // ---------------------------------------------------------------------
+  // key machine — owns every key in the player layer
+  // ---------------------------------------------------------------------
   useEffect(() => {
     pushFocusLayer(LAYER)
     setCustomKeyHandler((e) => {
+      // Error state: normal navigation drives the Retry focusable; Back exits.
       if (statusRef.current === 'error') return false
-      if (e.key === 'Enter') {
-        const v = videoRef.current
-        if (v && statusRef.current === 'ok') {
-          if (v.paused) v.play().catch(() => {})
-          else v.pause()
-        }
-        return true
+      if (statusRef.current !== 'ok') {
+        // Loading: swallow nav/OK so keys can't leak to the detail layer
+        // beneath; Back falls through and exits the player.
+        return !isBackKey(e) && (e.key === 'Enter' || (e.key || '').startsWith('Arrow'))
       }
-      if ((e.key || '').startsWith('Arrow')) return true
-      return false
+
+      if (isBackKey(e)) {
+        if (barRef.current) {
+          hideBar()
+          return true
+        }
+        return false // default tv-back pops the player overlay
+      }
+
+      if (barRef.current) {
+        armHideTimer() // any input while shown postpones auto-hide
+        switch (e.key) {
+          case 'ArrowUp':
+            hideBar()
+            return true
+          case 'ArrowDown':
+            // T20 hook: opens the player panel.
+            return true
+          case 'ArrowLeft':
+            stepSeek(-STEP_SHOWN_S, e.repeat)
+            return true
+          case 'ArrowRight':
+            stepSeek(STEP_SHOWN_S, e.repeat)
+            return true
+          case 'Enter':
+            togglePlay()
+            return true
+          default:
+            return true
+        }
+      }
+
+      switch (e.key) {
+        case 'ArrowDown':
+          showBar()
+          return true
+        case 'ArrowLeft':
+          stepSeek(-STEP_HIDDEN_S, e.repeat)
+          return true
+        case 'ArrowRight':
+          stepSeek(STEP_HIDDEN_S, e.repeat)
+          return true
+        case 'Enter':
+          togglePlay()
+          return true
+        case 'ArrowUp':
+          return true
+        default:
+          return false
+      }
     })
     return () => {
       setCustomKeyHandler(null)
       popFocusLayer()
     }
-  }, [])
+  }, [armHideTimer, hideBar, showBar, stepSeek, togglePlay])
 
   // The error state has this layer's only focusable; land on it deterministically.
   useEffect(() => {
     if (status === 'error') focusTo(`${LAYER}/content-0-0`)
   }, [status])
 
+  // ---------------------------------------------------------------------
+  // data: detail (title + episode urls) from the shared page cache
+  // ---------------------------------------------------------------------
   useEffect(() => {
+    let cancelled = false
+    // Detail is already cached by the page beneath us — this never refetches.
+    pageCache
+      .loadOnce(`detail:${id}`, () => fetchDetail(id))
+      .then((d) => {
+        if (!cancelled) setData(d)
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id, attempt])
+
+  // ---------------------------------------------------------------------
+  // playback: wire the <video> to the current episode's stream
+  // ---------------------------------------------------------------------
+  useEffect(() => {
+    if (!data) return
     const video = videoRef.current
     let hls = null
     let cancelled = false
@@ -109,17 +320,41 @@ export default function PlayerPage({ id, episodeIndex }) {
 
     const onPlaying = () => setStatus('ok')
     const onVideoError = () => setStatus('error')
+    const onPause = () => {
+      // Any pause surfaces the bar (remote OK, or a future system event).
+      if (statusRef.current === 'ok' && !video.ended) showBar()
+    }
+    const onTime = () => {
+      const dur = video.duration
+      if (!Number.isFinite(dur) || dur <= 0) return
+      // While a seek is pending, the played track is a preview cursor — leave it.
+      if (pendingSeekRef.current == null && playedRef.current) {
+        playedRef.current.style.width = `${(video.currentTime / dur) * 100}%`
+      }
+      if (curTimeRef.current) curTimeRef.current.textContent = fmtTime(video.currentTime)
+      if (remainRef.current) remainRef.current.textContent = `-${fmtTime(dur - video.currentTime)}`
+    }
+    const onProgress = () => {
+      const dur = video.duration
+      if (!Number.isFinite(dur) || dur <= 0 || !bufferedRef.current) return
+      const b = video.buffered
+      let end = 0
+      for (let i = 0; i < b.length; i++) {
+        if (b.start(i) <= video.currentTime + 0.5 && b.end(i) > end) end = b.end(i)
+      }
+      bufferedRef.current.style.width = `${(end / dur) * 100}%`
+    }
     video.addEventListener('playing', onPlaying)
     video.addEventListener('error', onVideoError)
+    video.addEventListener('pause', onPause)
+    video.addEventListener('timeupdate', onTime)
+    video.addEventListener('progress', onProgress)
 
     ;(async () => {
       try {
-        // Detail is already cached by the page beneath us — this never refetches.
-        const d = await pageCache.loadOnce(`detail:${id}`, () => fetchDetail(id))
         const ep =
-          d.episodes.find((e) => e.index === episodeIndex) || d.episodes[d.episodes.length - 1]
+          data.episodes.find((e) => e.index === curEp) || data.episodes[data.episodes.length - 1]
         if (!ep?.url) throw new Error('no playable url')
-        if (cancelled) return
         const src = streamUrl(ep.url)
 
         if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -139,8 +374,8 @@ export default function PlayerPage({ id, episodeIndex }) {
           playlistLoadPolicy: LOAD_POLICY,
           fragLoadPolicy: LOAD_POLICY,
         })
-        hls.on(Hls.Events.MANIFEST_PARSED, (_evt, data) => {
-          const lvl = pickStartLevel(data.levels || [])
+        hls.on(Hls.Events.MANIFEST_PARSED, (_evt, parsed) => {
+          const lvl = pickStartLevel(parsed.levels || [])
           if (lvl >= 0) {
             hls.startLevel = lvl
             hls.autoLevelCapping = lvl // ABR stays below UHD; manual switch is T20
@@ -148,8 +383,8 @@ export default function PlayerPage({ id, episodeIndex }) {
           hls.startLoad()
           video.play().catch(() => {})
         })
-        hls.on(Hls.Events.ERROR, (_evt, data) => {
-          if (data.fatal) setStatus('error')
+        hls.on(Hls.Events.ERROR, (_evt, info) => {
+          if (info.fatal) setStatus('error')
         })
         hls.attachMedia(video)
         hls.loadSource(src)
@@ -162,16 +397,43 @@ export default function PlayerPage({ id, episodeIndex }) {
       cancelled = true
       video.removeEventListener('playing', onPlaying)
       video.removeEventListener('error', onVideoError)
+      video.removeEventListener('pause', onPause)
+      video.removeEventListener('timeupdate', onTime)
+      video.removeEventListener('progress', onProgress)
       if (hls) hls.destroy()
       // Drop the native source too so no segment request outlives the page.
       video.removeAttribute('src')
       video.load()
     }
-  }, [id, episodeIndex, attempt])
+  }, [data, curEp, attempt, showBar])
+
+  const episodes = data?.episodes || []
+  const epLabel = episodes.length > 1 ? `第${curEp}集` : ''
 
   return (
     <div className="player">
       <video ref={videoRef} className="player-video" />
+
+      {/* Control bar — always mounted so the DOM refs stay stable; visibility
+          is an instant display toggle. */}
+      <div className="player-bar" style={{ display: barVisible ? 'block' : 'none' }}>
+        <div className="player-bar-info">
+          <span className="player-bar-title">{data?.title || ''}</span>
+          {epLabel && <span className="player-bar-ep">{epLabel}</span>}
+        </div>
+        <div className="player-track">
+          <div ref={bufferedRef} className="player-track-buffered" />
+          <div ref={playedRef} className="player-track-played" />
+        </div>
+        <div className="player-times">
+          <span ref={curTimeRef}>00:00</span>
+          <span ref={remainRef}>-00:00</span>
+        </div>
+      </div>
+
+      {/* Seek target badge (« / » + mm:ss), shared by both seek modes. */}
+      <div ref={badgeRef} className="player-seek-badge" style={{ display: 'none' }} />
+
       {status === 'loading' && <div className="player-status">加载中…</div>}
       {status === 'error' && (
         <div className="player-status">

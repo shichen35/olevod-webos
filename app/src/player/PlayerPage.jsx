@@ -26,7 +26,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { detail as fetchDetail, streamUrl } from '../api/olevod.js'
 import * as pageCache from '../store/pageCache.js'
-import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
+import { recordHistory, recordProgress, clearProgress, getWatchState } from '../store/history.js'
 import {
   useFocusable,
   pushFocusLayer,
@@ -409,13 +409,22 @@ export default function PlayerPage({ id, episodeIndex }) {
         ? watch.position
         : 0
 
-    // Persist progress: near the end counts as finished -> reset to zero so the
-    // next play starts clean and stops counting as a resume.
+    // Persist progress. Positions come from timeupdate ticks (lastKnown), never
+    // a live read at flush time: on the TV's native pipeline currentTime can
+    // already read 0 during suspend/teardown, which must not clobber real
+    // progress. Near the end counts as finished -> the resume point moves to
+    // the next episode (from its start), or is cleared after the last one.
+    const lastKnown = { pos: NaN, dur: NaN }
     const flushProgress = () => {
-      const dur = video.duration
-      if (!started || !Number.isFinite(dur) || dur <= 0) return
-      const pos = dur - video.currentTime <= FINISHED_TAIL_S ? 0 : video.currentTime
-      recordProgress(id, curEp, pos, dur)
+      const { pos, dur } = lastKnown
+      if (!started || !Number.isFinite(pos) || !Number.isFinite(dur) || dur <= 0) return
+      if (dur - pos <= FINISHED_TAIL_S) {
+        const next = nextEpRef.current
+        if (next != null) recordProgress(id, next, 0, dur)
+        else clearProgress(id)
+      } else {
+        recordProgress(id, curEp, pos, dur)
+      }
     }
     const flushTimer = setInterval(() => {
       if (started && !video.paused) flushProgress()
@@ -462,6 +471,12 @@ export default function PlayerPage({ id, episodeIndex }) {
     const onTime = () => {
       const dur = video.duration
       if (!Number.isFinite(dur) || dur <= 0) return
+      // Feed the flush position. A snap to exactly 0 from well into playback is
+      // a pipeline reset, not a user seek — never let it become the flush value.
+      if (!(video.currentTime === 0 && lastKnown.pos > 1)) {
+        lastKnown.pos = video.currentTime
+        lastKnown.dur = dur
+      }
       // While a seek is pending, the played track is a preview cursor — leave it.
       if (pendingSeekRef.current == null && playedRef.current) {
         playedRef.current.style.width = `${(video.currentTime / dur) * 100}%`

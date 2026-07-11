@@ -103,8 +103,10 @@ export default function DetailPage({ id, onPlay, style }) {
   // Episodes are newest-first, so episode 1 is the last entry.
   const firstEp = episodes[episodes.length - 1]
   const watch = history.find((x) => x.id === id)?.watch || null
-  const canResume =
-    watch && watch.position > 30 && episodes.some((e) => e.index === watch.lastEpisodeIndex)
+  // Any surviving watch entry is resumable: position 0 is a queued next
+  // episode, and positions under the player's resume threshold just restart
+  // that episode. Guard only against episodes that no longer exist.
+  const canResume = watch && episodes.some((e) => e.index === watch.lastEpisodeIndex)
   const resumeIndex = canResume ? watch.lastEpisodeIndex : null
 
   const primaryLabel = canResume ? `▶ 继续观看 第${resumeIndex}集` : '▶ 播放 第1集'

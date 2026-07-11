@@ -2,6 +2,10 @@
  * Watch history — a capped, most-recent-first list of watched titles, each
  * carrying resume progress { lastEpisodeIndex, position, duration }.
  *
+ * `watch` is the resume point: position 0 means "start this episode from the
+ * beginning" (the previous one was finished); null means there is nothing to
+ * resume (all episodes finished, or never played far enough).
+ *
  * Consumed by: the home "Continue Watching" shelf (progress bar), the detail
  * page's "Continue Watching Episode N", and the player's resume feature.
  */
@@ -34,6 +38,15 @@ export function recordProgress(id, lastEpisodeIndex, position, duration) {
     const rest = prev.filter((x) => x.id !== id)
     const base = existing || { id }
     return [{ ...base, watch: { lastEpisodeIndex, position, duration } }, ...rest].slice(0, CAP)
+  })
+}
+
+// Drop a title's resume point (last episode finished) but keep it in history.
+export function clearProgress(id) {
+  historyStore.set((prev) => {
+    const existing = prev.find((x) => x.id === id)
+    if (!existing || !existing.watch) return prev
+    return prev.map((x) => (x.id === id ? { ...x, watch: null } : x))
   })
 }
 

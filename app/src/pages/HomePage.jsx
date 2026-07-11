@@ -70,8 +70,9 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
 
   // Build the shelf list in render order; row = index (kept continuous).
   // The local shelves can each be switched off in Settings.
+  // A watch entry at position 0 is a queued next episode — still resumable.
   const continueItems = getSetting(settings, 'homeShowRecent')
-    ? history.filter((h) => h.watch && h.watch.position > 0).slice(0, 12)
+    ? history.filter((h) => h.watch).slice(0, 12)
     : []
   const favItems = getSetting(settings, 'homeShowFavorites') ? favorites.slice(0, 12) : []
 

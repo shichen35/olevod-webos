@@ -1,35 +1,88 @@
 /*
  * Environment detection + transport selection. This is the ONE place the app is
- * allowed to call fetch(), so the business layer never knows whether it is
- * talking to the network directly (browser/dev) or through the Luna service
- * (real device).
+ * allowed to call fetch() or touch the Luna bus, so the business layer never
+ * knows whether it is talking to the network directly (browser/dev) or through
+ * the Luna service (real device).
  *
  * Two channels (see doc/olevod-api.md §6):
  *   - API JSON  -> Luna service on the real device, direct fetch in the browser.
  *   - Media     -> local HTTP proxy on the real device, unchanged in the browser.
  *
- * This task (T05) implements the browser/direct path in full and fixes the shape
- * of the real-device functions; T22 fills in the Luna bus call and the proxy
- * port wiring. Until then the TV branches safely fall back to direct fetch.
+ * Device mode is handshake-based, not presence-based: PalmSystem existing only
+ * makes us TRY a service ping. The simulator has PalmSystem but no Node service
+ * — the ping times out there and everything stays on direct fetch.
  */
+
+const SERVICE = 'com.olevod.app.service'
+const PING_TIMEOUT_MS = 2000
+const FETCH_TIMEOUT_MS = 10000
 
 // window.PalmSystem is injected only inside the webOS webview.
 export const isTV = typeof window !== 'undefined' && !!window.PalmSystem
 
-// Populated by initTvEnv() on the real device (T22).
+// Populated by initTvEnv() on the real device.
 let serviceReady = false
 let proxyPort = null
 
 /**
- * Startup hook: on the real device, ping the Luna service and retrieve the
- * local proxy port. In the browser this is a no-op. Defined here so the app
- * can `await initTvEnv()` at boot regardless of environment.
+ * One Luna bus call as a Promise. A bus call cannot be truly aborted (same
+ * caveat as transportGet's T05 semantics), so the timeout rejects and lets any
+ * late response fall on the floor.
+ */
+function lunaCall(method, params, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let bridge
+    try {
+      // PalmServiceBridge is the raw bus binding every webOS webview injects —
+      // no webOSTV.js library needed in the bundle.
+      bridge = new window.PalmServiceBridge()
+    } catch (e) {
+      reject(new Error('no luna bridge'))
+      return
+    }
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      try {
+        bridge.cancel()
+      } catch {
+        /* already torn down */
+      }
+      reject(new Error(`luna ${method} timeout`))
+    }, timeoutMs)
+
+    bridge.onservicecallback = (raw) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      try {
+        resolve(JSON.parse(raw))
+      } catch (e) {
+        reject(new Error(`luna ${method} bad response`))
+      }
+    }
+    bridge.call(`luna://${SERVICE}/${method}`, JSON.stringify(params || {}))
+  })
+}
+
+/**
+ * Startup hook, awaited before the first frame (main.jsx): on the real device,
+ * ping the Luna service and learn the actual proxy port (it may have
+ * incremented past its default on conflict). Browser/simulator: no-op /
+ * timeout -> direct mode. Never throws — a dead service just means fallback.
  */
 export async function initTvEnv() {
   if (!isTV) return
-  // T22: com.olevod.app.service ping -> set serviceReady = true and proxyPort.
-  // Left disabled for now so transportGet() falls back to direct fetch on-device
-  // rather than hitting an unimplemented Luna call.
+  try {
+    const res = await lunaCall('ping', {}, PING_TIMEOUT_MS)
+    if (res && res.ok && res.proxyPort) {
+      serviceReady = true
+      proxyPort = res.proxyPort
+    }
+  } catch {
+    // Simulator, or the service failed to start: stay in direct mode.
+  }
 }
 
 // Direct network fetch — the browser/dev path, and the safety-net fallback on
@@ -45,12 +98,15 @@ async function directGet(url, opts = {}) {
   return res.text()
 }
 
-// Real-device Luna transport. Interface fixed now; implemented in T22.
-// NOTE: a Luna bus call cannot be aborted, so callers race it against their own
-// timeout and let a slow call finish in the background.
-// eslint-disable-next-line no-unused-vars
+// Real-device Luna transport: the service fetches api.olelive.com and returns
+// decompressed text. The URL arrives fully built and _vv-signed.
 async function lunaFetch(url) {
-  throw new Error('luna transport not implemented (T22)')
+  const res = await lunaCall('fetch', { url }, FETCH_TIMEOUT_MS)
+  if (!res || res.returnValue !== true) {
+    throw new Error(`luna fetch failed: ${res?.error || 'unknown'}`)
+  }
+  if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`)
+  return res.body
 }
 
 /**
@@ -73,12 +129,25 @@ export async function transportGet(url, opts = {}) {
 /**
  * Map a media (m3u8/.ts) URL to a loadable address.
  * Browser: returned unchanged. Real device: rewritten to the local proxy so the
- * proxy can inject the CDN Referer and pass through Range/CORS (T22).
+ * proxy can inject the CDN Referer and pass through Range/CORS.
  */
 export function mediaUrl(rawUrl) {
-  if (isTV && proxyPort) {
-    // T22: return `http://127.0.0.1:${proxyPort}/media?u=${encodeURIComponent(rawUrl)}`
-    return rawUrl
+  if (isTV && serviceReady && proxyPort) {
+    try {
+      const u = new URL(rawUrl)
+      return `http://127.0.0.1:${proxyPort}/proxy/${u.host}${u.pathname}${u.search}`
+    } catch {
+      return rawUrl
+    }
   }
   return rawUrl
+}
+
+/**
+ * Exit the app (webOS back-chain terminal). Kept here so environment probing
+ * never leaks outside this module.
+ */
+export function exitApp() {
+  if (window.webOS?.platformBack) window.webOS.platformBack()
+  else window.close?.()
 }

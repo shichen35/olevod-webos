@@ -32,6 +32,7 @@ import DetailPage from './pages/DetailPage.jsx'
 import LibraryPage from './pages/LibraryPage.jsx'
 import { getFilter, setFilter } from './store/filters.js'
 import { prefetchAll } from './api/feeds.js'
+import { exitApp } from './api/luna.js'
 import { DEFAULT_SORT } from './config/taxonomy.js'
 
 const DEFAULT_FILTER = { genre: '0', area: '0', year: '0', sort: DEFAULT_SORT }
@@ -123,8 +124,7 @@ export default function App() {
         focusTo(`home/tabbar-0-${idx}`)
         return
       }
-      if (window.webOS?.platformBack) window.webOS.platformBack()
-      else window.close?.()
+      exitApp()
     }
     window.addEventListener('tv-back', onBack)
     return () => window.removeEventListener('tv-back', onBack)

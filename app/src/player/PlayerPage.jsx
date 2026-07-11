@@ -6,7 +6,7 @@
  *   bar hidden: Down = show bar · Up = show the key hint · Left/Right = seek
  *               step (long-press repeats, step grows each held second)
  *               OK = play/pause (pausing shows the bar) · Back = exit
- *   bar shown:  Up = hide bar · Left/Right = bigger seek step · OK = play/pause
+ *   bar shown:  Up = hide bar · Left/Right = same seek step · OK = play/pause
  *               Back = hide bar
  *   Seeks accumulate into a pending target and only commit after the key has
  *   settled for ~500ms — no burst of segment requests while stepping.
@@ -37,11 +37,10 @@ import {
 
 const LAYER = 'player'
 
-const STEP_HIDDEN_S = 15 // tap step with the bar hidden
-const STEP_SHOWN_S = 60 // drag step with the bar shown
+const STEP_S = 15 // seek step per tap, bar shown or hidden (long-press ramps it)
 const SEEK_SETTLE_MS = 500 // commit the pending seek once input settles
 const SEEK_REPEAT_MS = 200 // long-press step cadence (native key repeat, throttled)
-const SEEK_ACCEL_MAX = 5 // long-press: step multiplier grows 1x/held-second up to this
+const SEEK_ACCEL_MAX = 10 // long-press: step multiplier grows 1x/held-second up to this
 const BADGE_LINGER_MS = 800 // keep the target badge up briefly after committing
 const BAR_HIDE_MS = 5000
 
@@ -328,10 +327,10 @@ export default function PlayerPage({ id, episodeIndex }) {
             hideBar()
             return true
           case 'ArrowLeft':
-            stepSeek(-STEP_SHOWN_S, e.repeat)
+            stepSeek(-STEP_S, e.repeat)
             return true
           case 'ArrowRight':
-            stepSeek(STEP_SHOWN_S, e.repeat)
+            stepSeek(STEP_S, e.repeat)
             return true
           case 'Enter':
             togglePlay()
@@ -346,10 +345,10 @@ export default function PlayerPage({ id, episodeIndex }) {
           showBar()
           return true
         case 'ArrowLeft':
-          stepSeek(-STEP_HIDDEN_S, e.repeat)
+          stepSeek(-STEP_S, e.repeat)
           return true
         case 'ArrowRight':
-          stepSeek(STEP_HIDDEN_S, e.repeat)
+          stepSeek(STEP_S, e.repeat)
           return true
         case 'Enter':
           togglePlay()
@@ -591,27 +590,26 @@ export default function PlayerPage({ id, episodeIndex }) {
 
       {/* Control bar — always mounted so the DOM refs stay stable; visibility
           is an instant display toggle. */}
-      <div className="player-bar" style={{ display: barVisible ? 'flex' : 'none' }}>
-        <span className="player-bar-btn">
-          {paused ? (
-            <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-label="播放">
-              <path d="M8 5.5v13a1 1 0 0 0 1.54.84l10.2-6.5a1 1 0 0 0 0-1.68L9.54 4.66A1 1 0 0 0 8 5.5z" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-label="暂停">
-              <path d="M7 5h3.4v14H7zM13.6 5H17v14h-3.4z" />
-            </svg>
-          )}
-        </span>
-        <div className="player-bar-body">
-          <div className="player-track">
-            <div ref={bufferedRef} className="player-track-buffered" />
-            <div ref={playedRef} className="player-track-played" />
-          </div>
-          <div className="player-times">
-            <span ref={curTimeRef}>00:00</span>
-            <span ref={remainRef}>-00:00</span>
-          </div>
+      <div className="player-bar" style={{ display: barVisible ? 'block' : 'none' }}>
+        <div className="player-track">
+          <div ref={bufferedRef} className="player-track-buffered" />
+          <div ref={playedRef} className="player-track-played" />
+        </div>
+        {/* Times row: current | play-pause icon centered | remaining */}
+        <div className="player-bar-row">
+          <span ref={curTimeRef} className="player-time">00:00</span>
+          <span className="player-bar-btn">
+            {paused ? (
+              <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-label="播放">
+                <path d="M8 5.5v13a1 1 0 0 0 1.54.84l10.2-6.5a1 1 0 0 0 0-1.68L9.54 4.66A1 1 0 0 0 8 5.5z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-label="暂停">
+                <path d="M7 5h3.4v14H7zM13.6 5H17v14h-3.4z" />
+              </svg>
+            )}
+          </span>
+          <span ref={remainRef} className="player-time player-time-remain">-00:00</span>
         </div>
       </div>
 

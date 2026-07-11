@@ -53,31 +53,37 @@
   color: var(--text-2);
 }
 
-/* --- Control bar: floating glass panel, play/pause icon + track + times --- */
+/* --- Control bar: floating glass panel — track on top, then a row with the
+   times at the edges and the play/pause icon dead-center --- */
 .player-bar {
   position: absolute;
   left: var(--safe-x);
   right: var(--safe-x);
   bottom: 48px;
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  padding: 24px 36px;
+  padding: 24px 36px 16px;
   border-radius: 28px;
   background: var(--glass-strong);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   backdrop-filter: blur(40px) saturate(180%);
   border: 1px solid var(--glass-edge);
 }
+/* 1fr | auto | 1fr keeps the icon centered regardless of the time widths. */
+.player-bar-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
 .player-bar-btn {
-  flex: 0 0 auto;
   display: flex;
   align-items: center;
   color: var(--text);
 }
-.player-bar-body {
-  flex: 1 1 auto;
-  min-width: 0;
+.player-time {
+  font-size: var(--fs-label);
+  color: var(--text-2);
+}
+.player-time-remain {
+  text-align: right;
 }
 
 /* Track: rounded pill; unplayed = translucent base, buffered above it,
@@ -88,7 +94,7 @@
   border-radius: 999px;
   overflow: hidden;
   background: var(--glass-active);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 .player-track-buffered {
   position: absolute;
@@ -105,13 +111,6 @@
   left: 0;
   width: 0;
   background: var(--focus);
-}
-
-.player-times {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--fs-label);
-  color: var(--text-2);
 }
 
 /* --- Resume toast: glass pill, top-right (title chip owns the top-left) --- */

@@ -7,7 +7,7 @@
   background: var(--bg);
 }
 
-/* --- Tab bar --- */
+/* --- Tab bar: floating frosted-glass capsule (Apple Liquid Glass style) --- */
 .tabbar {
   position: absolute;
   top: 0;
@@ -16,9 +16,23 @@
   height: var(--tabbar-h);
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 var(--safe-x);
-  background: var(--bg); /* opaque; no gradient scrim over the content */
+  justify-content: center;
+  z-index: 1; /* above the tab-content scrollers that extend beneath it */
+  /* The bar itself is fully transparent; the glass lives on the capsule so
+     content scrolling past shows through around it. */
+}
+
+.tabbar-glass {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-edge); /* hairline highlight rim */
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35); /* static lift, painted once */
 }
 
 .tab {
@@ -26,10 +40,11 @@
   color: var(--text-2);
   padding: 8px 28px;
   border: var(--focus-border) solid transparent;
-  border-radius: 8px;
+  border-radius: 999px;
 }
 .tab-active {
   color: var(--text);
+  background: var(--glass-active);
 }
 /* Focus wins over selected: solid white fill, dark text, switched instantly. */
 .tab.focused {
@@ -38,15 +53,19 @@
   border-color: var(--focus);
 }
 
-/* --- Per-tab content area (the sole scroll container) --- */
+/* --- Per-tab content area (the sole scroll container) ---
+   Starts at the very top so scrolled content passes under the translucent tab
+   bar; the top padding keeps the resting position below it. Focused elements
+   never hide under the bar: the global [data-focus-id] scroll-margin (120px)
+   exceeds the bar height. */
 .tab-content {
   position: absolute;
-  top: var(--content-top);
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   overflow-y: auto;
-  padding: 0 var(--safe-x) var(--content-bottom);
+  padding: var(--content-top) var(--safe-x) var(--content-bottom);
 }
 
 /* --- Overlays (detail / player) --- */

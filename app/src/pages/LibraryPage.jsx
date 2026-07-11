@@ -1,8 +1,8 @@
 /*
  * Library ("我的") tab: three segments — Favorites / History / Settings — with
  * the same focus-hover auto-switch as the tab bar. Favorites and History are
- * 6-column card grids fed live from the stores; Settings is a single-column list
- * (clear history via ConfirmDialog, plus an About row).
+ * 6-column card grids fed live from the stores; Settings is a grouped list
+ * (clear history via ConfirmDialog) with the app version as a plain label below.
  */
 import { useCallback, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
@@ -72,7 +72,6 @@ function SettingsRow({ group, row, label, kind, onSelect }) {
 export default function LibraryPage({ group = 'content', onOpenDetail }) {
   const [seg, setSeg] = useState('fav')
   const [confirmClear, setConfirmClear] = useState(false)
-  const [aboutOpen, setAboutOpen] = useState(false)
   const debounceRef = useRef(null)
 
   const favorites = useStoreValue(favoritesStore)
@@ -106,13 +105,12 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
       {seg === 'fav' && <CardGrid items={favorites} group={group} onOpenDetail={onOpenDetail} />}
       {seg === 'history' && <CardGrid items={history} group={group} onOpenDetail={onOpenDetail} withEp />}
       {seg === 'settings' && (
-        <div className="settings-list">
-          <SettingsRow group={group} row={1} label="清除观看历史" kind="danger" onSelect={() => setConfirmClear(true)} />
-          <SettingsRow group={group} row={2} label="关于（版本 1.0.0）" onSelect={() => setAboutOpen((v) => !v)} />
-          {aboutOpen && (
-            <div className="settings-about">OleVod webOS TV · 数据来源 api.olelive.com</div>
-          )}
-        </div>
+        <>
+          <div className="settings-list">
+            <SettingsRow group={group} row={1} label="清除观看历史" kind="danger" onSelect={() => setConfirmClear(true)} />
+          </div>
+          <div className="settings-version">版本 {__APP_VERSION__}</div>
+        </>
       )}
 
       {confirmClear && (

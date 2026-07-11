@@ -80,6 +80,12 @@ function applyFocus(newId) {
       el.classList.add('focused')
       // Always instant — no smooth scrolling anywhere in the app.
       el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+      // Topmost row of a scrolling page: snap the scroller all the way up so
+      // the heading above the first row (which 'nearest' leaves clipped) shows.
+      if (rec && rec.row === 0 && rec.group !== 'tabbar') {
+        const scroller = el.closest('.tab-content, .overlay')
+        if (scroller) scroller.scrollTop = 0
+      }
     }
     // If el is null the element is not mounted yet; useLayoutEffect self-heals
     // the class once it commits (see useFocusable below).

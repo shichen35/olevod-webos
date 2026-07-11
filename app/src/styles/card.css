@@ -40,7 +40,7 @@
   height: 360px;
   background: var(--bg-elev);
   overflow: hidden;
-  border-radius: 6px;
+  border-radius: 12px;
 }
 
 .thumb {

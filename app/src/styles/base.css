@@ -77,20 +77,23 @@ button {
  */
 
 /* Cards: reserve the border slot up front (transparent) so adding the focus
-   border never shifts layout. */
+   border never shifts layout. Radius = poster radius (12px) + border width,
+   so the focus ring hugs the rounded poster corners. */
 .focusable-card {
   border: var(--focus-border) solid transparent;
+  border-radius: 15px;
 }
 .focusable-card.focused {
   border-color: var(--focus);
 }
 
-/* Buttons / chips: unfocused is an elevated opaque fill; focused inverts to a
-   solid white fill with dark text, switched instantly. */
+/* Buttons / chips: pill-shaped, unfocused is an elevated opaque fill; focused
+   inverts to a solid white fill with dark text, switched instantly. */
 .focusable-chip {
   background: var(--bg-elev-2);
   color: var(--text);
   border: var(--focus-border) solid transparent;
+  border-radius: 999px;
 }
 .focusable-chip.focused {
   background: var(--focus);

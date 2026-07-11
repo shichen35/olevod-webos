@@ -5,22 +5,29 @@
   padding-top: 16px;
 }
 
-/* --- Segment control (row 0) --- */
+/* --- Segment control (row 0): glass capsule, same material as the tab bar --- */
 .segments {
-  display: flex;
-  gap: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-edge);
 }
 .seg {
   font-size: var(--fs-label);
   color: var(--text-2);
   padding: 8px 28px;
   border: var(--focus-border) solid transparent;
-  border-radius: 8px;
+  border-radius: 999px;
 }
 .seg-active {
   color: var(--text);
-  border-bottom-color: var(--accent);
+  background: var(--glass-active);
 }
 .seg.focused {
   background: var(--focus);
@@ -35,26 +42,39 @@
   font-size: var(--fs-body);
 }
 
-/* --- Settings list --- */
+/* --- Settings: iOS-style inset grouped list + version caption below --- */
 .settings-list {
   max-width: 900px;
+  padding: 6px;
+  border-radius: 20px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-edge);
 }
 .settings-row {
   font-size: var(--fs-body);
   padding: 20px 24px;
-  border-radius: 8px;
+  border-radius: 14px;
   border: var(--focus-border) solid transparent;
 }
 .settings-row-danger {
   color: var(--text);
 }
-.settings-about {
-  padding: 16px 24px;
+/* tvOS list focus: solid white fill, dark text (overrides .focusable-row). */
+.settings-row.focused {
+  background: var(--focus);
+  color: var(--focus-text);
+}
+.settings-version {
+  max-width: 900px;
+  margin-top: 20px;
+  text-align: center;
   color: var(--text-3);
   font-size: var(--fs-caption);
 }
 
-/* --- Confirm dialog (centered opaque card, no scrim) --- */
+/* --- Confirm dialog: centered frosted-glass alert card, no scrim --- */
 .dialog-wrap {
   position: fixed;
   inset: 0;
@@ -64,9 +84,11 @@
 }
 .dialog {
   width: 640px;
-  background: var(--bg-elev);
-  border: 2px solid var(--bg-elev-2);
-  border-radius: 16px;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-edge);
+  border-radius: 24px;
   padding: 44px 40px 32px;
 }
 .dialog-title {
@@ -89,8 +111,8 @@
   width: 100%;
   font-size: var(--fs-label);
   padding: 18px 0;
-  border-radius: 10px;
-  background: var(--bg-elev-2);
+  border-radius: 14px;
+  background: var(--glass-active);
   color: var(--text);
   border: var(--focus-border) solid transparent;
 }

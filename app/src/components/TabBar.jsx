@@ -34,23 +34,25 @@ export default function TabBar({ activeTab, onHoverTab, onCommitTab }) {
 
   return (
     <div className="tabbar">
-      {TABS.map((tab, i) => (
-        <TabItem
-          key={tab.key}
-          tab={tab}
-          col={i}
-          active={tab.key === activeTab}
-          onHover={() => {
-            clearTimeout(debounceRef.current)
-            // Debounce so quickly passing through tabs doesn't flash a load.
-            debounceRef.current = setTimeout(() => onHoverTab(tab.key), 150)
-          }}
-          onSelect={() => {
-            clearTimeout(debounceRef.current)
-            onCommitTab(tab.key)
-          }}
-        />
-      ))}
+      <div className="tabbar-glass">
+        {TABS.map((tab, i) => (
+          <TabItem
+            key={tab.key}
+            tab={tab}
+            col={i}
+            active={tab.key === activeTab}
+            onHover={() => {
+              clearTimeout(debounceRef.current)
+              // Debounce so quickly passing through tabs doesn't flash a load.
+              debounceRef.current = setTimeout(() => onHoverTab(tab.key), 150)
+            }}
+            onSelect={() => {
+              clearTimeout(debounceRef.current)
+              onCommitTab(tab.key)
+            }}
+          />
+        ))}
+      </div>
     </div>
   )
 }

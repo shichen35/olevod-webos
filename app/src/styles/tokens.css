@@ -6,11 +6,24 @@
  *   - All colors are opaque hex. No rgba(), no opacity layering, no gradients.
  *   - No shadows, no blur, no translucency. A "dimmed" look is achieved with a
  *     darker opaque surface token, never with alpha.
+ *   - Single sanctioned exception: the --glass-* material (translucent fill +
+ *     backdrop blur, Apple Liquid Glass style). It is reserved for chrome
+ *     surfaces — the tab bar / segment capsules, the settings group, the
+ *     filter panel sheet, and dialogs. These are small or static regions and
+ *     the app only scrolls in instant steps, so the GPU pays one repaint per
+ *     keypress, not per frame. Content surfaces (cards, grids, text) stay
+ *     fully opaque; nothing outside --glass-* may use alpha or blur.
  * Sizes are annotated directly in real 1920x1080 px (no logical stage + scale).
  */
 :root {
   /* --- Surfaces (opaque, darkest -> lightest elevation) --- */
   --bg: #0e0e11;          /* global background */
+
+  /* --- Frosted-glass material (the one sanctioned alpha exception) --- */
+  --glass-bg: rgba(28, 28, 34, 0.55);        /* capsule/group fill over blurred content */
+  --glass-strong: rgba(24, 24, 30, 0.7);     /* denser fill: sheets and dialogs */
+  --glass-edge: rgba(255, 255, 255, 0.14);   /* hairline highlight rim */
+  --glass-active: rgba(255, 255, 255, 0.12); /* selected pill / button fill (unfocused) */
   --bg-elev: #1c1c21;     /* panels / dialogs */
   --bg-elev-2: #2a2a31;   /* unfocused button / chip background, focused row */
 

@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 
 // webOS 24 ships Chromium 108; newer JS/CSS syntax silently breaks on the TV,
 // so pin the build target. `base:'./'` emits relative asset paths for file://
@@ -8,6 +11,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: './',
+  // Single version source: package.json (webos-meta/appinfo.json must match).
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   build: {
     target: 'chrome108',
     rollupOptions: {

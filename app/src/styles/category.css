@@ -26,12 +26,11 @@
   flex: 0 0 auto;
   font-size: var(--fs-label);
   padding: 8px 22px;
-  border-radius: 8px;
+  border-radius: 999px;
 }
-/* Selected is distinct from focus: an accent underline bar via border-bottom. */
+/* Selected is distinct from focus (white fill): accent-tinted text. */
 .chip-selected {
-  color: var(--text);
-  border-bottom-color: var(--accent);
+  color: var(--accent);
 }
 
 .filter-summary {

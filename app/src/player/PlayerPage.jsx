@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { detail as fetchDetail, streamUrl } from '../api/olevod.js'
 import * as pageCache from '../store/pageCache.js'
+import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
 import {
   useFocusable,
   pushFocusLayer,
@@ -41,6 +42,11 @@ const SEEK_SETTLE_MS = 500 // commit the pending seek once input settles
 const SEEK_REPEAT_MS = 200 // long-press step cadence (native key repeat, throttled)
 const BADGE_LINGER_MS = 800 // keep the target badge up briefly after committing
 const BAR_HIDE_MS = 5000
+
+const PROGRESS_FLUSH_MS = 5000 // persist watch progress cadence
+const RESUME_MIN_S = 30 // only resume when more than this was watched
+const FINISHED_TAIL_S = 15 // this close to the end counts as finished
+const TOAST_MS = 3000
 
 function fmtTime(s) {
   if (!Number.isFinite(s) || s < 0) s = 0
@@ -104,6 +110,8 @@ export default function PlayerPage({ id, episodeIndex }) {
   const [status, setStatus] = useState('loading') // loading | ok | error
   const [attempt, setAttempt] = useState(0) // bump to tear down and retry
   const [barVisible, setBarVisible] = useState(false)
+  const [toast, setToast] = useState(null) // resume notice; static, 3s
+  const toastTimerRef = useRef(null)
 
   const statusRef = useRef(status)
   statusRef.current = status
@@ -149,7 +157,13 @@ export default function PlayerPage({ id, episodeIndex }) {
     setBarVisible(false)
   }, [])
 
-  useEffect(() => () => clearTimeout(hideTimerRef.current), [])
+  useEffect(
+    () => () => {
+      clearTimeout(hideTimerRef.current)
+      clearTimeout(toastTimerRef.current)
+    },
+    [],
+  )
 
   // ---------------------------------------------------------------------
   // seeking — accumulate, preview, commit on settle
@@ -316,9 +330,58 @@ export default function PlayerPage({ id, episodeIndex }) {
     const video = videoRef.current
     let hls = null
     let cancelled = false
+    let started = false // first 'playing' of THIS episode load
+    let resumeCorrected = false
     setStatus('loading')
 
-    const onPlaying = () => setStatus('ok')
+    // Resume decision (T18): same episode, meaningfully into it.
+    const watch = getWatchState(id)
+    const resumePos =
+      watch && watch.lastEpisodeIndex === curEp && watch.position > RESUME_MIN_S
+        ? watch.position
+        : 0
+
+    // Persist progress: near the end counts as finished -> reset to zero so the
+    // next play starts clean and stops counting as a resume.
+    const flushProgress = () => {
+      const dur = video.duration
+      if (!started || !Number.isFinite(dur) || dur <= 0) return
+      const pos = dur - video.currentTime <= FINISHED_TAIL_S ? 0 : video.currentTime
+      recordProgress(id, curEp, pos, dur)
+    }
+    const flushTimer = setInterval(() => {
+      if (started && !video.paused) flushProgress()
+    }, PROGRESS_FLUSH_MS)
+
+    const onPlaying = () => {
+      setStatus('ok')
+      // hls.js can snap the first frame back to 0 — correct once.
+      if (resumePos > 0 && !resumeCorrected) {
+        resumeCorrected = true
+        if (video.currentTime < resumePos - 3) video.currentTime = resumePos
+      }
+      if (!started) {
+        started = true
+        recordHistory({
+          id: data.id,
+          name: data.title,
+          pic: data.pic,
+          score: data.rating,
+          remarks: data.remarks,
+          year: data.year,
+          area: data.region,
+        })
+        if (resumePos > 0) {
+          setToast(`已从 ${fmtTime(resumePos)} 继续播放`)
+          clearTimeout(toastTimerRef.current)
+          toastTimerRef.current = setTimeout(() => setToast(null), TOAST_MS)
+        }
+      }
+    }
+    const onLoadedMeta = () => {
+      // Native-HLS resume: seek as soon as the duration is known.
+      if (resumePos > 0 && video.currentTime < resumePos - 3) video.currentTime = resumePos
+    }
     const onVideoError = () => setStatus('error')
     const onPause = () => {
       // Any pause surfaces the bar (remote OK, or a future system event).
@@ -345,6 +408,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       bufferedRef.current.style.width = `${(end / dur) * 100}%`
     }
     video.addEventListener('playing', onPlaying)
+    video.addEventListener('loadedmetadata', onLoadedMeta)
     video.addEventListener('error', onVideoError)
     video.addEventListener('pause', onPause)
     video.addEventListener('timeupdate', onTime)
@@ -380,7 +444,8 @@ export default function PlayerPage({ id, episodeIndex }) {
             hls.startLevel = lvl
             hls.autoLevelCapping = lvl // ABR stays below UHD; manual switch is T20
           }
-          hls.startLoad()
+          // Resume at load time — starting at 0 and seeking would double-buffer.
+          hls.startLoad(resumePos > 0 ? resumePos : -1)
           video.play().catch(() => {})
         })
         hls.on(Hls.Events.ERROR, (_evt, info) => {
@@ -395,7 +460,12 @@ export default function PlayerPage({ id, episodeIndex }) {
 
     return () => {
       cancelled = true
+      // Flush the outgoing episode's progress before teardown — covers exit,
+      // retry, and episode switches alike.
+      clearInterval(flushTimer)
+      flushProgress()
       video.removeEventListener('playing', onPlaying)
+      video.removeEventListener('loadedmetadata', onLoadedMeta)
       video.removeEventListener('error', onVideoError)
       video.removeEventListener('pause', onPause)
       video.removeEventListener('timeupdate', onTime)
@@ -433,6 +503,8 @@ export default function PlayerPage({ id, episodeIndex }) {
 
       {/* Seek target badge (« / » + mm:ss), shared by both seek modes. */}
       <div ref={badgeRef} className="player-seek-badge" style={{ display: 'none' }} />
+
+      {toast && <div className="player-toast">{toast}</div>}
 
       {status === 'loading' && <div className="player-status">加载中…</div>}
       {status === 'error' && (

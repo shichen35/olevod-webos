@@ -12,7 +12,7 @@ import Thumb from '../components/Thumb.jsx'
 import { useFocusable, pushFocusLayer, popFocusLayer, focusTo } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore, toggle as toggleFavorite } from '../store/favorites.js'
-import { getWatchState } from '../store/history.js'
+import { historyStore } from '../store/history.js'
 import * as pageCache from '../store/pageCache.js'
 
 const LAYER = 'detail'
@@ -52,6 +52,9 @@ export default function DetailPage({ id, onPlay, style }) {
   const [status, setStatus] = useState('loading')
   const favorites = useStoreValue(favoritesStore)
   const isFav = favorites.some((x) => x.id === id)
+  // Subscribed (not a one-shot read): closing the player must immediately flip
+  // the primary button to "continue watching episode N" (T18).
+  const history = useStoreValue(historyStore)
 
   const load = useCallback(() => {
     setStatus('loading')
@@ -97,7 +100,7 @@ export default function DetailPage({ id, onPlay, style }) {
   const episodes = data.episodes || []
   // Episodes are newest-first, so episode 1 is the last entry.
   const firstEp = episodes[episodes.length - 1]
-  const watch = getWatchState(id)
+  const watch = history.find((x) => x.id === id)?.watch || null
   const canResume =
     watch && watch.position > 30 && episodes.some((e) => e.index === watch.lastEpisodeIndex)
   const resumeIndex = canResume ? watch.lastEpisodeIndex : null

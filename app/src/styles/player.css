@@ -82,6 +82,18 @@
   color: var(--text-2);
 }
 
+/* --- Resume toast (T18): static opaque card, top-left, removed after 3s --- */
+.player-toast {
+  position: absolute;
+  top: 48px;
+  left: var(--safe-x);
+  background: var(--bg-elev);
+  border: 2px solid var(--bg-elev-2);
+  padding: 14px 28px;
+  font-size: var(--fs-label);
+  color: var(--text);
+}
+
 /* --- Seek target badge: static, centered above the bar area --- */
 .player-seek-badge {
   position: absolute;

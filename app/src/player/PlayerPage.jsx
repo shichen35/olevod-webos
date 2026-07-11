@@ -48,6 +48,8 @@ const RESUME_MIN_S = 30 // only resume when more than this was watched
 const FINISHED_TAIL_S = 15 // this close to the end counts as finished
 const TOAST_MS = 3000
 
+const UP_NEXT_S = 30 // remaining time that surfaces the Up Next card
+
 function fmtTime(s) {
   if (!Number.isFinite(s) || s < 0) s = 0
   s = Math.floor(s)
@@ -112,11 +114,23 @@ export default function PlayerPage({ id, episodeIndex }) {
   const [barVisible, setBarVisible] = useState(false)
   const [toast, setToast] = useState(null) // resume notice; static, 3s
   const toastTimerRef = useRef(null)
+  const [upNext, setUpNext] = useState(false) // Up Next card visible
+  const [switching, setSwitching] = useState(false) // episode-change reload
 
   const statusRef = useRef(status)
   statusRef.current = status
   const barRef = useRef(barVisible)
   barRef.current = barVisible
+  const upNextRef = useRef(upNext)
+  upNextRef.current = upNext
+  const upNextDismissedRef = useRef(false) // per-episode: Back/Up dismissed it
+
+  // "Next" in a newest-first list is the entry BEFORE the current one.
+  const epList = data?.episodes || []
+  const curIdx = epList.findIndex((e) => e.index === curEp)
+  const nextEpIndex = curIdx > 0 ? epList[curIdx - 1].index : null
+  const nextEpRef = useRef(null)
+  nextEpRef.current = nextEpIndex
 
   // High-frequency playback feedback goes straight to these DOM nodes.
   const playedRef = useRef(null)
@@ -216,6 +230,20 @@ export default function PlayerPage({ id, episodeIndex }) {
     [],
   )
 
+  // Switch episodes WITHOUT exiting the player: the playback effect's cleanup
+  // flushes the outgoing episode's progress, then the new run reloads the URL
+  // through the same quality-selection path.
+  const switchEpisode = useCallback((n) => {
+    if (n == null) return
+    upNextDismissedRef.current = false
+    setUpNext(false)
+    setSwitching(true)
+    setBarVisible(false)
+    setCurEp(n)
+  }, [])
+  const switchEpisodeRef = useRef(switchEpisode)
+  switchEpisodeRef.current = switchEpisode
+
   const togglePlay = useCallback(() => {
     const v = videoRef.current
     if (!v) return
@@ -240,6 +268,20 @@ export default function PlayerPage({ id, episodeIndex }) {
         // Loading: swallow nav/OK so keys can't leak to the detail layer
         // beneath; Back falls through and exits the player.
         return !isBackKey(e) && (e.key === 'Enter' || (e.key || '').startsWith('Arrow'))
+      }
+
+      // Up Next card takes OK (switch now) and Up/Back (dismiss) first; other
+      // keys keep their normal meaning while the card is up.
+      if (upNextRef.current) {
+        if (e.key === 'Enter') {
+          switchEpisodeRef.current(nextEpRef.current)
+          return true
+        }
+        if (isBackKey(e) || e.key === 'ArrowUp') {
+          upNextDismissedRef.current = true
+          setUpNext(false)
+          return true
+        }
       }
 
       if (isBackKey(e)) {
@@ -355,6 +397,7 @@ export default function PlayerPage({ id, episodeIndex }) {
 
     const onPlaying = () => {
       setStatus('ok')
+      setSwitching(false)
       // hls.js can snap the first frame back to 0 — correct once.
       if (resumePos > 0 && !resumeCorrected) {
         resumeCorrected = true
@@ -396,6 +439,26 @@ export default function PlayerPage({ id, episodeIndex }) {
       }
       if (curTimeRef.current) curTimeRef.current.textContent = fmtTime(video.currentTime)
       if (remainRef.current) remainRef.current.textContent = `-${fmtTime(dur - video.currentTime)}`
+      // Up Next: surface once per episode when the tail comes into view.
+      if (
+        started &&
+        !upNextRef.current &&
+        !upNextDismissedRef.current &&
+        nextEpRef.current != null &&
+        dur - video.currentTime <= UP_NEXT_S
+      ) {
+        setUpNext(true)
+      }
+    }
+    const onEnded = () => {
+      // The finished-tail rule zeroes this episode's progress on flush.
+      flushProgress()
+      if (nextEpRef.current != null) {
+        switchEpisodeRef.current(nextEpRef.current)
+      } else {
+        // Last episode: leave the player; focus restores in the detail layer.
+        window.dispatchEvent(new CustomEvent('tv-back'))
+      }
     }
     const onProgress = () => {
       const dur = video.duration
@@ -413,6 +476,7 @@ export default function PlayerPage({ id, episodeIndex }) {
     video.addEventListener('pause', onPause)
     video.addEventListener('timeupdate', onTime)
     video.addEventListener('progress', onProgress)
+    video.addEventListener('ended', onEnded)
 
     ;(async () => {
       try {
@@ -470,6 +534,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       video.removeEventListener('pause', onPause)
       video.removeEventListener('timeupdate', onTime)
       video.removeEventListener('progress', onProgress)
+      video.removeEventListener('ended', onEnded)
       if (hls) hls.destroy()
       // Drop the native source too so no segment request outlives the page.
       video.removeAttribute('src')
@@ -506,7 +571,21 @@ export default function PlayerPage({ id, episodeIndex }) {
 
       {toast && <div className="player-toast">{toast}</div>}
 
-      {status === 'loading' && <div className="player-status">加载中…</div>}
+      {/* Up Next (T19): opaque card, bottom-right; OK switches immediately. */}
+      {upNext && nextEpIndex != null && (
+        <div className="player-upnext">
+          <div className="player-upnext-label">即将播放</div>
+          <div className="player-upnext-ep">第{nextEpIndex}集</div>
+          <div className="player-upnext-hint">按 OK 立即播放</div>
+        </div>
+      )}
+
+      {status === 'loading' && (
+        <div className="player-status">
+          {switching ? `正在加载 第${curEp}集…` : '加载中…'}
+        </div>
+      )}
+
       {status === 'error' && (
         <div className="player-status">
           <RetryButton onRetry={() => setAttempt((n) => n + 1)} />

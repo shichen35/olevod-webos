@@ -94,6 +94,31 @@
   color: var(--text);
 }
 
+/* --- Up Next card (T19): opaque, bottom-right, appears instantly --- */
+.player-upnext {
+  position: absolute;
+  right: var(--safe-x);
+  bottom: 220px;
+  background: var(--bg-elev);
+  border: 2px solid var(--text-3);
+  padding: 24px 36px;
+  text-align: center;
+}
+.player-upnext-label {
+  font-size: var(--fs-caption);
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+.player-upnext-ep {
+  font-size: var(--fs-heading);
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.player-upnext-hint {
+  font-size: var(--fs-caption);
+  color: var(--text-2);
+}
+
 /* --- Seek target badge: static, centered above the bar area --- */
 .player-seek-badge {
   position: absolute;

@@ -26,6 +26,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detail as fetchDetail, streamUrl } from '../api/olevod.js'
 import * as pageCache from '../store/pageCache.js'
 import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
+import { getSetting, setSetting } from '../store/settings.js'
+import PlayerPanel from './PlayerPanel.jsx'
 import {
   useFocusable,
   pushFocusLayer,
@@ -116,6 +118,11 @@ export default function PlayerPage({ id, episodeIndex }) {
   const toastTimerRef = useRef(null)
   const [upNext, setUpNext] = useState(false) // Up Next card visible
   const [switching, setSwitching] = useState(false) // episode-change reload
+  const [panelOpen, setPanelOpen] = useState(false) // bottom panel (T20)
+  const [hint, setHint] = useState(false) // one-time first-run key hint
+  const [speed, setSpeed] = useState(1) // persists across episode switches
+  const [qualityLevels, setQualityLevels] = useState([]) // hls.js path only
+  const [curLevel, setCurLevel] = useState(-1) // -1 = auto (ABR)
 
   const statusRef = useRef(status)
   statusRef.current = status
@@ -124,6 +131,14 @@ export default function PlayerPage({ id, episodeIndex }) {
   const upNextRef = useRef(upNext)
   upNextRef.current = upNext
   const upNextDismissedRef = useRef(false) // per-episode: Back/Up dismissed it
+  const panelRef = useRef(panelOpen)
+  panelRef.current = panelOpen
+  const hintRef = useRef(hint)
+  hintRef.current = hint
+  const speedRef = useRef(speed)
+  speedRef.current = speed
+  const hlsRef = useRef(null) // live hls.js instance (quality switching)
+  const capRef = useRef(-1) // the sub-1440p auto-cap chosen at manifest parse
 
   // "Next" in a newest-first list is the entry BEFORE the current one.
   const epList = data?.episodes || []
@@ -230,6 +245,50 @@ export default function PlayerPage({ id, episodeIndex }) {
     [],
   )
 
+  // ---------------------------------------------------------------------
+  // panel + speed + quality (T20)
+  // ---------------------------------------------------------------------
+  const openPanel = useCallback(() => {
+    clearTimeout(hideTimerRef.current) // bar stays put behind the panel
+    setPanelOpen(true)
+  }, [])
+  const closePanel = useCallback(() => {
+    setPanelOpen(false)
+    showBar() // collapse back to the control bar, auto-hide re-armed
+  }, [showBar])
+
+  const applySpeed = useCallback((s) => {
+    setSpeed(s)
+    const v = videoRef.current
+    if (v) v.playbackRate = s
+  }, [])
+
+  const applyQuality = useCallback((i) => {
+    setCurLevel(i)
+    const hls = hlsRef.current
+    if (!hls) return
+    if (i === -1) {
+      // Back to ABR, re-capped below the UHD tier.
+      hls.autoLevelCapping = capRef.current
+      hls.currentLevel = -1
+    } else {
+      // Manual pin (UHD included): uncap, then lock the level — no ABR fallback.
+      hls.autoLevelCapping = -1
+      hls.currentLevel = i
+    }
+  }, [])
+
+  // First-run hint: once per install (settings-backed); any key or 3s ends it.
+  const hintArmedRef = useRef(false)
+  useEffect(() => {
+    if (!hintArmedRef.current && getSetting('playerHintShown')) return
+    hintArmedRef.current = true
+    setSetting('playerHintShown', true)
+    setHint(true)
+    const t = setTimeout(() => setHint(false), TOAST_MS)
+    return () => clearTimeout(t)
+  }, [])
+
   // Switch episodes WITHOUT exiting the player: the playback effect's cleanup
   // flushes the outgoing episode's progress, then the new run reloads the URL
   // through the same quality-selection path.
@@ -270,6 +329,19 @@ export default function PlayerPage({ id, episodeIndex }) {
         return !isBackKey(e) && (e.key === 'Enter' || (e.key || '').startsWith('Arrow'))
       }
 
+      // Any key dismisses the first-run hint, then keeps its normal meaning.
+      if (hintRef.current) setHint(false)
+
+      // Panel open: Back collapses it to the control bar; arrows/OK pass
+      // through to the focus engine, which drives the panel's focusables.
+      if (panelRef.current) {
+        if (isBackKey(e)) {
+          closePanel()
+          return true
+        }
+        return false
+      }
+
       // Up Next card takes OK (switch now) and Up/Back (dismiss) first; other
       // keys keep their normal meaning while the card is up.
       if (upNextRef.current) {
@@ -299,7 +371,7 @@ export default function PlayerPage({ id, episodeIndex }) {
             hideBar()
             return true
           case 'ArrowDown':
-            // T20 hook: opens the player panel.
+            openPanel()
             return true
           case 'ArrowLeft':
             stepSeek(-STEP_SHOWN_S, e.repeat)
@@ -338,7 +410,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       setCustomKeyHandler(null)
       popFocusLayer()
     }
-  }, [armHideTimer, hideBar, showBar, stepSeek, togglePlay])
+  }, [armHideTimer, hideBar, showBar, stepSeek, togglePlay, openPanel, closePanel])
 
   // The error state has this layer's only focusable; land on it deterministically.
   useEffect(() => {
@@ -375,6 +447,9 @@ export default function PlayerPage({ id, episodeIndex }) {
     let started = false // first 'playing' of THIS episode load
     let resumeCorrected = false
     setStatus('loading')
+    // Quality state is per-stream; a fresh episode re-parses its own master.
+    setQualityLevels([])
+    setCurLevel(-1)
 
     // Resume decision (T18): same episode, meaningfully into it.
     const watch = getWatchState(id)
@@ -424,6 +499,8 @@ export default function PlayerPage({ id, episodeIndex }) {
     const onLoadedMeta = () => {
       // Native-HLS resume: seek as soon as the duration is known.
       if (resumePos > 0 && video.currentTime < resumePos - 3) video.currentTime = resumePos
+      // The chosen speed survives episode switches and reloads.
+      video.playbackRate = speedRef.current
     }
     const onVideoError = () => setStatus('error')
     const onPause = () => {
@@ -502,12 +579,17 @@ export default function PlayerPage({ id, episodeIndex }) {
           playlistLoadPolicy: LOAD_POLICY,
           fragLoadPolicy: LOAD_POLICY,
         })
+        hlsRef.current = hls
         hls.on(Hls.Events.MANIFEST_PARSED, (_evt, parsed) => {
-          const lvl = pickStartLevel(parsed.levels || [])
+          const levels = parsed.levels || []
+          const lvl = pickStartLevel(levels)
+          capRef.current = lvl
           if (lvl >= 0) {
             hls.startLevel = lvl
-            hls.autoLevelCapping = lvl // ABR stays below UHD; manual switch is T20
+            hls.autoLevelCapping = lvl // ABR stays below UHD; manual switch via panel
           }
+          // Surface every tier (UHD included) for the panel's quality tab.
+          setQualityLevels(levels.map((l, i) => ({ i, height: l.height, bitrate: l.bitrate })))
           // Resume at load time — starting at 0 and seeking would double-buffer.
           hls.startLoad(resumePos > 0 ? resumePos : -1)
           video.play().catch(() => {})
@@ -535,6 +617,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       video.removeEventListener('timeupdate', onTime)
       video.removeEventListener('progress', onProgress)
       video.removeEventListener('ended', onEnded)
+      hlsRef.current = null
       if (hls) hls.destroy()
       // Drop the native source too so no segment request outlives the page.
       video.removeAttribute('src')
@@ -577,6 +660,31 @@ export default function PlayerPage({ id, episodeIndex }) {
           <div className="player-upnext-label">即将播放</div>
           <div className="player-upnext-ep">第{nextEpIndex}集</div>
           <div className="player-upnext-hint">按 OK 立即播放</div>
+        </div>
+      )}
+
+      {panelOpen && (
+        <PlayerPanel
+          episodes={epList}
+          curEp={curEp}
+          speed={speed}
+          qualityLevels={qualityLevels}
+          curLevel={curLevel}
+          onSwitchEpisode={(n) => {
+            setPanelOpen(false)
+            switchEpisode(n)
+          }}
+          onSetSpeed={applySpeed}
+          onSetQuality={applyQuality}
+          onClose={closePanel}
+        />
+      )}
+
+      {hint && (
+        <div className="player-hint">
+          <div className="player-hint-title">遥控键位</div>
+          <div>OK 播放 / 暂停 · 左右键快退快进</div>
+          <div>下键调出控制条，再按下键打开面板 · 返回键逐层退出</div>
         </div>
       )}
 

@@ -119,6 +119,56 @@
   color: var(--text-2);
 }
 
+/* --- Bottom panel (T20): opaque sheet over the control bar --- */
+.player-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 560px;
+  overflow-y: auto;
+  background: var(--bg-elev);
+  border-top: 2px solid var(--bg-elev-2);
+  padding: 28px var(--safe-x) 36px;
+}
+.player-panel-tabs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.player-panel-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.player-panel-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* --- First-run key hint (T20): one-time static card, centered --- */
+.player-hint {
+  position: absolute;
+  top: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elev);
+  border: 2px solid var(--bg-elev-2);
+  padding: 24px 40px;
+  text-align: center;
+  font-size: var(--fs-label);
+  color: var(--text-2);
+}
+.player-hint-title {
+  font-size: var(--fs-heading);
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.player-hint div + div {
+  margin-top: 6px;
+}
+
 /* --- Seek target badge: static, centered above the bar area --- */
 .player-seek-badge {
   position: absolute;

@@ -11,17 +11,21 @@ The "我的" (Library) tab: three segments for favorites / history / settings, p
 1. **Segment control (row 0)**: chips for "收藏" (Favorites) ｜ "历史" (History) ｜ "设置" (Settings), supporting the same focus-hover
    auto-switch as the tab bar (150ms debounce); the selected state is visually distinct from the focus state.
 2. **Favorites / History segments**: each is a 6-column VideoCard grid (row 1 onward), with history cards carrying a
-   "Watched through EPxx" badge; data is subscribed from the store for instant updates; empty state shows centered, non-focusable text.
-3. **Settings segment**: a single-column list of rows (T02's third focus-state category):
-   - "Clear watch history" → confirmed via ConfirmDialog;
-   - "About" → version number / data-source note (a static row or a simple popover).
-   **Do not implement** toggles like "reduce motion" or "disable blur" (there's no motion/blur anywhere globally to toggle off).
-4. **ConfirmDialog**: a centered, opaque `--bg-elev` rounded card with a title + description + **full-width stacked
-   buttons** (addressed by row for focus), defaulting focus to "Cancel"; its own `confirm` focus layer, with the back key acting as Cancel.
-   **No backdrop overlay** (no translucent scrim); the focus-layer mechanism already guarantees the content behind the dialog doesn't respond
-   to input — if visual separation is still needed, an opaque dialog card with a border is sufficient.
-5. Focus handling after clearing history: the scenario where the confirm button's cell disappears is covered by `popFocusLayer`'s
-   existing "cell was unmounted, fall back to the group's first cell" mechanism (already implemented in T03 — verify it here).
+   "看到第N集" badge plus a bottom watch-progress bar; data is subscribed from the store for instant updates; empty state shows
+   centered, non-focusable text.
+3. **Settings segment**: a single-column grouped list (T02's third focus-state category, rows 1-3 of the content group):
+   - "首页显示收藏" and "首页显示最近观看" → Apple-style switches (settings store) that show/hide the home page's
+     "My Favorites" and "Continue Watching" shelves;
+   - "清除观看历史" → a danger row confirmed via ConfirmDialog.
+   The app version renders as a plain non-focusable caption pinned near the bottom of the screen (the build-time
+   `__APP_VERSION__` constant) — no separate "About" row.
+4. **ConfirmDialog**: a centered frosted-glass rounded card (`--glass-strong` + backdrop blur) with a title + description +
+   **full-width stacked buttons** (addressed by row for focus: Cancel = row 0, Confirm = row 1 with a danger tint), defaulting
+   focus to "Cancel"; its own `confirm` focus layer, with the back key acting as Cancel (a custom key handler registered for the
+   dialog's lifetime). **No backdrop scrim**; the focus-layer mechanism already guarantees the content behind the dialog doesn't
+   respond to input.
+5. Focus handling after clearing history: the scenario where the previously focused cell disappears is covered by `popFocusLayer`'s
+   existing "remembered cell was unmounted, fall back to the layer's first focusable" mechanism (already implemented in T03 — verify it here).
 
 ## Explicitly out of scope
 

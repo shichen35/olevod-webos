@@ -4,8 +4,7 @@
  *      returns 401. Derived from the current Unix timestamp (seconds).
  *   2. AES-CBC decryption of the `data` field some list endpoints return.
  *
- * No network, no environment checks — just math. See doc/olevod-api.md §4.2 for
- * the reference (Python) implementation this is verified against.
+ * No network, no environment checks — just math.
  *
  * CLOCK CONSTRAINT: the signature is a function of the device clock. If the TV's
  * clock is wrong, every request 401s — check the time first when debugging auth.
@@ -153,7 +152,7 @@ function utf8Bytes(str) {
 /**
  * Compute the `_vv` signature for a Unix timestamp (seconds).
  * Bit-transposes each timestamp digit into four short hex chunks, then
- * interleaves them with slices of md5(timestamp). See doc/olevod-api.md §4.2.
+ * interleaves them with slices of md5(timestamp).
  */
 export function vv(ts) {
   const t = String(ts)

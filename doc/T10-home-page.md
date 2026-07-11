@@ -9,17 +9,29 @@ with dynamic row layout and empty rows skipped.
 
 ## Implementation requirements
 
-1. **Row list and order**: Continue Watching (first 12 from history, cards carry a "Watched through EPxx" badge + progress bar) →
+1. **Row list and order**: Continue Watching (first 12 history entries with actual watch
+   progress, cards carry a "看到第N集" badge + progress bar via Shelf's `cardExtras`) →
    My Favorites (first 12 from favorites) → Popular Movies / Popular Variety / Popular TV Series
-   (each section via `categoryList({sort:'hot', size:12})`). Empty rows are not rendered at all,
+   (each section via `categoryList({sort:'hot', size:12})`, assembled in `api/feeds.js`'s
+   `loadHomePopular`). Empty rows are not rendered at all,
    and **row numbers (focus row) are assigned consecutively in actual render order**, so up/down navigation stays continuous by ±1.
-2. **Data fetching**: only the three popular-content rows hit the network — via `Promise.allSettled` concurrently; a single category's failure only leaves that one row empty.
-   Continue Watching / Favorites come from the store (subscribed via `useSyncExternalStore`, so returning to home after playback reflects instantly).
-3. **Caching**: popular-content data is cached keyed via `pageCache.loadOnce` — switching tabs and back renders instantly with no
-   spinner; `refreshNonce` (tab Enter, wired in T15) invalidates the cache and forces a refetch.
-4. **All-failed state**: when all three network rows fail, show centered error text + a focusable "Retry" button.
-5. Card `onSelect` → opens the detail overlay (before T13 exists, use console/placeholder).
-6. Loading state: static "Loading..." text (no spinner animation).
+2. **Settings toggles**: the two local shelves can each be switched off in Settings —
+   `homeShowRecent` (Continue Watching) and `homeShowFavorites` (My Favorites) in
+   `store/settings.js`, read through `getSetting()` (so older persisted snapshots fall
+   back to the defaults, both on). A disabled shelf is simply absent and row numbering
+   stays continuous.
+3. **Data fetching**: only the three popular-content rows hit the network — via `Promise.allSettled` concurrently; a single category's failure only leaves that one row empty.
+   Continue Watching / Favorites / settings come from the stores (subscribed via `useStoreValue` on `useSyncExternalStore`, so returning to home after playback reflects instantly).
+4. **Caching**: the three popular rows are cached as one unit under the `home:popular`
+   key via `pageCache.loadOnce` — switching tabs and back renders instantly with no
+   spinner; `refreshNonce` (tab Enter, wired in T15) invalidates the `home:` cache prefix and refetches
+   **without blanking** (the old rows stay on screen until the new data lands).
+5. **All-failed state**: when no row has content after the network rows resolve, show centered error text + a focusable "Retry" button (Retry invalidates the cache and reloads from a blank loading state).
+6. Card `onSelect` → `onOpenDetail(item.id)` opens the detail overlay (T13).
+7. Shelf rows are registered as row-cursor groups (`setRowCursorGroup`): entering a
+   shelf vertically lands on that row's remembered column (first card if never
+   visited) instead of carrying the column across rows.
+8. Loading state: static "加载中…" text (no spinner animation).
 
 ## Explicitly out of scope
 
@@ -28,8 +40,8 @@ with dynamic row layout and empty rows skipped.
 
 ## Acceptance criteria
 
-- [ ] On a cold start into the home page: the three popular rows render images; when there's no history/favorites the corresponding
-      rows disappear and up/down navigation remains continuous;
+- [ ] On a cold start into the home page: the three popular rows render images; when there's no history/favorites — or the
+      corresponding shelf is switched off in Settings — those rows disappear and up/down navigation remains continuous;
 - [ ] After watching part of a show (history data can be hand-seeded first), "Continue Watching" appears at the top,
       with the correct badge and progress bar;
 - [ ] Starting with no network shows a "Retry" button; restoring network and pressing OK reloads successfully;

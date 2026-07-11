@@ -1,7 +1,6 @@
 /*
  * Business endpoint wrappers. Everything above this layer works with normalized
  * shapes and never sees raw gateway responses or builds URLs by hand.
- * See doc/olevod-api.md §4.3-§4.4 for the underlying endpoints.
  */
 import { apiGet } from './http.js'
 import { mediaUrl } from './luna.js'

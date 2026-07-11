@@ -1,7 +1,7 @@
 # T22 Wiring the Frontend to the On-Device Dual Channel
 
-> Milestone D | Depends on: T21, T05, T16 | Deliverable: `src/api/luna.js`
-> device-branch implementation
+> Milestone D | Depends on: T21, T05, T16 | Deliverable:
+> `app/src/api/luna.js` device-branch implementation
 
 ## Goal
 
@@ -13,13 +13,15 @@ proves the transport abstraction actually holds up.
 
 ## References
 
-- Dual-channel architecture: [doc/olevod-api.md](../olevod-api.md) §6
+- Dual-channel architecture: header comments of `app/src/api/luna.js` and
+  `service/com.olevod.app.service/service.js`
 
 ## Requirements
 
 1. **Environment detection**: if `window.PalmSystem` exists, attempt a Luna
-   bus (`webOS.service.request` or `PalmServiceBridge`) `ping` to
-   `com.olevod.app.service`; success = device mode, and record the
+   bus `ping` to `com.olevod.app.service` via the raw `PalmServiceBridge`
+   binding every webOS webview injects (no webOSTV.js library needed in the
+   bundle); success = device mode, and record the
    returned `proxyPort`; failure (simulator has no Node service) = direct
    mode. `initTvEnv()` is awaited before the first frame in `main.jsx` — so
    media URLs point at the right port from the very first frame. Give the
@@ -30,9 +32,9 @@ proves the transport abstraction actually holds up.
 3. **`mediaUrl` device branch**: `https://{host}/{path}` ->
    `http://127.0.0.1:{proxyPort}/proxy/{host}/{path}?{query}`; the browser
    returns the URL unchanged.
-4. Wrap Luna calls in a Promise with a timeout-based reject (Luna calls
-   can't be truly aborted — comment this to note it matches T05's
-   semantics).
+4. Wrap Luna calls in a Promise with a timeout-based reject (~2s for
+   `ping`, ~10s for `fetch`; Luna calls can't be truly aborted — comment
+   this to note it matches T05's semantics).
 5. Explicitly verify the simulator path: when `PalmSystem` exists but
    `ping` fails, everything falls back to direct mode with full
    functionality.
@@ -54,5 +56,7 @@ proves the transport abstraction actually holds up.
 - [ ] Manually killing the service process: the API still falls back to
       direct requests and returns data (media being unavailable is
       expected in that case);
-- [ ] `grep -R "PalmSystem\|webOS" src/` only matches `luna.js` (environment
-      detection is fully contained there).
+- [ ] `grep -R "PalmSystem\|PalmServiceBridge\|window.webOS" app/src/` only
+      matches `api/luna.js` — environment probing and platform API access
+      are fully contained there (other files touch webOS only in comments
+      and the Back keyCode 461 constant).

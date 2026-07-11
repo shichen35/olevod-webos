@@ -12,7 +12,7 @@ pass.
 
 ## Validation checklist
 
-### Functional walkthrough (drive.mjs self-driven + manual remote, both tracks)
+### Functional walkthrough (`tools/drive.mjs` self-driven + manual remote, both tracks)
 
 - [ ] App launches to the home page with focus on the "首页" (Home) tab;
       switching tabs after warm-up shows no loading state;
@@ -33,7 +33,7 @@ pass.
       standby/wake cycle, the service is still alive (keepAlive is
       working).
 
-### Performance baseline (recorded into device-baseline.md via debug.mjs)
+### Performance baseline (recorded into device-baseline.md via `tools/debug.mjs`)
 
 - [ ] Once the home page is ready: DOM node count / focusable element count
       / JSHeapUsedSize (expected order of magnitude: <=300 nodes, ~20

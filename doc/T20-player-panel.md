@@ -1,57 +1,56 @@
-# T20 Player Panel (Episodes / Speed / Quality) and First-Run Hint
+# T20 Player: No Bottom Panel (Auto Quality, Fixed Speed) and Key Hint
 
-> Milestone C | Depends on: T17 | Deliverable: `PlayerPage` bottom panel +
-> one-time usage hint
+> Milestone C | Depends on: T17 | Deliverable: `PlayerPage` key-hint card +
+> fixed playback policy (no bottom panel)
 
 ## Goal
 
-A bottom panel that expands with Down when the control bar is already
-shown: three horizontal tabs for episodes / playback speed / quality, plus
-a one-time key-handling hint on first entering the player.
+Keep the player chrome minimal: there is deliberately **no bottom panel** —
+quality is fully automatic and playback speed is fixed — and instead of a
+settings UI, a key-hint card teaches the remote bindings whenever a title is
+opened fresh, and can be recalled with Up at any time.
 
 ## Requirements
 
-1. **Panel structure**: an opaque `--bg-elev` panel at the bottom, row 0 is
-   the tab row (`Episodes | Speed | Quality`), row 1 onward is the content
-   of the current tab; a dedicated `player-panel` focus layer (push/pop),
-   Back collapses the panel back to the control bar. Opens/closes instantly
-   with no animation.
-2. **Episodes tab**: an 8-column numeric grid (reusing the rendering
-   convention from the detail page's episode selector), current episode
-   highlighted; OK switches episodes without exiting the player (goes
-   through T19's episode-switch path).
-3. **Speed tab**: 0.75 / 1.0 / 1.25 / 1.5 / 2.0 — sets `video.playbackRate`,
-   shared between the native and hls.js branches; current setting
-   highlighted; the chosen speed persists across episode switches/reloads.
-4. **Quality tab**: on the hls.js path, list the master playlist's levels
-   (including a >=1440 "Ultra HD" tier if present, manually selectable);
-   selecting a level sets `hls.currentLevel` (disabling ABR fallback); **the
-   native HLS path can't retrieve level info, so this tab is hidden
-   entirely** (shown/hidden based on capability — this is the actual
-   behavior on the real device).
-5. **First-run hint**: on first entering the player, show a one-time
-   key-handling hint (a static card that disappears after 3s or on any key
-   press), recorded via `settings.playerHintShown` so it doesn't appear
-   again.
-6. Left/Right switching between tabs, and navigation within a tab's
-   content, must not interfere with each other (the panel uses an
-   independent grid addressing scheme internally).
+1. **No panel**: the player has no episodes / speed / quality panel and no
+   `player-panel` focus layer. Quality is fully automatic — the hls.js path
+   starts at, and caps ABR below, the UHD tier (T16); the native path uses
+   the system's own ABR. Playback speed is always 1x (`playbackRate` is
+   never touched). Episode switching happens from the detail page's episode
+   grid, the Up Next card, or autoplay (T19) — never from inside a panel.
+2. **Key hint card**: a static glass card (`--glass-strong` fill + backdrop
+   blur + `--glass-edge` border) centered near the top of the screen, with
+   a "遥控键位" title and two lines covering the bindings: OK play/pause ·
+   Left/Right seek (long-press accelerates) · Down shows the control bar ·
+   Up recalls this hint · Back exits.
+3. **Trigger**: shown automatically on entering the player whenever the
+   title has **no saved watch position** (`getWatchState(id)` missing or
+   `position` not > 0). It is not persisted behind a one-time flag — a
+   title keeps showing the hint until some progress has been recorded for
+   it. It disappears after 3s, or on any key press; the dismissing key
+   still performs its normal action.
+4. **Recall**: with the control bar hidden, Up shows the hint again at any
+   time (with the bar shown, Up hides the bar instead — T17).
+5. **Down with the bar shown is consumed with no action** — it does not
+   open anything (there is no panel), and it must not leak to the layer
+   beneath.
 
 ## Explicitly out of scope
 
+- A bottom panel with episodes / speed / quality tabs (quality is
+  ABR-managed, speed is fixed at 1x, episodes live on the detail page);
+- Manual quality selection of the >=1440 "Ultra HD" tier;
 - Subtitles, audio track selection (the stream has no additional tracks);
 - Aspect ratio adjustment.
 
 ## Acceptance criteria
 
-- [ ] With the bar shown, Down opens the panel, Back collapses the panel
-      back to the control bar, Back again collapses the bar, Back again
-      exits the player — all four levels work correctly;
-- [ ] All three tabs work as expected: episode switching doesn't exit the
-      player, speed changes apply immediately and persist across episode
-      switches, and quality changes switch the segment tier visible in
-      Network;
-- [ ] With native HLS simulated (temporarily forcing that branch), the
-      quality tab does not appear and tab navigation still works correctly;
-- [ ] After clearing localStorage, the first-run hint appears once on
-      entering the player and does not appear again after that.
+- [ ] Entering a title with no saved watch progress shows the hint; it
+      disappears after 3s or on any key press, and that key still performs
+      its normal action;
+- [ ] After watching long enough for a progress flush (a few seconds) and
+      re-entering the same title, the hint no longer auto-appears;
+- [ ] With the bar hidden, Up recalls the hint at any time; with the bar
+      shown, Up hides the bar instead;
+- [ ] With the bar shown, Down does nothing and no key leaks to the detail
+      layer beneath; no speed or quality UI exists anywhere in the player.

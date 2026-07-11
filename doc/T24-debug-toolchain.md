@@ -37,13 +37,18 @@ screenshots, remote-control key injection, and remote shell access.
    and **netcap.mjs** for reading segment request timing from the proxy
    logs — useful for playback troubleshooting, can be added later if
    needed.
-6. All scripts reuse the device configuration from `tools/device.mjs`; the
-   connection layer (SSH tunnel + CDP WebSocket) is factored into one
-   shared module rather than duplicated in every script.
+6. All scripts reuse the device configuration already centralized in
+   `tools/device.mjs` (`TV.debugPort` from `TV_DEBUG_PORT`, default 9998,
+   plus the `ssh-rsa` host-key algorithm ssh2 needs); `tools/package.json`
+   already declares the `ssh2` and `ws` dependencies for the SSH tunnel and
+   the CDP WebSocket. There are no npm scripts — everything runs as
+   `node tools/<script>.mjs`. The connection layer (SSH tunnel + CDP
+   WebSocket) is factored into one shared module rather than duplicated in
+   every script.
 7. Document two CDP blind spots: native HLS segment requests don't show up
    in the CDP Network domain (check the proxy logs instead); and the
-   service's `console.log` output doesn't reach journald (it's written to
-   a file instead).
+   service's `console.log` output doesn't reach journald (the service
+   writes to `/tmp/olevod-service.log` instead).
 
 ## Explicitly out of scope
 
@@ -56,5 +61,7 @@ screenshots, remote-control key injection, and remote shell access.
       in a screenshot after key injection, and get output back from a
       remote command;
 - [ ] Disconnects/timeouts produce a clear error (never hang silently);
-- [ ] The README has a "Debugging" section: one line per script describing
-      its purpose plus an example command.
+- [ ] The root README documents the debugging scripts — one line per
+      script describing its purpose plus an example command (its
+      Development section already points at the CDP-over-SSH toolchain in
+      `tools/`).

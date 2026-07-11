@@ -20,7 +20,7 @@ app/        frontend (Vite + React 19.2)
   webos-meta/   appinfo.json + icons (for packaging)
 service/    Luna background service (Node 16 CommonJS): API fetch + local HLS proxy
 tools/      deployment and CDP-over-SSH debugging scripts
-doc/        development plan, API integration notes, and per-task docs
+doc/        per-task development docs (T01-T25)
 build.sh    build -> package .ipk -> optional deploy
 ```
 
@@ -59,7 +59,7 @@ bash build.sh <passphrase>          # build + package + deploy + launch
 Standard pipeline: `ares-package` -> `ares-setup-device` -> `ares-novacom --getkey`
 -> `ares-install` -> `ares-launch`. When the official CLI isn't usable under
 some newer Node versions, `tools/deploy.mjs` uses `ssh2` to run the equivalent
-pipeline. See [doc/tasks/T23](doc/tasks/T23-packaging-deploy.md) for details.
+pipeline. See [doc/T23](doc/T23-packaging-deploy.md) for details.
 
 ## Architecture Highlights
 
@@ -77,6 +77,5 @@ pipeline. See [doc/tasks/T23](doc/tasks/T23-packaging-deploy.md) for details.
 - **Request signing**: every GET carries `?_vv=<signature>`
   (`app/src/api/sign.js`, generated locally from a timestamp).
 
-See [doc/olevod-api.md](doc/olevod-api.md) for API details, and
-[doc/README.md](doc/README.md) for the full development plan and task
-breakdown.
+See the per-task docs in [doc/](doc/) (T01-T25) for the design and acceptance
+criteria of each subsystem.

@@ -12,23 +12,29 @@ to switch immediately.
 ## Requirements
 
 1. **Determining the next episode**: the player holds the full `episodes`
-   array (passed in from the detail page); the array is **newest-first**, so
-   "next episode" = the entry **before** the current index (index - 1). If
-   there's no next episode, go back to the detail page after `ended`.
+   array (from the normalized detail, read through the shared page cache
+   that the detail page beneath already populated); the array is
+   **newest-first**, so "next episode" = the entry **before** the current
+   index (index - 1). If there's no next episode, `ended` dispatches a
+   `tv-back` and the player exits to the detail page.
 2. **Up Next card**: when ≤30s remain and a next episode exists, show an
-   "Up Next: Episode N" card in the bottom-right (opaque `--bg-elev`
-   background + border, appears instantly with no animation); while shown,
-   **OK immediately switches to the next episode** (replacing play/pause);
-   Up or Back first dismisses the card and restores normal key handling.
+   "即将播放 / 第N集 / 按 OK 立即播放" card in the bottom-right (glass:
+   `--glass-strong` fill + backdrop blur + `--glass-edge` border, appears
+   instantly with no animation); while shown, **OK immediately switches to
+   the next episode** (replacing play/pause); Up or Back dismisses the
+   card, and it does not reappear for the current episode (a per-episode
+   dismissed flag, reset on episode switch); other keys keep their normal
+   meaning while the card is up.
 3. **Autoplay on `ended`**: switching episodes does not exit the player —
-   first flush the current episode's progress (T18), then swap the URL and
-   reload (reusing T16's quality-selection logic), and update history to
-   the new episode.
-4. During the episode switch, show a static "Loading next episode N..."
-   message; no flash of a black screen or error state.
+   first flush the current episode's progress (T18's finished-tail rule
+   zeroes it), then reload the new episode's URL through the same
+   quality-selection path (T16); history/progress then record against the
+   new episode from its first `playing` event.
+4. During the episode switch, show a static "正在加载 第N集…" message; no
+   flash of an error state.
 5. Verify the autoplay chain all the way to the end: on the last episode,
-   `ended` returns to the detail page with focus landing on the play
-   button.
+   `ended` returns to the detail page with focus restored where it was in
+   the detail layer.
 
 ## Explicitly out of scope
 
@@ -46,5 +52,6 @@ to switch immediately.
       history/progress records update accordingly;
 - [ ] Finishing the last episode returns to the detail page with correct
       focus;
-- [ ] While the Up Next card is shown, Back first dismisses it; pressing
-      Back again then follows the normal exit chain.
+- [ ] While the Up Next card is shown, Back first dismisses it (and the
+      card stays away for the rest of the episode); pressing Back again
+      then follows the normal exit chain.

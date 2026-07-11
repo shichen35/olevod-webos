@@ -13,8 +13,9 @@ half of the data channel needed once the app is packaged onto the device.
 ## References
 
 - Skill: `reference/service-and-proxy.md` (full scaffold)
-- Proxy allowlist and media-layer conclusions:
-  [doc/olevod-api.md](../olevod-api.md) §5-§6
+- Proxy allowlist and media-layer conclusions: header comment of
+  `service/com.olevod.app.service/service.js` (the API gateway validates
+  only the `_vv` signature; the CDN wants a Referer and rejects Origin)
 
 ## Requirements
 
@@ -22,13 +23,16 @@ half of the data channel needed once the app is packaged onto the device.
    `webos-service`; use `activityManager.create('keepAlive')` to prevent the
    background process from being reclaimed; use
    `process.on('uncaughtException')` to log and stay alive; **everything is
-   CommonJS** (`require`).
+   CommonJS** (`require`). When `webos-service` is absent (a dev machine),
+   catch the failed `require` and run in proxy-only mode so `node
+   service.js` still works standalone for local acceptance.
 2. **Luna methods**:
    - `ping`: returns `{ ok, proxyPort }` (used by the frontend for a
      startup handshake and to learn the actual proxy port);
-   - `fetch`: `{ url, headers? }` -> makes an https request -> returns the
-     **decompressed JSON text**. Only `api.olelive.com` is allowed (host
-     allowlist). **Keep request headers minimal**: the API gateway only
+   - `fetch`: `{ url }` (the URL arrives fully built and `_vv`-signed from
+     the frontend) -> makes an https request -> returns
+     `{ status, body }` where `body` is the **decompressed JSON text**.
+     Only `api.olelive.com` is allowed (host allowlist). **Keep request headers minimal**: the API gateway only
      validates `_vv` and doesn't check Referer/Origin — a plain UA is
      sufficient, no need to spoof Client Hints / Fetch Metadata or other
      browser-style headers.
@@ -50,10 +54,10 @@ half of the data channel needed once the app is packaged onto the device.
      expensive on the TV's CPU);
    - upstream timeout (~10s) and destroy the upstream socket on client
      disconnect, so a single stuck segment can't hang playback.
-4. Write logs to a file (e.g. `/tmp/olevod-service.log`) or make them
-   readable via the proxy route — the service's `console.log` output does
-   not go to `journald` (a conclusion from the skill), so debugging needs an
-   explicit exit path.
+4. Write logs to `/tmp/olevod-service.log` (append-only; a failing log
+   write must never take the service down) — the service's `console.log`
+   output does not go to `journald` (a conclusion from the skill), so
+   debugging needs an explicit exit path.
 
 ## Explicitly out of scope
 

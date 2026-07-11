@@ -4,7 +4,7 @@
  * knows whether it is talking to the network directly (browser/dev) or through
  * the Luna service (real device).
  *
- * Two channels (see doc/olevod-api.md §6):
+ * Two channels:
  *   - API JSON  -> Luna service on the real device, direct fetch in the browser.
  *   - Media     -> local HTTP proxy on the real device, unchanged in the browser.
  *

@@ -1,7 +1,7 @@
 /*
  * com.olevod.app.service — webOS background service (Node 16, CommonJS).
  *
- * One process, two channels (see doc/olevod-api.md §6):
+ * One process, two channels:
  *   1. Luna bus methods `ping` / `fetch` — API JSON retrieval. The packaged
  *      webview runs from a file:// origin, so api.olelive.com is unreachable
  *      from the app directly; the service fetches and returns decompressed

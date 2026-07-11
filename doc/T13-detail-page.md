@@ -10,11 +10,13 @@ Focus defaults to the primary play button (the shortest path to pressing OK and 
 ## Implementation requirements
 
 1. **Layout (no translucency)**: skip a "poster blown up to fill the background + gradient overlay" treatment (it violates the
-   performance red lines); instead use **solid-color sections**: an info column on the left at roughly 55% width (`--bg` background), and a poster
-   `<img>` on the right (`object-fit:cover`, `imageUrl` at a large size suffix, 404s handled by Thumb's fallback mechanism).
-   Text always sits on a solid background, never overlaid on the image.
+   performance red lines); instead use **solid-color sections**: a poster on the left at the same fixed footprint as a grid card
+   (`--card-w` wide, 2:3 aspect ratio, rendered through `Thumb` — the identical sized asset is usually already cached when
+   arriving from a poster grid, and 404s are handled by Thumb's fallback mechanism), with the info column filling the remaining
+   width to its right. Text always sits on a solid background, never overlaid on the image.
 2. **Info hierarchy**: eyebrow (category · year · region · remarks) → large title (display type scale) →
-   a badge row (rating pill / UHD / "N episodes total") → a 3-line-truncated synopsis (the **`info.content`** field) →
+   a badge row (accent-colored rating, shown only when > 0, plus a "全 N 集" episode count) → a 3-line-truncated synopsis
+   (the detail response's **`content`** field, exposed as `synopsis` by `src/api/olevod.js`) →
    a single truncated line for director / cast.
 3. **Action row (row 0)**: the primary button's label is context-aware — if a history record still points to an episode present
    in this fetch and `position > 30s`, it reads "▶ Continue Watching Episode N"; otherwise "▶ Play Episode 1"
@@ -23,8 +25,9 @@ Focus defaults to the primary play button (the shortest path to pressing OK and 
 4. **Episode grid (row 1 onward)**: an 8-column grid of numbered cells (a multi-row grid is more efficient than a single horizontal
    row for shows with hundreds of episodes); the episode currently in progress carries a "Continue" badge; OK jumps straight into the player
    (carrying the episode index).
-5. **Overlay mechanics**: opening calls `pushFocusLayer('detail')` + hides the shell via `display:none`; data is cached via
-   `pageCache.loadOnce(detail:id)`. Loading/error states show large centered text, with a focusable "Retry" on failure.
+5. **Overlay mechanics**: the overlay calls `pushFocusLayer('detail')` on mount (popped on unmount); the shell beneath stays
+   mounted and is hidden via `display:none` by the App view stack. Data is cached via `pageCache.loadOnce(detail:${id})`.
+   Loading/error states show large centered text, with a focusable "Retry" on failure.
 6. Back key: closes the detail view, pops the layer, and restores the shell's display and focus.
 
 ## Explicitly out of scope

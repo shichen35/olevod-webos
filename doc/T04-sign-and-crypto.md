@@ -11,19 +11,20 @@ with no dependency on any runtime-environment check.
 
 ## Reference
 
-- Algorithm spec: [doc/olevod-api.md](../olevod-api.md) §4.2 (includes a Python
-  reference implementation)
+- Implementation: `app/src/api/sign.js` (the algorithm description below is
+  authoritative; the code is the reference)
 
 ## Requirements
 
 1. **`vv(ts)` / `vvNow()`**: input a Unix timestamp in seconds, output the
    signature string. Algorithm: take the ASCII binary of each digit character in
    the timestamp and "transpose" it bitwise into four short hex segments (each
-   3 characters, left-padded with zeros), then interleave them with slices of
-   `md5(timestamp)` (`[0:3] [6:11] [14:19] [22:27] [30:]`). Verify bit-for-bit
-   against the reference implementation in the API doc §4.2.
+   left-padded with zeros to 3 characters; longer values are kept as-is), then
+   interleave them with slices of `md5(timestamp)`
+   (`[0:3] [6:11] [14:19] [22:27] [30:]`).
 2. **Bundled MD5**: Chromium 108's WebCrypto has no MD5, so include a small pure-JS
    MD5 implementation (a single function is enough, no external dependency).
+   Export `md5` too, for tests and debugging.
 3. **`aesDecryptToJson(cipherB64)`**: AES-128-CBC / PKCS7; key = characters
    `[8:24]` (16 bytes) of `md5("YYYY-MM-DD")` for today's local date, IV = key.
    Implement with WebCrypto's `subtle.decrypt`; base64-decode -> decrypt ->
@@ -41,9 +42,11 @@ with no dependency on any runtime-environment check.
 
 ## Acceptance criteria
 
-- [ ] Using the Python implementation from API doc §4.2, generate expected
-      values for a batch of timestamps (including ones with zeros and varying
-      lengths); the JS implementation matches every one;
+- [ ] For a batch of timestamps (including ones with zeros and varying
+      lengths), `vv(ts)` is deterministic and its output decomposes back into
+      exactly the documented construction — the `md5(timestamp)` slices
+      `[0:3] [6:11] [14:19] [22:27] [30:]` interleaved with the four
+      bit-transposed pieces — recompute a few samples by hand to confirm;
 - [ ] Verified in the browser console: `fetch('https://api.olelive.com/v1/pub/vod/list/type?_vv='+vvNow())`
       returns 200 with `code===0`; omitting `_vv` returns 401;
 - [ ] Decrypting a real AES ciphertext sample yields valid JSON; decrypting a

@@ -61,6 +61,45 @@
 .settings-row-danger {
   color: var(--text);
 }
+.settings-row-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text);
+}
+
+/* Apple-style switch: opaque track (accent when on), knob slides via margin. */
+.switch {
+  display: flex;
+  align-items: center;
+  width: 76px;
+  height: 44px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--bg-elev-2);
+}
+.switch-on {
+  background: var(--accent);
+}
+.switch-knob {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--text);
+}
+.switch-on .switch-knob {
+  margin-left: auto;
+}
+/* Keep the switch readable on the solid white focused row. */
+.settings-row.focused .switch {
+  background: #c9c9ce;
+}
+.settings-row.focused .switch-on {
+  background: var(--accent);
+}
+.settings-row.focused .switch-knob {
+  background: #ffffff;
+}
 /* tvOS list focus: solid white fill, dark text (overrides .focusable-row). */
 .settings-row.focused {
   background: var(--focus);

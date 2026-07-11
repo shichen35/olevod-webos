@@ -13,6 +13,7 @@ import { loadHomePopular, POPULAR } from '../api/feeds.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { historyStore } from '../store/history.js'
 import { favoritesStore } from '../store/favorites.js'
+import { settingsStore, getSetting } from '../store/settings.js'
 import { useFocusable, setRowCursorGroup } from '../hooks/useFocus.js'
 import * as pageCache from '../store/pageCache.js'
 
@@ -28,6 +29,7 @@ function RetryButton({ group, onRetry }) {
 export default function HomePage({ group = 'content', onOpenDetail, refreshNonce }) {
   const history = useStoreValue(historyStore)
   const favorites = useStoreValue(favoritesStore)
+  const settings = useStoreValue(settingsStore)
   const [popular, setPopular] = useState(null) // null while loading; array once resolved
 
   // `clear` blanks to a loading state (initial load / retry); a refresh keeps
@@ -67,8 +69,11 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
   }, [load])
 
   // Build the shelf list in render order; row = index (kept continuous).
-  const continueItems = history.filter((h) => h.watch && h.watch.position > 0).slice(0, 12)
-  const favItems = favorites.slice(0, 12)
+  // The local shelves can each be switched off in Settings.
+  const continueItems = getSetting(settings, 'homeShowRecent')
+    ? history.filter((h) => h.watch && h.watch.position > 0).slice(0, 12)
+    : []
+  const favItems = getSetting(settings, 'homeShowFavorites') ? favorites.slice(0, 12) : []
 
   const rows = []
   if (continueItems.length) rows.push({ key: 'continue', title: '继续观看', items: continueItems, isContinue: true })

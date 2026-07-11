@@ -11,6 +11,7 @@ import { useFocusable } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore } from '../store/favorites.js'
 import { historyStore, clear as clearHistory } from '../store/history.js'
+import { settingsStore, getSetting, toggleSetting } from '../store/settings.js'
 
 const COLS = 6
 const CONTENT_ROW0 = 1 // segment control is row 0; content starts at row 1
@@ -69,6 +70,18 @@ function SettingsRow({ group, row, label, kind, onSelect }) {
   )
 }
 
+function SettingsToggle({ group, row, label, on, onToggle }) {
+  const { props } = useFocusable({ layer: 'home', group, row, col: 0, onSelect: onToggle })
+  return (
+    <div className="settings-row settings-row-toggle focusable-row" {...props}>
+      <span>{label}</span>
+      <span className={`switch${on ? ' switch-on' : ''}`}>
+        <span className="switch-knob" />
+      </span>
+    </div>
+  )
+}
+
 export default function LibraryPage({ group = 'content', onOpenDetail }) {
   const [seg, setSeg] = useState('fav')
   const [confirmClear, setConfirmClear] = useState(false)
@@ -76,6 +89,7 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
 
   const favorites = useStoreValue(favoritesStore)
   const history = useStoreValue(historyStore)
+  const settings = useStoreValue(settingsStore)
 
   const hoverSeg = useCallback((key) => {
     clearTimeout(debounceRef.current)
@@ -107,7 +121,21 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
       {seg === 'settings' && (
         <>
           <div className="settings-list">
-            <SettingsRow group={group} row={1} label="清除观看历史" kind="danger" onSelect={() => setConfirmClear(true)} />
+            <SettingsToggle
+              group={group}
+              row={1}
+              label="首页显示收藏"
+              on={getSetting(settings, 'homeShowFavorites')}
+              onToggle={() => toggleSetting('homeShowFavorites')}
+            />
+            <SettingsToggle
+              group={group}
+              row={2}
+              label="首页显示最近观看"
+              on={getSetting(settings, 'homeShowRecent')}
+              onToggle={() => toggleSetting('homeShowRecent')}
+            />
+            <SettingsRow group={group} row={3} label="清除观看历史" kind="danger" onSelect={() => setConfirmClear(true)} />
           </div>
           <div className="settings-version">版本 {__APP_VERSION__}</div>
         </>

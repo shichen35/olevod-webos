@@ -77,15 +77,15 @@
   background: var(--bg-elev);
 }
 
-/* Episode grid: fixed-width cells, 8 across. */
+/* Episode grid: 8 equal tracks spanning the full content width (symmetric
+   margins). Track count must match EP_COLS in DetailPage. */
 .ep-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 14px;
 }
 .ep-cell {
   position: relative;
-  width: 190px;
   padding: 16px 0;
   text-align: center;
   font-size: var(--fs-label);

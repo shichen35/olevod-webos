@@ -13,7 +13,7 @@ import { loadHomePopular, POPULAR } from '../api/feeds.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { historyStore } from '../store/history.js'
 import { favoritesStore } from '../store/favorites.js'
-import { useFocusable } from '../hooks/useFocus.js'
+import { useFocusable, setRowCursorGroup } from '../hooks/useFocus.js'
 import * as pageCache from '../store/pageCache.js'
 
 function RetryButton({ group, onRetry }) {
@@ -42,6 +42,14 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
   useEffect(() => {
     load()
   }, [load])
+
+  // Shelves are independent rows: each keeps its own focus cursor (remembered
+  // column, first card if never visited) instead of inheriting the column the
+  // cursor came from.
+  useEffect(() => {
+    setRowCursorGroup('home', group)
+    return () => setRowCursorGroup('home', group, false)
+  }, [group])
 
   // refreshNonce bump (tab Enter, T15): drop the cache and refetch WITHOUT
   // clearing. Skip the initial value so mount doesn't double-load.

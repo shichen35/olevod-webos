@@ -10,34 +10,35 @@
   margin: 0 0 18px;
 }
 
-/* One horizontal row. The right padding creates the "more to scroll" bleed at
-   the viewport edge; the scrollbar is hidden (focus drives scrolling). */
+/* One horizontal row. Exactly 6 cards fill the content width, so the row's
+   resting state is symmetric (equal safe-x margins both sides); the scrollbar
+   is hidden (focus drives scrolling). */
 .shelf-row {
   display: flex;
-  gap: 20px;
+  gap: var(--grid-gap);
   overflow-x: auto;
   overflow-y: hidden;
-  padding-right: 160px;
   scrollbar-width: none;
 }
 .shelf-row::-webkit-scrollbar {
   display: none;
 }
 
-/* Card. Border slot comes from .focusable-card (T02); here we only size it and
-   make off-screen cards cheap to skip. */
+/* Card. Width adapts to the screen (--card-w: 6 per row edge to edge). Border
+   slot comes from .focusable-card (T02); here we only size it and make
+   off-screen cards cheap to skip. */
 .card {
   flex: 0 0 auto;
-  width: 240px;
+  width: var(--card-w);
   contain: content;
   content-visibility: auto;
-  contain-intrinsic-size: 240px 430px;
+  contain-intrinsic-size: var(--card-w) 490px;
 }
 
 .card-poster {
   position: relative;
-  width: 240px;
-  height: 360px;
+  width: 100%;
+  aspect-ratio: 2 / 3;
   background: var(--bg-elev);
   overflow: hidden;
   border-radius: 12px;

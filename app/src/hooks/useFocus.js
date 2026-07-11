@@ -41,6 +41,18 @@ export function setActiveContentGroup(group) {
   activeContentGroup = group
 }
 
+// Groups where every row keeps its OWN cursor: entering a row vertically lands
+// on that row's remembered column, or its first item if never visited —
+// the current column is never carried across rows (Netflix-style shelves,
+// where each row scrolls independently). Grids stay on the default carry-over
+// behavior so vertical movement runs straight down a column.
+const rowCursorGroups = new Set() // "{layer}/{group}"
+export function setRowCursorGroup(layer, group, on = true) {
+  const key = `${layer}/${group}`
+  if (on) rowCursorGroups.add(key)
+  else rowCursorGroups.delete(key)
+}
+
 // ---------------------------------------------------------------------------
 // id helpers
 // ---------------------------------------------------------------------------
@@ -152,10 +164,12 @@ function firstInLayer(layer) {
 }
 
 // Nearest existing column in a target row: try the remembered column for that
-// row, then the incoming column, then walk outward within a bounded window.
+// row, then the incoming column (or col 0 in row-cursor groups), then walk
+// outward within a bounded window.
 function nearestColInRow(layer, group, row, preferCol) {
   const remembered = rowMemory.get(`${layer}/${group}-${row}`)
-  const startCol = remembered != null ? remembered : preferCol
+  const startCol =
+    remembered != null ? remembered : rowCursorGroups.has(`${layer}/${group}`) ? 0 : preferCol
 
   if (registry.has(buildId(layer, group, row, startCol))) {
     return buildId(layer, group, row, startCol)

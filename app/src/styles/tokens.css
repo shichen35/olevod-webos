@@ -53,8 +53,13 @@
 
   /* --- Layout / safe area --- */
   --safe-x: 84px;         /* left/right safe margin */
+  /* Poster lists fill the full content width symmetrically: 6 cards per row
+     (must match COLS in CategoryPage/LibraryPage), fixed gutter, card width
+     derived so 6 cards + 5 gaps = 1920 - 2*safe-x exactly. */
+  --grid-gap: 20px;
+  --card-w: calc((1920px - 2 * var(--safe-x) - 5 * var(--grid-gap)) / 6);
   --tabbar-h: 84px;       /* top tab bar height */
-  --content-top: 108px;   /* content start offset from the top */
+  --content-top: 92px;    /* content start offset from the top (bar + 8px) */
   --content-bottom: 60px; /* bottom padding */
 
   /* --- Focus geometry --- */

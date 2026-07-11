@@ -141,10 +141,15 @@
   flex-wrap: wrap;
   gap: 16px;
 }
+/* Episode chips: 8 equal tracks, full panel width, symmetric margins. Track
+   count must match EP_COLS in PlayerPanel (visual rows = focus rows). */
 .player-panel-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 16px;
+}
+.player-panel-grid .panel-chip {
+  text-align: center;
 }
 
 /* --- First-run key hint (T20): one-time static card, centered --- */

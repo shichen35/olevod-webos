@@ -40,11 +40,18 @@
   white-space: nowrap;
 }
 
-/* --- Grid --- */
+/* --- Grid: 6 equal tracks spanning the full content width (symmetric
+   margins). Track count must match COLS in CategoryPage/LibraryPage. --- */
 .grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px 20px;
+  display: grid;
+  /* minmax(0,1fr): plain 1fr's auto minimum lets poster images inflate their
+     track, breaking the equal columns. */
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 24px var(--grid-gap);
+}
+/* Cards stretch to their track (a hair wider than --card-w; visually equal). */
+.grid .card {
+  width: auto;
 }
 
 .grid-sentinel {

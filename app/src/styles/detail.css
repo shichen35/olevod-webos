@@ -117,11 +117,16 @@
   border-radius: 10px;
 }
 
-/* Loading / error centered state (reuses .overlay). */
+/* Loading / error state, same look as the player's: heading-size text at true
+   viewport center. Lives on an inner element (absolute over the whole .overlay,
+   ignoring its safe-area padding) because App.jsx toggles layers with an inline
+   display style that would override flex on the .overlay node itself. */
 .detail-status {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--fs-title);
-  color: var(--text-2);
+  font-size: var(--fs-heading);
+  color: var(--text);
 }

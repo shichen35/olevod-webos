@@ -522,8 +522,10 @@ export default function PlayerPage({ id, episodeIndex }) {
           return
         }
 
-        // Desktop-browser dev path: hls.js, loaded on demand.
-        const { default: Hls } = await import('hls.js')
+        // Desktop-browser dev path: hls.js, loaded on demand. The light build
+        // is enough — no subtitles/alt-audio/DRM here — and stays under the
+        // bundler's 500 kB chunk warning.
+        const { default: Hls } = await import('hls.js/light')
         if (cancelled) return
         if (!Hls.isSupported()) throw new Error('hls.js unsupported')
         hls = new Hls({

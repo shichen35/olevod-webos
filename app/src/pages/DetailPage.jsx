@@ -84,15 +84,17 @@ export default function DetailPage({ id, onPlay, style }) {
 
   if (status === 'loading') {
     return (
-      <div className="overlay detail-status" style={style}>
-        加载中…
+      <div className="overlay" style={style}>
+        <div className="detail-status">加载中…</div>
       </div>
     )
   }
   if (status === 'error') {
     return (
-      <div className="overlay detail-status" style={style}>
-        <RetryCell onRetry={load} />
+      <div className="overlay" style={style}>
+        <div className="detail-status">
+          <RetryCell onRetry={load} />
+        </div>
       </div>
     )
   }

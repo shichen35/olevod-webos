@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 #
-# Build + package + optional deploy.
+# Build + package .ipk into out/.
 #
-#   bash build.sh --no-deploy        # build + package .ipk into out/ only
-#   bash build.sh "<passphrase>"     # ... then install + launch on the TV
-#                                    #     (passphrase = Dev Mode app, rotates)
+#   bash build.sh
 #
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -21,11 +19,3 @@ ares-package --no-minify app/dist service/com.olevod.app.service -o out
 
 IPK=$(ls -t out/*.ipk | head -1)
 echo "packaged: ${IPK}"
-
-# 4. Optional deploy.
-ARG="${1:-}"
-if [[ -z "${ARG}" || "${ARG}" == "--no-deploy" ]]; then
-  [[ -z "${ARG}" ]] && echo "no passphrase given — skipping deploy (pass the Dev Mode passphrase to install+launch)"
-  exit 0
-fi
-node tools/deploy.mjs "${ARG}" "${IPK}"

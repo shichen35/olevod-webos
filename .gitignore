@@ -29,6 +29,3 @@ tv-key*
 
 # local Claude Code tooling (never committed)
 .claude/
-
-# local reference implementation (not part of the project)
-bkp/

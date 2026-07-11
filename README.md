@@ -19,9 +19,8 @@ app/        frontend (Vite + React 19.2)
   src/{config,api,hooks,store,components,pages,player,styles}
   webos-meta/   appinfo.json + icons (for packaging)
 service/    Luna background service (Node 16 CommonJS): API fetch + local HLS proxy
-tools/      deployment and CDP-over-SSH debugging scripts
 doc/        per-task development docs (T01-T25)
-build.sh    build -> package .ipk -> optional deploy
+build.sh    build -> package .ipk
 ```
 
 ## Development
@@ -35,31 +34,23 @@ npm run preview    # preview the build output locally
 ```
 
 No automated tests; verification is via `npm run build` passing plus manual
-remote-control walkthroughs in the browser/preview. For on-device debugging,
-use the CDP-over-SSH toolchain in `tools/` to read console/performance/network
-data before making code changes.
+remote-control walkthroughs in the browser/preview and the webOS Simulator.
 
 In the browser, use the keyboard to simulate the remote: arrow keys to
 navigate, Enter to select, Esc to go back (the real device's back key is
 webOS keyCode 461).
 
-## Build and Deploy (webOS)
+## Build and Package (webOS)
 
-Requires the official LG CLI and Developer Mode on the TV:
+Requires the official LG CLI:
 
 ```bash
 npm install -g @webos-tools/cli     # ares-* commands; verify with ares -V
-# Install the Developer Mode App on the TV and enable developer mode; note the
-# passphrase (it rotates each session)
 
-bash build.sh --no-deploy           # build + package .ipk only
-bash build.sh <passphrase>          # build + package + deploy + launch
+bash build.sh                       # build + package .ipk into out/
 ```
 
-Standard pipeline: `ares-package` -> `ares-setup-device` -> `ares-novacom --getkey`
--> `ares-install` -> `ares-launch`. When the official CLI isn't usable under
-some newer Node versions, `tools/deploy.mjs` uses `ssh2` to run the equivalent
-pipeline. See [doc/T23](doc/T23-packaging-deploy.md) for details.
+See [doc/T23](doc/T23-packaging-deploy.md) for packaging details.
 
 ## Architecture Highlights
 

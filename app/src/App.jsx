@@ -9,18 +9,15 @@
  * player = "player". Each overlay pushes its focus layer on mount and pops it on
  * unmount, so the back chain and focus memory stay in lockstep with the stack.
  *
- * Content pages (Home/Category/Detail/Player) arrive in T10-T16; this task uses
- * focusable placeholders so navigation and the back chain can be exercised now.
+ * The player is the one lazy() page: its chunk (and hls.js) must stay out of
+ * the startup bundle, and it genuinely unmounts on back so playback stops.
  */
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import {
   initFocusEngine,
   focusTo,
-  pushFocusLayer,
-  popFocusLayer,
   getCurrentFocus,
   setActiveContentGroup,
-  useFocusable,
 } from './hooks/useFocus.js'
 
 // Each tab's content lives in its own focus group so all tabs can stay mounted
@@ -39,25 +36,9 @@ import { DEFAULT_SORT } from './config/taxonomy.js'
 
 const DEFAULT_FILTER = { genre: '0', area: '0', year: '0', sort: DEFAULT_SORT }
 
-// --- Placeholder overlay (player is replaced by PlayerPage in T16) ----------
-function OverlayPlaceholder({ layer, title, actionLabel, onAction, style }) {
-  const act = useFocusable({ layer, group: 'content', row: 0, col: 0, onSelect: onAction })
-  useEffect(() => {
-    // Push this focus layer, then focus into it once its focusables have
-    // registered (child register effects run before this parent effect).
-    pushFocusLayer(layer)
-    focusTo(`${layer}/content-0-0`)
-    return () => popFocusLayer()
-  }, [layer])
-  return (
-    <div className="overlay" style={style}>
-      <div className="placeholder-heading">{title}</div>
-      <div className="placeholder-row">
-        <span className="focusable-chip" {...act.props}>{actionLabel}</span>
-      </div>
-    </div>
-  )
-}
+// Lazy: the player chunk (and hls.js inside it) loads on first playback, never
+// at startup.
+const PlayerPage = lazy(() => import('./player/PlayerPage.jsx'))
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home')
@@ -82,7 +63,13 @@ export default function App() {
   const vis = (type) => ({ display: top.type === type ? 'block' : 'none' })
 
   const openDetail = useCallback((id) => setStack((s) => [...s, { type: 'detail', id }]), [])
-  const openPlayer = useCallback((payload) => setStack((s) => [...s, { type: 'player', ...payload }]), [])
+  // Ignore a second OK while the player frame is already on top (the lazy chunk
+  // takes a beat to mount, during which the detail button can still fire).
+  const openPlayer = useCallback(
+    (payload) =>
+      setStack((s) => (s[s.length - 1].type === 'player' ? s : [...s, { type: 'player', ...payload }])),
+    [],
+  )
 
   const openFilterFor = useCallback((category) => setFilterPanel({ open: true, category }), [])
   const closeFilter = useCallback(() => setFilterPanel({ open: false, category: null }), [])
@@ -194,7 +181,15 @@ export default function App() {
       )}
 
       {top.type === 'player' && (
-        <OverlayPlaceholder layer="player" title="播放器占位" actionLabel="播放器内占位按钮" onAction={() => {}} />
+        <Suspense
+          fallback={
+            <div className="player">
+              <div className="player-status">加载中…</div>
+            </div>
+          }
+        >
+          <PlayerPage id={top.id} episodeIndex={top.episodeIndex} />
+        </Suspense>
       )}
     </>
   )

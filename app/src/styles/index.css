@@ -13,6 +13,7 @@
 @import "./filter.css";
 @import "./detail.css";
 @import "./library.css";
+@import "./player.css";
 
 /* Page styles are appended here as later tasks add them, e.g.:
    @import "../pages/home.css";

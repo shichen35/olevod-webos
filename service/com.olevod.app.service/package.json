@@ -1,0 +1,6 @@
+{
+  "name": "com.olevod.app.service",
+  "version": "1.0.0",
+  "description": "OleVod data channel: Luna fetch + local HLS proxy",
+  "main": "service.js"
+}

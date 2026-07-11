@@ -1,0 +1,10 @@
+{
+  "id": "com.olevod.app.service",
+  "description": "OleVod data channel: Luna fetch + local HLS proxy",
+  "services": [
+    {
+      "name": "com.olevod.app.service",
+      "description": "OleVod data channel: Luna fetch + local HLS proxy"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "olevod-tools",
+  "private": true,
+  "type": "module",
+  "description": "Deployment and CDP debugging scripts for the olevod webOS app",
+  "dependencies": {
+    "ssh2": "^1.16.0",
+    "ws": "^8.18.0"
+  }
+}

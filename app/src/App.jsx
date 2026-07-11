@@ -107,7 +107,7 @@ export default function App() {
     })
   }, [activeTab])
 
-  // Back-navigation chain: player -> detail -> content -> tabbar -> home tab -> exit.
+  // Back-navigation chain: player -> detail -> content(->tabbar) -> exit.
   useEffect(() => {
     const onBack = () => {
       const prev = stackRef.current
@@ -116,19 +116,12 @@ export default function App() {
         setStack(prev.slice(0, -1))
         return
       }
-      // At the shell: first Back returns focus from the content area to the tab
-      // bar, next Back goes to the home tab, and only from home does it exit.
+      // At the shell: if focus is in the content area, return it to the tab bar;
+      // if it is already on the tab bar, hand Back to the system (exit prompt).
       const cur = getCurrentFocus() || ''
       if (cur.startsWith('home/content:')) {
         const idx = Math.max(0, TABS.findIndex((t) => t.key === activeTabRef.current))
         focusTo(`home/tabbar-0-${idx}`)
-        return
-      }
-      if (activeTabRef.current !== 'home') {
-        // Switch the tab explicitly — focusTo alone is a same-id no-op when the
-        // home tab already holds focus, and the hover preview never fires.
-        setActiveTab('home')
-        focusTo('home/tabbar-0-0')
         return
       }
       exitApp()

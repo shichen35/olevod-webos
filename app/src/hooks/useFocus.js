@@ -27,7 +27,7 @@ const layerStack = [DEFAULT_LAYER]
 // Focus memory. Restored on layer pop / cross-group jumps / vertical row moves.
 const lastFocusByLayer = new Map() // layer -> id
 const lastFocusByGroup = new Map() // "{layer}/{group}" -> id
-const rowMemory = new Map()        // "{layer}/{group}-{row}" -> col (last column visited in that row)
+const rowMemory = new Map()        // "{layer}/{group}-{row}" -> col (read only for row-cursor groups)
 
 // Listeners notified on every focus change (id => void); for effects that must
 // track focus without owning a focusable (e.g. header state).
@@ -163,13 +163,14 @@ function firstInLayer(layer) {
   return null
 }
 
-// Nearest existing column in a target row: try the remembered column for that
-// row, then the incoming column (or col 0 in row-cursor groups), then walk
-// outward within a bounded window.
+// Nearest existing column in a target row, then walk outward within a bounded
+// window. Row-cursor groups (home shelves) land on the row's remembered column
+// (first item if never visited); every other group keeps the incoming column
+// so vertical movement runs straight down.
 function nearestColInRow(layer, group, row, preferCol) {
-  const remembered = rowMemory.get(`${layer}/${group}-${row}`)
-  const startCol =
-    remembered != null ? remembered : rowCursorGroups.has(`${layer}/${group}`) ? 0 : preferCol
+  const rowCursor = rowCursorGroups.has(`${layer}/${group}`)
+  const remembered = rowCursor ? rowMemory.get(`${layer}/${group}-${row}`) : null
+  const startCol = remembered != null ? remembered : rowCursor ? 0 : preferCol
 
   if (registry.has(buildId(layer, group, row, startCol))) {
     return buildId(layer, group, row, startCol)

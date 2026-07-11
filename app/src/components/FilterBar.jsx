@@ -1,16 +1,17 @@
 /*
- * Category page header row (focus row 0 of the content group): a horizontally
- * scrollable strip of subtype chips (All + taxonomy genres) followed by a
- * "Filter" button that opens the region/year/sort panel (T12), plus a
- * non-focusable summary of the current filter on the right.
+ * Category page header (focus rows 0-1 of the content group): row 0 is a
+ * horizontally scrollable strip of subtype chips (All + taxonomy genres);
+ * row 1 is its own line with the "Filter" button that opens the
+ * region/year/sort panel (T12) plus a non-focusable summary of the current
+ * filter next to it.
  *
  * Selecting a chip applies immediately (server-side filtering in CategoryPage).
  */
 import { useFocusable } from '../hooks/useFocus.js'
 import { getCategory, SORTS } from '../config/taxonomy.js'
 
-function Chip({ group, col, label, selected, onSelect }) {
-  const { props } = useFocusable({ layer: 'home', group, row: 0, col, onSelect })
+function Chip({ group, row = 0, col, label, selected, onSelect }) {
+  const { props } = useFocusable({ layer: 'home', group, row, col, onSelect })
   return (
     <span className={`chip focusable-chip${selected ? ' chip-selected' : ''}`} {...props}>
       {label}
@@ -44,9 +45,11 @@ export default function FilterBar({ category, group = 'content', filter, onSelec
             onSelect={() => onSelectGenre(g.value)}
           />
         ))}
-        <Chip group={group} col={genres.length} label="筛选" onSelect={onOpenFilter} />
       </div>
-      <div className="filter-summary">{summaryText(cfg, filter)}</div>
+      <div className="filter-actions">
+        <Chip group={group} row={1} col={0} label="筛选" onSelect={onOpenFilter} />
+        <div className="filter-summary">{summaryText(cfg, filter)}</div>
+      </div>
     </div>
   )
 }

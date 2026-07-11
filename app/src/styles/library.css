@@ -67,8 +67,10 @@
   color: var(--focus-text);
 }
 .settings-version {
-  max-width: 900px;
-  margin-top: 20px;
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
   text-align: center;
   color: var(--text-3);
   font-size: var(--fs-caption);

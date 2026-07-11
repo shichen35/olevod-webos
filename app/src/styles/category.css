@@ -4,11 +4,12 @@
   padding-top: 16px;
 }
 
-/* --- Filter bar (row 0) --- */
+/* --- Filter header (focus rows 0-1): genre chips line, then the filter
+   button + current-filter summary on their own line. --- */
 .filter-bar {
   display: flex;
-  align-items: center;
-  gap: 24px;
+  flex-direction: column;
+  gap: 16px;
   margin-bottom: 24px;
 }
 .filter-chips {
@@ -16,10 +17,14 @@
   gap: 12px;
   overflow-x: auto;
   scrollbar-width: none;
-  flex: 1 1 auto;
 }
 .filter-chips::-webkit-scrollbar {
   display: none;
+}
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
 }
 
 .chip {

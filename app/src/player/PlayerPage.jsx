@@ -1,18 +1,19 @@
 /*
  * Full-screen HLS player (the "player" focus layer, above "detail").
  *
- * T16 gave it enter -> play -> back; T17 adds the control bar and the full
- * remote-key state machine. Still to come: resume (T18), autoplay-next (T19),
- * bottom panel (T20 — the bar-shown Down key is its reserved hook).
- *
  * Key machine (all keys intercepted at the player layer via
  * setCustomKeyHandler; Back unwinds one level at a time):
- *   bar hidden: Down = show bar · Left/Right = ±15s step (long-press repeats)
+ *   bar hidden: Down = show bar · Up = show the key hint · Left/Right = seek
+ *               step (long-press repeats, step grows each held second)
  *               OK = play/pause (pausing shows the bar) · Back = exit
- *   bar shown:  Up = hide bar · Down = panel (T20) · Left/Right = ±60s drag
- *               OK = play/pause · Back = hide bar
+ *   bar shown:  Up = hide bar · Left/Right = bigger seek step · OK = play/pause
+ *               Back = hide bar
  *   Seeks accumulate into a pending target and only commit after the key has
  *   settled for ~500ms — no burst of segment requests while stepping.
+ *
+ * The title chip (top-left) shows/hides together with the control bar.
+ * Quality is fully automatic (ABR capped below the UHD tier); playback speed
+ * is always 1x — there is no bottom panel.
  *
  * Performance: progress/timecode updates go straight to the DOM via refs on
  * `timeupdate` — playback must not re-render the component every second.
@@ -26,8 +27,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detail as fetchDetail, streamUrl } from '../api/olevod.js'
 import * as pageCache from '../store/pageCache.js'
 import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
-import { getSetting, setSetting } from '../store/settings.js'
-import PlayerPanel from './PlayerPanel.jsx'
 import {
   useFocusable,
   pushFocusLayer,
@@ -42,6 +41,7 @@ const STEP_HIDDEN_S = 15 // tap step with the bar hidden
 const STEP_SHOWN_S = 60 // drag step with the bar shown
 const SEEK_SETTLE_MS = 500 // commit the pending seek once input settles
 const SEEK_REPEAT_MS = 200 // long-press step cadence (native key repeat, throttled)
+const SEEK_ACCEL_MAX = 5 // long-press: step multiplier grows 1x/held-second up to this
 const BADGE_LINGER_MS = 800 // keep the target badge up briefly after committing
 const BAR_HIDE_MS = 5000
 
@@ -67,9 +67,9 @@ function isBackKey(e) {
   return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
 }
 
-// Highest quality below the 1440p tier — the UHD tier is reserved for manual
-// switching (T20). Returns -1 when the master has no such level; then hls.js
-// keeps its own ABR choice.
+// Highest quality below the 1440p tier — UHD is too heavy to auto-select.
+// Returns -1 when the master has no such level; then hls.js keeps its own
+// ABR choice.
 function pickStartLevel(levels) {
   let best = -1
   for (let i = 0; i < levels.length; i++) {
@@ -118,11 +118,8 @@ export default function PlayerPage({ id, episodeIndex }) {
   const toastTimerRef = useRef(null)
   const [upNext, setUpNext] = useState(false) // Up Next card visible
   const [switching, setSwitching] = useState(false) // episode-change reload
-  const [panelOpen, setPanelOpen] = useState(false) // bottom panel (T20)
-  const [hint, setHint] = useState(false) // one-time first-run key hint
-  const [speed, setSpeed] = useState(1) // persists across episode switches
-  const [qualityLevels, setQualityLevels] = useState([]) // hls.js path only
-  const [curLevel, setCurLevel] = useState(-1) // -1 = auto (ABR)
+  const [hint, setHint] = useState(false) // settings-gated key hint
+  const [paused, setPaused] = useState(false) // drives the bar's play/pause icon
 
   const statusRef = useRef(status)
   statusRef.current = status
@@ -131,14 +128,8 @@ export default function PlayerPage({ id, episodeIndex }) {
   const upNextRef = useRef(upNext)
   upNextRef.current = upNext
   const upNextDismissedRef = useRef(false) // per-episode: Back/Up dismissed it
-  const panelRef = useRef(panelOpen)
-  panelRef.current = panelOpen
   const hintRef = useRef(hint)
   hintRef.current = hint
-  const speedRef = useRef(speed)
-  speedRef.current = speed
-  const hlsRef = useRef(null) // live hls.js instance (quality switching)
-  const capRef = useRef(-1) // the sub-1440p auto-cap chosen at manifest parse
 
   // "Next" in a newest-first list is the entry BEFORE the current one.
   const epList = data?.episodes || []
@@ -158,6 +149,7 @@ export default function PlayerPage({ id, episodeIndex }) {
   const seekTimerRef = useRef(null) // settle timer
   const badgeTimerRef = useRef(null)
   const lastStepAtRef = useRef(0)
+  const holdStartAtRef = useRef(0) // when the current long-press began
   const hideTimerRef = useRef(null)
 
   // ---------------------------------------------------------------------
@@ -211,11 +203,16 @@ export default function PlayerPage({ id, episodeIndex }) {
       const dur = v?.duration
       if (!v || !Number.isFinite(dur) || dur <= 0) return
       const now = Date.now()
+      if (!isRepeat) holdStartAtRef.current = now // a fresh press resets the ramp
       if (isRepeat && now - lastStepAtRef.current < SEEK_REPEAT_MS) return
       lastStepAtRef.current = now
 
+      // Long-press acceleration: the step grows by 1x for every held second.
+      const heldS = isRepeat ? Math.floor((now - holdStartAtRef.current) / 1000) : 0
+      const mult = Math.min(1 + heldS, SEEK_ACCEL_MAX)
+
       const base = pendingSeekRef.current ?? v.currentTime
-      const target = Math.min(Math.max(base + deltaS, 0), Math.max(dur - 2, 0))
+      const target = Math.min(Math.max(base + deltaS * mult, 0), Math.max(dur - 2, 0))
       pendingSeekRef.current = target
       showBadge(deltaS, target)
       // Preview cursor: while the bar is up, the played track follows the target.
@@ -245,49 +242,19 @@ export default function PlayerPage({ id, episodeIndex }) {
     [],
   )
 
-  // ---------------------------------------------------------------------
-  // panel + speed + quality (T20)
-  // ---------------------------------------------------------------------
-  const openPanel = useCallback(() => {
-    clearTimeout(hideTimerRef.current) // bar stays put behind the panel
-    setPanelOpen(true)
-  }, [])
-  const closePanel = useCallback(() => {
-    setPanelOpen(false)
-    showBar() // collapse back to the control bar, auto-hide re-armed
-  }, [showBar])
-
-  const applySpeed = useCallback((s) => {
-    setSpeed(s)
-    const v = videoRef.current
-    if (v) v.playbackRate = s
-  }, [])
-
-  const applyQuality = useCallback((i) => {
-    setCurLevel(i)
-    const hls = hlsRef.current
-    if (!hls) return
-    if (i === -1) {
-      // Back to ABR, re-capped below the UHD tier.
-      hls.autoLevelCapping = capRef.current
-      hls.currentLevel = -1
-    } else {
-      // Manual pin (UHD included): uncap, then lock the level — no ABR fallback.
-      hls.autoLevelCapping = -1
-      hls.currentLevel = i
-    }
-  }, [])
-
-  // First-run hint: once per install (settings-backed); any key or 3s ends it.
-  const hintArmedRef = useRef(false)
-  useEffect(() => {
-    if (!hintArmedRef.current && getSetting('playerHintShown')) return
-    hintArmedRef.current = true
-    setSetting('playerHintShown', true)
+  // Key hint: every video opened with no saved watch progress shows it, and
+  // Up with the bar hidden recalls it any time; any key or 3s ends it.
+  const hintTimerRef = useRef(null)
+  const showHint = useCallback(() => {
     setHint(true)
-    const t = setTimeout(() => setHint(false), TOAST_MS)
-    return () => clearTimeout(t)
+    clearTimeout(hintTimerRef.current)
+    hintTimerRef.current = setTimeout(() => setHint(false), TOAST_MS)
   }, [])
+  useEffect(() => {
+    const w = getWatchState(id)
+    if (!w || !(w.position > 0)) showHint()
+    return () => clearTimeout(hintTimerRef.current)
+  }, [id, showHint])
 
   // Switch episodes WITHOUT exiting the player: the playback effect's cleanup
   // flushes the outgoing episode's progress, then the new run reloads the URL
@@ -329,18 +296,8 @@ export default function PlayerPage({ id, episodeIndex }) {
         return !isBackKey(e) && (e.key === 'Enter' || (e.key || '').startsWith('Arrow'))
       }
 
-      // Any key dismisses the first-run hint, then keeps its normal meaning.
+      // Any key dismisses the key hint, then keeps its normal meaning.
       if (hintRef.current) setHint(false)
-
-      // Panel open: Back collapses it to the control bar; arrows/OK pass
-      // through to the focus engine, which drives the panel's focusables.
-      if (panelRef.current) {
-        if (isBackKey(e)) {
-          closePanel()
-          return true
-        }
-        return false
-      }
 
       // Up Next card takes OK (switch now) and Up/Back (dismiss) first; other
       // keys keep their normal meaning while the card is up.
@@ -370,9 +327,6 @@ export default function PlayerPage({ id, episodeIndex }) {
           case 'ArrowUp':
             hideBar()
             return true
-          case 'ArrowDown':
-            openPanel()
-            return true
           case 'ArrowLeft':
             stepSeek(-STEP_SHOWN_S, e.repeat)
             return true
@@ -401,6 +355,7 @@ export default function PlayerPage({ id, episodeIndex }) {
           togglePlay()
           return true
         case 'ArrowUp':
+          showHint() // bar hidden: Up recalls the key hint
           return true
         default:
           return false
@@ -410,7 +365,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       setCustomKeyHandler(null)
       popFocusLayer()
     }
-  }, [armHideTimer, hideBar, showBar, stepSeek, togglePlay, openPanel, closePanel])
+  }, [armHideTimer, hideBar, showBar, stepSeek, togglePlay, showHint])
 
   // The error state has this layer's only focusable; land on it deterministically.
   useEffect(() => {
@@ -447,9 +402,6 @@ export default function PlayerPage({ id, episodeIndex }) {
     let started = false // first 'playing' of THIS episode load
     let resumeCorrected = false
     setStatus('loading')
-    // Quality state is per-stream; a fresh episode re-parses its own master.
-    setQualityLevels([])
-    setCurLevel(-1)
 
     // Resume decision (T18): same episode, meaningfully into it.
     const watch = getWatchState(id)
@@ -473,6 +425,7 @@ export default function PlayerPage({ id, episodeIndex }) {
     const onPlaying = () => {
       setStatus('ok')
       setSwitching(false)
+      setPaused(false)
       // hls.js can snap the first frame back to 0 — correct once.
       if (resumePos > 0 && !resumeCorrected) {
         resumeCorrected = true
@@ -499,11 +452,11 @@ export default function PlayerPage({ id, episodeIndex }) {
     const onLoadedMeta = () => {
       // Native-HLS resume: seek as soon as the duration is known.
       if (resumePos > 0 && video.currentTime < resumePos - 3) video.currentTime = resumePos
-      // The chosen speed survives episode switches and reloads.
-      video.playbackRate = speedRef.current
     }
     const onVideoError = () => setStatus('error')
+    const onPlay = () => setPaused(false)
     const onPause = () => {
+      setPaused(true)
       // Any pause surfaces the bar (remote OK, or a future system event).
       if (statusRef.current === 'ok' && !video.ended) showBar()
     }
@@ -550,6 +503,7 @@ export default function PlayerPage({ id, episodeIndex }) {
     video.addEventListener('playing', onPlaying)
     video.addEventListener('loadedmetadata', onLoadedMeta)
     video.addEventListener('error', onVideoError)
+    video.addEventListener('play', onPlay)
     video.addEventListener('pause', onPause)
     video.addEventListener('timeupdate', onTime)
     video.addEventListener('progress', onProgress)
@@ -579,17 +533,12 @@ export default function PlayerPage({ id, episodeIndex }) {
           playlistLoadPolicy: LOAD_POLICY,
           fragLoadPolicy: LOAD_POLICY,
         })
-        hlsRef.current = hls
         hls.on(Hls.Events.MANIFEST_PARSED, (_evt, parsed) => {
-          const levels = parsed.levels || []
-          const lvl = pickStartLevel(levels)
-          capRef.current = lvl
+          const lvl = pickStartLevel(parsed.levels || [])
           if (lvl >= 0) {
             hls.startLevel = lvl
-            hls.autoLevelCapping = lvl // ABR stays below UHD; manual switch via panel
+            hls.autoLevelCapping = lvl // ABR stays below the UHD tier
           }
-          // Surface every tier (UHD included) for the panel's quality tab.
-          setQualityLevels(levels.map((l, i) => ({ i, height: l.height, bitrate: l.bitrate })))
           // Resume at load time — starting at 0 and seeking would double-buffer.
           hls.startLoad(resumePos > 0 ? resumePos : -1)
           video.play().catch(() => {})
@@ -613,11 +562,11 @@ export default function PlayerPage({ id, episodeIndex }) {
       video.removeEventListener('playing', onPlaying)
       video.removeEventListener('loadedmetadata', onLoadedMeta)
       video.removeEventListener('error', onVideoError)
+      video.removeEventListener('play', onPlay)
       video.removeEventListener('pause', onPause)
       video.removeEventListener('timeupdate', onTime)
       video.removeEventListener('progress', onProgress)
       video.removeEventListener('ended', onEnded)
-      hlsRef.current = null
       if (hls) hls.destroy()
       // Drop the native source too so no segment request outlives the page.
       video.removeAttribute('src')
@@ -632,20 +581,37 @@ export default function PlayerPage({ id, episodeIndex }) {
     <div className="player">
       <video ref={videoRef} className="player-video" />
 
+      {/* Title chip — top-left, shows/hides together with the control bar. */}
+      {barVisible && (
+        <div className="player-title">
+          <span className="player-title-name">{data?.title || ''}</span>
+          {epLabel && <span className="player-title-ep">{epLabel}</span>}
+        </div>
+      )}
+
       {/* Control bar — always mounted so the DOM refs stay stable; visibility
           is an instant display toggle. */}
-      <div className="player-bar" style={{ display: barVisible ? 'block' : 'none' }}>
-        <div className="player-bar-info">
-          <span className="player-bar-title">{data?.title || ''}</span>
-          {epLabel && <span className="player-bar-ep">{epLabel}</span>}
-        </div>
-        <div className="player-track">
-          <div ref={bufferedRef} className="player-track-buffered" />
-          <div ref={playedRef} className="player-track-played" />
-        </div>
-        <div className="player-times">
-          <span ref={curTimeRef}>00:00</span>
-          <span ref={remainRef}>-00:00</span>
+      <div className="player-bar" style={{ display: barVisible ? 'flex' : 'none' }}>
+        <span className="player-bar-btn">
+          {paused ? (
+            <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-label="播放">
+              <path d="M8 5.5v13a1 1 0 0 0 1.54.84l10.2-6.5a1 1 0 0 0 0-1.68L9.54 4.66A1 1 0 0 0 8 5.5z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-label="暂停">
+              <path d="M7 5h3.4v14H7zM13.6 5H17v14h-3.4z" />
+            </svg>
+          )}
+        </span>
+        <div className="player-bar-body">
+          <div className="player-track">
+            <div ref={bufferedRef} className="player-track-buffered" />
+            <div ref={playedRef} className="player-track-played" />
+          </div>
+          <div className="player-times">
+            <span ref={curTimeRef}>00:00</span>
+            <span ref={remainRef}>-00:00</span>
+          </div>
         </div>
       </div>
 
@@ -654,7 +620,7 @@ export default function PlayerPage({ id, episodeIndex }) {
 
       {toast && <div className="player-toast">{toast}</div>}
 
-      {/* Up Next (T19): opaque card, bottom-right; OK switches immediately. */}
+      {/* Up Next (T19): glass card, bottom-right; OK switches immediately. */}
       {upNext && nextEpIndex != null && (
         <div className="player-upnext">
           <div className="player-upnext-label">即将播放</div>
@@ -663,28 +629,11 @@ export default function PlayerPage({ id, episodeIndex }) {
         </div>
       )}
 
-      {panelOpen && (
-        <PlayerPanel
-          episodes={epList}
-          curEp={curEp}
-          speed={speed}
-          qualityLevels={qualityLevels}
-          curLevel={curLevel}
-          onSwitchEpisode={(n) => {
-            setPanelOpen(false)
-            switchEpisode(n)
-          }}
-          onSetSpeed={applySpeed}
-          onSetQuality={applyQuality}
-          onClose={closePanel}
-        />
-      )}
-
       {hint && (
         <div className="player-hint">
           <div className="player-hint-title">遥控键位</div>
-          <div>OK 播放 / 暂停 · 左右键快退快进</div>
-          <div>下键调出控制条，再按下键打开面板 · 返回键逐层退出</div>
+          <div>OK 播放 / 暂停 · 左右键快退快进（长按加速）</div>
+          <div>下键调出控制条 · 上键查看本提示 · 返回键退出</div>
         </div>
       )}
 

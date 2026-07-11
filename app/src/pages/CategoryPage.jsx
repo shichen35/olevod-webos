@@ -2,8 +2,9 @@
  * Category page (one instance per Movies/Variety/TV Series tab, configured by
  * taxonomy): a filter row + a 6-column poster grid + infinite scroll.
  *
- * Focus: FilterBar is row 0 of the content group; cards start at row 1, so
- * moving down from a chip flows straight into the grid.
+ * Focus: FilterBar occupies rows 0-1 of the content group (genre chips, then
+ * the filter button line); cards start at row 2, so moving down from the
+ * filter button flows straight into the grid.
  *
  * A monotonically increasing genRef token invalidates in-flight requests: any
  * result that returns after the filter changed is discarded, so a slow stale
@@ -20,7 +21,7 @@ import * as pageCache from '../store/pageCache.js'
 
 const COLS = 6
 const PAGE_SIZE = 24
-const FILTER_ROWS = 1
+const FILTER_ROWS = 2 // genre chips (row 0) + filter button line (row 1)
 
 export default function CategoryPage({ category, group = 'content', onOpenDetail, onOpenFilter, refreshNonce, filterOverride }) {
   const [filter, setFilterState] = useState(() => getFilter(category) || defaultFilter())

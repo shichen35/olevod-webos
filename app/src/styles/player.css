@@ -1,6 +1,9 @@
-/* Full-screen player: solid black video surface; every chrome element is an
-   opaque panel that appears/disappears instantly (display toggle — no fade,
-   no scrim, no translucency anywhere). */
+/* Full-screen player. Chrome (title chip, control bar, badges, cards) uses the
+   sanctioned --glass-* material (see tokens.css) and appears/disappears
+   instantly — display toggles only, no fades, no scrims.
+   Note: on the TV the video decodes on a hardware plane below the graphics
+   plane, so backdrop blur only affects rendered graphics there — the glass
+   reads as a translucent dark fill over the video, which is the intended look. */
 
 .player {
   position: fixed;
@@ -26,37 +29,66 @@
   color: var(--text);
 }
 
-/* --- Control bar (T17): opaque solid bar pinned to the bottom --- */
-.player-bar {
+/* --- Title chip: top-left glass capsule, visible while the bar is up --- */
+.player-title {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--bg-elev);
-  padding: 28px var(--safe-x) 32px;
-}
-
-.player-bar-info {
+  top: 48px;
+  left: var(--safe-x);
   display: flex;
   align-items: baseline;
-  gap: 24px;
-  margin-bottom: 20px;
+  gap: 20px;
+  padding: 14px 32px;
+  border-radius: 999px;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-edge);
 }
-.player-bar-title {
+.player-title-name {
   font-size: var(--fs-heading);
   color: var(--text);
 }
-.player-bar-ep {
+.player-title-ep {
   font-size: var(--fs-label);
   color: var(--text-2);
 }
 
-/* Track: unplayed = the track base itself; buffered and played layer on top. */
+/* --- Control bar: floating glass panel, play/pause icon + track + times --- */
+.player-bar {
+  position: absolute;
+  left: var(--safe-x);
+  right: var(--safe-x);
+  bottom: 48px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 24px 36px;
+  border-radius: 28px;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-edge);
+}
+.player-bar-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  color: var(--text);
+}
+.player-bar-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Track: rounded pill; unplayed = translucent base, buffered above it,
+   played = solid white on top. */
 .player-track {
   position: relative;
-  height: 6px;
-  background: var(--text-3);
-  margin-bottom: 16px;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--glass-active);
+  margin-bottom: 14px;
 }
 .player-track-buffered {
   position: absolute;
@@ -64,7 +96,7 @@
   bottom: 0;
   left: 0;
   width: 0;
-  background: var(--bg-elev-2);
+  background: var(--text-3);
 }
 .player-track-played {
   position: absolute;
@@ -82,26 +114,32 @@
   color: var(--text-2);
 }
 
-/* --- Resume toast (T18): static opaque card, top-left, removed after 3s --- */
+/* --- Resume toast: glass pill, top-right (title chip owns the top-left) --- */
 .player-toast {
   position: absolute;
   top: 48px;
-  left: var(--safe-x);
-  background: var(--bg-elev);
-  border: 2px solid var(--bg-elev-2);
+  right: var(--safe-x);
   padding: 14px 28px;
+  border-radius: 999px;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-edge);
   font-size: var(--fs-label);
   color: var(--text);
 }
 
-/* --- Up Next card (T19): opaque, bottom-right, appears instantly --- */
+/* --- Up Next card: glass card, bottom-right, appears instantly --- */
 .player-upnext {
   position: absolute;
   right: var(--safe-x);
   bottom: 220px;
-  background: var(--bg-elev);
-  border: 2px solid var(--text-3);
   padding: 24px 36px;
+  border-radius: 20px;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-edge);
   text-align: center;
 }
 .player-upnext-label {
@@ -119,48 +157,18 @@
   color: var(--text-2);
 }
 
-/* --- Bottom panel (T20): opaque sheet over the control bar --- */
-.player-panel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  max-height: 560px;
-  overflow-y: auto;
-  background: var(--bg-elev);
-  border-top: 2px solid var(--bg-elev-2);
-  padding: 28px var(--safe-x) 36px;
-}
-.player-panel-tabs {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.player-panel-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-/* Episode chips: 8 equal tracks, full panel width, symmetric margins. Track
-   count must match EP_COLS in PlayerPanel (visual rows = focus rows). */
-.player-panel-grid {
-  display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 16px;
-}
-.player-panel-grid .panel-chip {
-  text-align: center;
-}
-
-/* --- First-run key hint (T20): one-time static card, centered --- */
+/* --- Key hint (settings-gated): glass card, centered near the top --- */
 .player-hint {
   position: absolute;
   top: 120px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--bg-elev);
-  border: 2px solid var(--bg-elev-2);
   padding: 24px 40px;
+  border-radius: 20px;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-edge);
   text-align: center;
   font-size: var(--fs-label);
   color: var(--text-2);
@@ -174,15 +182,18 @@
   margin-top: 6px;
 }
 
-/* --- Seek target badge: static, centered above the bar area --- */
+/* --- Seek target badge: glass pill, centered above the bar area --- */
 .player-seek-badge {
   position: absolute;
   bottom: 220px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--bg-elev-2);
-  border: 2px solid var(--text-3);
-  padding: 10px 28px;
+  padding: 10px 32px;
+  border-radius: 999px;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-edge);
   font-size: var(--fs-heading);
   color: var(--text);
 }

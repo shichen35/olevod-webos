@@ -35,13 +35,15 @@
   contain-intrinsic-size: var(--card-w) 490px;
 }
 
+/* Radius = image radius (12px) + the reserved focus-border width, so the
+   image clips at 12px and the focus ring's outer edge stays rounded. */
 .card-poster {
   position: relative;
   width: 100%;
   aspect-ratio: 2 / 3;
   background: var(--bg-elev);
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: calc(12px + var(--focus-border));
 }
 
 .thumb {

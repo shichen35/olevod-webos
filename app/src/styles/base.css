@@ -76,14 +76,14 @@ button {
  * a consistent look with zero layout shift and zero motion.
  */
 
-/* Cards: reserve the border slot up front (transparent) so adding the focus
-   border never shifts layout. Radius = poster radius (12px) + border width,
-   so the focus ring hugs the rounded poster corners. */
-.focusable-card {
+/* Cards: the focus ring wraps only the poster, not the title/meta below it.
+   The slot is reserved on the poster (transparent border) so focusing never
+   shifts layout; .card has paint containment, so the ring must live inside
+   the card bounds rather than as an outline/negative margin. */
+.focusable-card .card-poster {
   border: var(--focus-border) solid transparent;
-  border-radius: 15px;
 }
-.focusable-card.focused {
+.focusable-card.focused .card-poster {
   border-color: var(--focus);
 }
 

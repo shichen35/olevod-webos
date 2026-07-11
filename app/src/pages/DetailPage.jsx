@@ -127,6 +127,11 @@ export default function DetailPage({ id, onPlay, style }) {
     <div className="overlay" style={style}>
       <div className="detail">
         <div className="detail-top">
+          <div className="detail-poster">
+            {/* Same sized asset as grid cards: usually already cached when
+                arriving from a poster grid, so it paints immediately. */}
+            <Thumb pic={data.pic} alt={data.title} />
+          </div>
           <div className="detail-info">
             <div className="detail-eyebrow">{eyebrow}</div>
             <h1 className="detail-title">{data.title}</h1>
@@ -144,9 +149,6 @@ export default function DetailPage({ id, onPlay, style }) {
                 onSelect={() => toggleFavorite(favItem)}
               />
             </div>
-          </div>
-          <div className="detail-poster">
-            <Thumb pic={data.pic} alt={data.title} size="600x900" />
           </div>
         </div>
 

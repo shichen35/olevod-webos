@@ -13,7 +13,8 @@
 }
 
 .detail-info {
-  width: 55%;
+  flex: 1;
+  min-width: 0;
 }
 .detail-eyebrow {
   font-size: var(--fs-label);
@@ -69,10 +70,13 @@
   border-radius: 8px;
 }
 
+/* Poster: same fixed footprint as a grid card (width + 2:3 ratio), so the
+   image is never cropped to an arbitrary shape by the flex layout. */
 .detail-poster {
-  flex: 1 1 auto;
-  height: 660px;
-  border-radius: 8px;
+  flex: 0 0 var(--card-w);
+  width: var(--card-w);
+  aspect-ratio: 2 / 3;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--bg-elev);
 }

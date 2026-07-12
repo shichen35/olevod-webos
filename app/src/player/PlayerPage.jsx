@@ -99,7 +99,7 @@ const LOAD_POLICY = {
 function RetryButton({ onRetry }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col: 0, onSelect: onRetry })
   return (
-    <span className="detail-btn focusable-chip" {...props}>
+    <span className="focusable rounded-lg bg-elev-2 px-8 py-3.5 text-label text-fg" {...props}>
       加载失败，重试
     </span>
   )
@@ -596,28 +596,28 @@ export default function PlayerPage({ id, episodeIndex }) {
     episodes.length > 1 ? epList[curIdx]?.title || `第${curEp}集` : ''
 
   return (
-    <div className="player">
-      <video ref={videoRef} className="player-video" />
+    <div className="fixed inset-0 bg-black">
+      <video ref={videoRef} className="h-full w-full bg-black object-contain" />
 
       {/* Title chip — top-left, shows/hides together with the control bar. */}
       {barVisible && (
-        <div className="player-title">
-          <span className="player-title-name">{data?.title || ''}</span>
-          {epLabel && <span className="player-title-ep">{epLabel}</span>}
+        <div className="glass-strong border border-glass-edge absolute top-12 left-safe flex items-baseline gap-5 rounded-full px-8 py-3.5">
+          <span className="text-heading text-fg">{data?.title || ''}</span>
+          {epLabel && <span className="text-label text-fg-2">{epLabel}</span>}
         </div>
       )}
 
       {/* Control bar — always mounted so the DOM refs stay stable; visibility
           is an instant display toggle. */}
-      <div className="player-bar" style={{ display: barVisible ? 'block' : 'none' }}>
-        <div className="player-track">
-          <div ref={bufferedRef} className="player-track-buffered" />
-          <div ref={playedRef} className="player-track-played" />
+      <div className="glass-strong border border-glass-edge absolute bottom-12 left-[33%] w-[34%] rounded-[28px] px-9 pt-6 pb-4" style={{ display: barVisible ? 'block' : 'none' }}>
+        <div className="relative mb-3 h-2 overflow-hidden rounded-full bg-glass-active">
+          <div ref={bufferedRef} className="absolute inset-y-0 left-0 w-0 bg-fg-3" />
+          <div ref={playedRef} className="absolute inset-y-0 left-0 w-0 bg-focus" />
         </div>
         {/* Times row: current | play-pause icon centered | remaining */}
-        <div className="player-bar-row">
-          <span ref={curTimeRef} className="player-time">00:00</span>
-          <span className="player-bar-btn">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+          <span ref={curTimeRef} className="text-label text-fg-2">00:00</span>
+          <span className="flex items-center text-fg">
             {paused ? (
               <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-label="播放">
                 <path d="M8 5.5v13a1 1 0 0 0 1.54.84l10.2-6.5a1 1 0 0 0 0-1.68L9.54 4.66A1 1 0 0 0 8 5.5z" />
@@ -628,40 +628,40 @@ export default function PlayerPage({ id, episodeIndex }) {
               </svg>
             )}
           </span>
-          <span ref={remainRef} className="player-time player-time-remain">-00:00</span>
+          <span ref={remainRef} className="text-right text-label text-fg-2">-00:00</span>
         </div>
       </div>
 
       {/* Seek target badge (« / » + mm:ss), shared by both seek modes. */}
-      <div ref={badgeRef} className="player-seek-badge" style={{ display: 'none' }} />
+      <div ref={badgeRef} className="glass-strong border border-glass-edge absolute bottom-55 left-1/2 -translate-x-1/2 rounded-full px-8 py-2.5 text-heading text-fg" style={{ display: 'none' }} />
 
-      {toast && <div className="player-toast">{toast}</div>}
+      {toast && <div className="glass-strong border border-glass-edge absolute top-12 right-safe rounded-full px-7 py-3.5 text-label text-fg">{toast}</div>}
 
       {/* Up Next (T19): glass card, bottom-right; OK switches immediately. */}
       {upNext && nextEpIndex != null && (
-        <div className="player-upnext">
-          <div className="player-upnext-label">即将播放</div>
-          <div className="player-upnext-ep">{nextEp.title || `第${nextEpIndex}集`}</div>
-          <div className="player-upnext-hint">按 OK 立即播放</div>
+        <div className="glass-strong border border-glass-edge absolute right-safe bottom-55 rounded-[20px] px-9 py-6 text-center">
+          <div className="mb-2 text-caption text-fg-2">即将播放</div>
+          <div className="mb-2 text-heading text-fg">{nextEp.title || `第${nextEpIndex}集`}</div>
+          <div className="text-caption text-fg-2">按 OK 立即播放</div>
         </div>
       )}
 
       {hint && (
-        <div className="player-hint">
-          <div className="player-hint-title">遥控键位</div>
+        <div className="glass-strong border border-glass-edge absolute top-30 left-1/2 -translate-x-1/2 rounded-[20px] px-10 py-6 text-center text-label text-fg-2">
+          <div className="mb-3 text-heading text-fg">遥控键位</div>
           <div>OK 播放 / 暂停 · 左右键快退快进（长按加速）</div>
-          <div>下键调出控制条 · 上键查看本提示 · 返回键退出</div>
+          <div className="mt-1.5">下键调出控制条 · 上键查看本提示 · 返回键退出</div>
         </div>
       )}
 
       {status === 'loading' && (
-        <div className="player-status">
+        <div className="absolute inset-0 flex items-center justify-center bg-black text-heading text-fg">
           {switching ? `正在加载 第${curEp}集…` : '加载中…'}
         </div>
       )}
 
       {status === 'error' && (
-        <div className="player-status">
+        <div className="absolute inset-0 flex items-center justify-center bg-black text-heading text-fg">
           <RetryButton onRetry={() => setAttempt((n) => n + 1)} />
         </div>
       )}

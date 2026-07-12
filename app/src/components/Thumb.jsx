@@ -12,7 +12,7 @@ export default function Thumb({ pic, alt = '', size = '384x560' }) {
 
   if (!pic || stage === 2) {
     return (
-      <div className="thumb thumb-fallback" aria-label={alt}>
+      <div className="flex h-full w-full items-center justify-center bg-elev text-display text-fg-3" aria-label={alt}>
         {(alt || '?').slice(0, 1)}
       </div>
     )
@@ -21,7 +21,7 @@ export default function Thumb({ pic, alt = '', size = '384x560' }) {
   const src = stage === 0 ? imageUrl(pic, size) : imageUrl(pic)
   return (
     <img
-      className="thumb"
+      className="h-full w-full object-cover"
       src={src}
       alt={alt}
       loading="lazy"

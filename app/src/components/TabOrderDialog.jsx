@@ -23,7 +23,10 @@ function isBackKey(e) {
 function SortButton({ row, col, glyph, disabled, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col, onSelect })
   return (
-    <div className={`sort-btn${disabled ? ' sort-btn-disabled' : ''}`} {...props}>
+    <div
+      className={`focusable w-21 rounded-xl bg-elev-2 py-3 text-center text-label text-fg-2 ${disabled ? 'opacity-35' : ''}`}
+      {...props}
+    >
       {glyph}
     </div>
   )
@@ -32,7 +35,7 @@ function SortButton({ row, col, glyph, disabled, onSelect }) {
 function DoneButton({ row, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col: 0, onSelect })
   return (
-    <button className="dlg-btn" {...props}>
+    <button className="focusable w-full rounded-[14px] bg-glass-active py-[18px] text-label text-fg" {...props}>
       完成
     </button>
   )
@@ -70,17 +73,17 @@ export default function TabOrderDialog({ onClose }) {
   }
 
   return (
-    <div className="dialog-wrap">
-      <div className="dialog">
-        <div className="dialog-title">调整标签栏顺序</div>
-        <div className="dialog-desc">首页与「我的」固定在两端，其余标签可上下移动。</div>
-        <div className="sort-list">
+    <div className="fixed inset-0 flex items-center justify-center">
+      <div className="glass-strong w-[640px] rounded-3xl border border-glass-edge px-10 pt-11 pb-8">
+        <div className="mb-4 text-title text-fg">调整标签栏顺序</div>
+        <div className="mb-8 text-body leading-normal text-fg-2">首页与「我的」固定在两端，其余标签可上下移动。</div>
+        <div className="mb-6 flex flex-col gap-2.5">
           {/* Keyed by position, not tab.key: focus ids are positional, and a
               keyed DOM move would carry the imperative .focused class along
               with the node while its id changes underneath it. */}
           {items.map((tab, i) => (
-            <div className="sort-row" key={i}>
-              <span className="sort-label">{tab.label}</span>
+            <div className="flex items-center gap-3 rounded-[14px] bg-glass-active py-2.5 pr-2.5 pl-6" key={i}>
+              <span className="flex-1 text-body text-fg">{tab.label}</span>
               <SortButton row={i} col={0} glyph="▲" disabled={i === 0} onSelect={() => move(i, -1)} />
               <SortButton row={i} col={1} glyph="▼" disabled={i === items.length - 1} onSelect={() => move(i, 1)} />
             </div>

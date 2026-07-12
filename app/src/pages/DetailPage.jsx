@@ -18,10 +18,14 @@ import * as pageCache from '../store/pageCache.js'
 const LAYER = 'detail'
 const EP_COLS = 6
 
+// Primary (play) action: accent fill at rest; `focusable`'s .focused rules
+// still win, so the white focus fill overrides it instantly.
+const DETAIL_BTN = 'focusable rounded-lg px-8 py-3.5 text-label'
+
 function ActionButton({ col, label, primary, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col, onSelect })
   return (
-    <span className={`detail-btn focusable-chip${primary ? ' detail-btn-primary' : ''}`} {...props}>
+    <span className={`${DETAIL_BTN} ${primary ? 'bg-accent text-inverse' : 'bg-elev-2 text-fg'}`} {...props}>
       {label}
     </span>
   )
@@ -31,10 +35,17 @@ function EpCell({ index, col, title, subtitle, isResume, onSelect }) {
   const row = 1 + Math.floor(index / EP_COLS)
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col, onSelect })
   return (
-    <div className={`ep-cell${isResume ? ' ep-cell-resume' : ''}`} {...props}>
-      <div className="ep-title">{title}</div>
-      {subtitle && <div className="ep-sub">{subtitle}</div>}
-      {isResume && <span className="ep-badge">继续</span>}
+    <div
+      className={`focusable relative rounded-md bg-elev-2 px-5 py-1.5 text-center text-label ${isResume ? 'text-fg' : 'text-fg-2'}`}
+      {...props}
+    >
+      <div className="truncate leading-[1.25]">{title}</div>
+      {/* Inherits the cell's current color (normal / focused / resume) and dims
+          via opacity so every state keeps readable contrast. */}
+      {subtitle && <div className="mt-0.5 text-caption leading-[1.25] opacity-65">{subtitle}</div>}
+      {isResume && (
+        <span className="absolute -top-2 -right-1.5 rounded-[10px] bg-accent px-2 py-0.5 text-caption text-inverse">继续</span>
+      )}
     </div>
   )
 }
@@ -42,7 +53,7 @@ function EpCell({ index, col, title, subtitle, isResume, onSelect }) {
 function RetryCell({ onRetry }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col: 0, onSelect: onRetry })
   return (
-    <span className="detail-btn focusable-chip" {...props}>
+    <span className={`${DETAIL_BTN} bg-elev-2 text-fg`} {...props}>
       加载失败，重试
     </span>
   )
@@ -85,15 +96,15 @@ export default function DetailPage({ id, onPlay, style }) {
 
   if (status === 'loading') {
     return (
-      <div className="overlay" style={style}>
-        <div className="detail-status">加载中…</div>
+      <div className="fixed inset-0 overflow-y-auto bg-bg px-safe pt-content-top pb-content-bottom" style={style}>
+        <div className="absolute inset-0 flex items-center justify-center text-heading text-fg">加载中…</div>
       </div>
     )
   }
   if (status === 'error') {
     return (
-      <div className="overlay" style={style}>
-        <div className="detail-status">
+      <div className="fixed inset-0 overflow-y-auto bg-bg px-safe pt-content-top pb-content-bottom" style={style}>
+        <div className="absolute inset-0 flex items-center justify-center text-heading text-fg">
           <RetryCell onRetry={load} />
         </div>
       </div>
@@ -129,24 +140,24 @@ export default function DetailPage({ id, onPlay, style }) {
   }
 
   return (
-    <div className="overlay" style={style}>
-      <div className="detail">
-        <div className="detail-top">
-          <div className="detail-poster">
+    <div className="fixed inset-0 overflow-y-auto bg-bg px-safe pt-content-top pb-content-bottom" style={style}>
+      <div className="flex min-h-full flex-col gap-10">
+        <div className="flex gap-14">
+          <div className="aspect-2/3 w-card shrink-0 overflow-hidden rounded-xl bg-elev">
             {/* Same sized asset as grid cards: usually already cached when
                 arriving from a poster grid, so it paints immediately. */}
             <Thumb pic={data.pic} alt={data.title} />
           </div>
-          <div className="detail-info">
-            <div className="detail-eyebrow">{eyebrow}</div>
-            <h1 className="detail-title">{data.title}</h1>
-            <div className="detail-badges">
-              {data.rating > 0 && <span className="badge-rating">{data.rating}</span>}
-              <span className="detail-count">全 {episodes.length} 集</span>
+          <div className="min-w-0 flex-1">
+            <div className="mb-3 text-label text-fg-3">{eyebrow}</div>
+            <h1 className="mb-5 text-display font-bold text-fg">{data.title}</h1>
+            <div className="mb-6 flex items-center gap-4">
+              {data.rating > 0 && <span className="text-heading font-bold text-accent">{data.rating}</span>}
+              <span className="text-label text-fg-2">全 {episodes.length} 集</span>
             </div>
-            <p className="detail-synopsis">{data.synopsis}</p>
-            <div className="detail-crew">{crew}</div>
-            <div className="detail-actions">
+            <p className="mb-5 line-clamp-3 text-body leading-normal text-fg-2">{data.synopsis}</p>
+            <div className="mb-8 truncate text-caption text-fg-3">{crew}</div>
+            <div className="flex gap-5">
               <ActionButton col={0} label={primaryLabel} primary onSelect={() => onPlay(primaryEp)} />
               <ActionButton
                 col={1}
@@ -157,7 +168,7 @@ export default function DetailPage({ id, onPlay, style }) {
           </div>
         </div>
 
-        <div className="ep-grid">
+        <div className="grid grid-cols-6 gap-3.5">
           {episodes.map((ep, i) => {
             // Main line is the API's per-episode title; the ordinal drops to a
             // sub line. Dramas title episodes as the zero-padded ordinal

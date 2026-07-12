@@ -1,21 +1,173 @@
 /*
- * Style entry point — the only stylesheet main.jsx imports.
- * Pulls in the design system first (tokens -> base), then each page's own css
- * as those tasks land. Keep page imports below the baseline so tokens are
- * always defined before a page rule references them.
+ * Tailwind CSS v4 entry — the only stylesheet main.jsx imports.
+ *
+ * The design system lives in @theme (colors, type scale, layout tokens);
+ * pages compose utility classes in JSX. Shared cross-page patterns are the
+ * custom utilities below (`focusable`, `glass`, `glass-strong`, …) and the
+ * `focused:` variant, which mirrors the imperative `.focused` class the focus
+ * engine toggles (useFocus.js) — no React re-render on focus moves.
+ *
+ * Hard constraints baked in here (see doc/README.md "Hard Constraints"):
+ *   - All colors are opaque hex. No rgba(), no opacity layering, no gradients.
+ *   - No shadows, no blur, no translucency. A "dimmed" look is achieved with a
+ *     darker opaque surface token, never with alpha.
+ *   - Single sanctioned exception: the glass-* material (translucent fill +
+ *     backdrop blur, Apple Liquid Glass style), reserved for chrome surfaces —
+ *     tab bar / segment capsules, the settings group, the filter panel sheet,
+ *     dialogs, and the player chrome. Content surfaces stay fully opaque.
+ *   - No motion of any kind: the transition/animation ban is enforced in the
+ *     base layer with !important. Focus is instant border/color swaps only.
+ *   - TV target is Chromium 108 (webOS 24): never use opacity modifiers like
+ *     bg-x/50 (they compile to color-mix(), Chrome 111+) — every color an
+ *     element needs must be its own token here.
+ * Sizes are real 1920x1080 px (no logical stage + scale).
  */
-@import "./tokens.css";
-@import "./base.css";
-@import "./app.css";
-@import "./card.css";
-@import "./home.css";
-@import "./category.css";
-@import "./filter.css";
-@import "./detail.css";
-@import "./library.css";
-@import "./player.css";
+@import "tailwindcss";
 
-/* Page styles are appended here as later tasks add them, e.g.:
-   @import "../pages/home.css";
-   @import "../pages/category.css";
-*/
+@theme {
+  /* Wipe the default palette: every color must come from this design system
+     (also guarantees no oklch() from stock colors reaches the TV). */
+  --color-*: initial;
+
+  /* Surfaces (opaque, darkest -> lightest elevation) */
+  --color-bg: #0e0e11;      /* global background */
+  --color-elev: #1c1c21;    /* panels / poster placeholders */
+  --color-elev-2: #2a2a31;  /* unfocused button / chip background */
+
+  /* Text (three fixed grayscale tiers, no white-with-opacity) */
+  --color-fg: #f5f5f7;      /* primary */
+  --color-fg-2: #9d9da3;    /* secondary */
+  --color-fg-3: #6b6b72;    /* tertiary / disabled */
+
+  /* Accents (used sparingly, never as a background wash) */
+  --color-accent: #23c8b6;  /* progress bars / ratings / selection indicator */
+  --color-uhd: #ffcf6b;     /* "UHD" badge / destructive dialog action */
+
+  /* Focus */
+  --color-focus: #f5f5f7;   /* focus border / fill */
+  --color-inverse: #111111; /* text on a focused (filled) button/chip */
+
+  /* Frosted-glass material (the one sanctioned alpha exception) */
+  --color-glass: rgba(28, 28, 34, 0.55);        /* capsule/group fill */
+  --color-glass-strong: rgba(24, 24, 30, 0.7);  /* denser: sheets and dialogs */
+  --color-glass-edge: rgba(255, 255, 255, 0.14);   /* hairline highlight rim */
+  --color-glass-active: rgba(255, 255, 255, 0.12); /* selected pill (unfocused) */
+
+  /* Player surface + switch knob still need plain black/white */
+  --color-black: #000000;
+  --color-white: #ffffff;
+
+  /* Type scale (actual 1080p px, minimum 22px for 10-foot legibility).
+     Defaults are wiped so no stock size can slip under the minimum. */
+  --text-*: initial;
+  --text-display: 60px;
+  --text-title: 45px;
+  --text-heading: 32px;
+  --text-body: 26px;
+  --text-label: 24px;
+  --text-caption: 22px;
+
+  --font-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei",
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* Layout / safe area (the numeric spacing scale stays: 1 unit = 4px) */
+  --spacing-safe: 84px;         /* left/right safe margin */
+  --spacing-content-top: 92px;  /* content start offset (tab bar + 8px) */
+  --spacing-content-bottom: 60px;
+  /* Poster lists fill the full content width symmetrically: 6 cards per row
+     (must match COLS in CategoryPage/LibraryPage), fixed gutter, card width
+     derived so 6 cards + 5 gaps = 1920 - 2*safe exactly. */
+  --spacing-gutter: 20px;
+  --spacing-card: calc((1920px - 2 * var(--spacing-safe) - 5 * var(--spacing-gutter)) / 6);
+}
+
+/*
+ * `focused:` variant — styles that apply while the focus engine has marked
+ * this element (or an ancestor, e.g. a card wrapping its title) as focused.
+ */
+@custom-variant focused (&:where(.focused, .focused *));
+
+/*
+ * Focusable chrome: reserves an invisible border slot so focusing never
+ * shifts layout, and inverts to the solid white fill / dark text instantly.
+ * &.focused (0,2,0) outranks single utilities, so focus wins over selected
+ * looks like text-accent or bg-glass-active.
+ */
+@utility focusable {
+  border: 3px solid transparent;
+  &.focused {
+    background: var(--color-focus);
+    border-color: var(--color-focus);
+    color: var(--color-inverse);
+  }
+}
+
+/* Frosted-glass material. Border/radius stay per-site (`border
+   border-glass-edge`, `border-l` for the filter sheet, …). */
+@utility glass {
+  background: var(--color-glass);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+@utility glass-strong {
+  background: var(--color-glass-strong);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+}
+
+/* Hidden scrollbar for rows the focus engine scrolls. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Cards: skip layout/paint work for off-screen entries. */
+@utility cv-auto {
+  content-visibility: auto;
+  contain: content;
+}
+
+@layer base {
+  /* Global ban guard: no motion of any kind, anywhere. */
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  html,
+  body {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden; /* the 1080p frame never scrolls as a whole */
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-size: var(--text-body);
+    line-height: 1.35;
+    /* No text smoothing tricks; keep it cheap for the weak TV GPU. */
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: default;
+  }
+
+  #root {
+    width: 100%;
+    height: 100%;
+  }
+
+  button {
+    cursor: default;
+  }
+
+  /* A focused element must never sit flush against the screen/container edge:
+     scrollIntoView({block:'nearest'}) will honor this margin. */
+  [data-focus-id] {
+    scroll-margin: 120px var(--spacing-safe);
+  }
+}

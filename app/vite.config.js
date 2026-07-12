@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 
@@ -9,7 +10,7 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 // packaging inside the .ipk. hls.js and React are split into their own chunks
 // so the player code stays out of the startup bundle (it is lazy-loaded).
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   base: './',
   // Single version source: package.json (webos-meta/appinfo.json must match).
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },

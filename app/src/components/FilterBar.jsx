@@ -12,8 +12,12 @@ import { getCategory, SORTS } from '../config/taxonomy.js'
 
 function Chip({ group, row = 0, col, label, selected, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row, col, onSelect })
+  // Selected is distinct from focus (white fill): accent-tinted text.
   return (
-    <span className={`chip focusable-chip${selected ? ' chip-selected' : ''}`} {...props}>
+    <span
+      className={`focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label ${selected ? 'text-accent' : 'text-fg'}`}
+      {...props}
+    >
       {label}
     </span>
   )
@@ -33,8 +37,8 @@ export default function FilterBar({ category, group = 'content', filter, onSelec
   const genres = cfg.genres
 
   return (
-    <div className="filter-bar">
-      <div className="filter-chips">
+    <div className="mb-6 flex flex-col gap-4">
+      <div className="flex gap-3 overflow-x-auto scrollbar-none">
         {genres.map((g, i) => (
           <Chip
             key={g.value}
@@ -46,9 +50,9 @@ export default function FilterBar({ category, group = 'content', filter, onSelec
           />
         ))}
       </div>
-      <div className="filter-actions">
+      <div className="flex items-center gap-6">
         <Chip group={group} row={1} col={0} label="筛选" onSelect={onOpenFilter} />
-        <div className="filter-summary">{summaryText(cfg, filter)}</div>
+        <div className="shrink-0 whitespace-nowrap text-caption text-fg-3">{summaryText(cfg, filter)}</div>
       </div>
     </div>
   )

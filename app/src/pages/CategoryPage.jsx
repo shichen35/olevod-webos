@@ -135,13 +135,17 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
   const fullyLoaded = status === 'ok' && items.length > 0 && items.length >= total
 
   return (
-    <div className="category" ref={rootRef}>
+    <div className="pt-4" ref={rootRef}>
       <FilterBar category={category} group={group} filter={filter} onSelectGenre={selectGenre} onOpenFilter={onOpenFilter} />
 
       {status === 'error' && items.length === 0 ? (
         <RetryRow group={group} onRetry={() => load(filter)} />
       ) : (
-        <div className="grid">
+        // grid-cols-6 = repeat(6, minmax(0,1fr)): the 0 minimum stops poster
+        // images inflating their track, keeping the columns equal. Track count
+        // must match COLS. Cards stretch to their track (a hair wider than
+        // --spacing-card; visually equal), so no width class is passed.
+        <div className="grid grid-cols-6 gap-x-gutter gap-y-6">
           {items.map((item, i) => (
             <VideoCard
               key={`${item.id}-${i}`}
@@ -156,9 +160,9 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
         </div>
       )}
 
-      <div ref={sentinelRef} className="grid-sentinel" />
-      {status === 'loading' && <div className="grid-status">加载中…</div>}
-      {fullyLoaded && <div className="grid-status">已加载全部 {total} 部</div>}
+      <div ref={sentinelRef} className="h-px w-full" />
+      {status === 'loading' && <div className="py-8 text-body text-fg-2">加载中…</div>}
+      {fullyLoaded && <div className="py-8 text-body text-fg-2">已加载全部 {total} 部</div>}
     </div>
   )
 }
@@ -166,8 +170,8 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
 function RetryRow({ group, onRetry }) {
   const { props } = useFocusable({ layer: 'home', group, row: FILTER_ROWS, col: 0, onSelect: onRetry })
   return (
-    <div className="grid-status">
-      <span className="focusable-chip" {...props}>
+    <div className="py-8 text-body text-fg-2">
+      <span className="focusable rounded-full bg-elev-2 text-fg" {...props}>
         加载失败，重试
       </span>
     </div>

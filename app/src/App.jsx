@@ -140,7 +140,7 @@ export default function App() {
 
   return (
     <>
-      <div className="shell" style={vis('shell')}>
+      <div className="relative h-[1080px] w-[1920px] bg-bg" style={vis('shell')}>
         <TabBar
           tabs={tabs}
           activeTab={activeTab}
@@ -150,8 +150,18 @@ export default function App() {
             setRefreshNonce((n) => ({ ...n, [key]: (n[key] || 0) + 1 }))
           }}
         />
+        {/* Per-tab content areas (the sole scroll containers). Each starts at
+            the very top so content passes under the translucent tab bar; the
+            top padding keeps the resting position below it, and the global
+            [data-focus-id] scroll-margin (120px) exceeds the bar height. The
+            literal `tab-content` class is a marker for CategoryPage's
+            closest(). */}
         {tabs.map((tab) => (
-          <div key={tab.key} className="tab-content" style={{ display: tab.key === activeTab ? 'block' : 'none' }}>
+          <div
+            key={tab.key}
+            className="tab-content absolute inset-0 overflow-y-auto px-safe pt-content-top pb-content-bottom"
+            style={{ display: tab.key === activeTab ? 'block' : 'none' }}
+          >
             {activated.has(tab.key) &&
               (tab.kind === 'home' ? (
                 <HomePage group={contentGroup(tab.key)} onOpenDetail={openDetail} refreshNonce={refreshNonce[tab.key]} />
@@ -192,8 +202,8 @@ export default function App() {
       {top.type === 'player' && (
         <Suspense
           fallback={
-            <div className="player">
-              <div className="player-status">加载中…</div>
+            <div className="fixed inset-0 bg-black">
+              <div className="absolute inset-0 flex items-center justify-center bg-black text-heading text-fg">加载中…</div>
             </div>
           }
         >

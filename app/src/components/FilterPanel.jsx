@@ -26,10 +26,16 @@ function isBackKey(e) {
   return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
 }
 
+// Selected is distinct from focus (white fill): an accent dot + accent text on
+// the elevated fill. Focus still overrides the text to dark instantly; the dot
+// keeps its explicit accent color either way.
+const PANEL_CHIP = 'focusable rounded-full bg-elev-2 px-[18px] py-2 text-label'
+const PANEL_CHIP_SELECTED = "text-accent before:mr-2 before:text-[16px] before:text-accent before:content-['●']"
+
 function OptChip({ row, col, label, selected, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: GROUP, row, col, onSelect })
   return (
-    <span className={`panel-chip focusable-chip${selected ? ' panel-chip-selected' : ''}`} {...props}>
+    <span className={`${PANEL_CHIP} ${selected ? PANEL_CHIP_SELECTED : 'text-fg'}`} {...props}>
       {label}
     </span>
   )
@@ -37,9 +43,9 @@ function OptChip({ row, col, label, selected, onSelect }) {
 
 function Group({ title, options, value, startRow, onPick }) {
   return (
-    <div className="panel-group">
-      <div className="panel-group-title">{title}</div>
-      <div className="panel-chips">
+    <div className="mb-8">
+      <div className="mb-4 text-heading text-fg">{title}</div>
+      <div className="flex flex-wrap gap-3">
         {options.map((o, i) => (
           <OptChip
             key={o.value}
@@ -85,15 +91,15 @@ export default function FilterPanel({ category, filter, onChange, onReset, onClo
   const done = useFocusable({ layer: LAYER, group: GROUP, row: actionRow, col: 1, onSelect: onClose })
 
   return (
-    <div className="filter-panel">
+    <div className="glass-strong fixed inset-y-0 right-0 w-[560px] overflow-y-auto border-l border-glass-edge px-10 py-12">
       <Group title="地区" options={cfg.areas} value={filter.area} startRow={0} onPick={(v) => onChange({ ...filter, area: v })} />
       <Group title="年份" options={cfg.years} value={filter.year} startRow={yearStart} onPick={(v) => onChange({ ...filter, year: v })} />
       <Group title="排序" options={SORTS} value={filter.sort} startRow={sortStart} onPick={(v) => onChange({ ...filter, sort: v })} />
-      <div className="panel-actions">
-        <span className="panel-chip focusable-chip" {...reset.props}>
+      <div className="mt-2 flex gap-4">
+        <span className={`${PANEL_CHIP} text-fg`} {...reset.props}>
           重置
         </span>
-        <span className="panel-chip focusable-chip" {...done.props}>
+        <span className={`${PANEL_CHIP} text-fg`} {...done.props}>
           完成
         </span>
       </div>

@@ -20,7 +20,7 @@ import * as pageCache from '../store/pageCache.js'
 function RetryButton({ group, onRetry }) {
   const { props } = useFocusable({ layer: 'home', group, row: 0, col: 0, onSelect: onRetry })
   return (
-    <span className="focusable-chip" {...props}>
+    <span className="focusable rounded-full bg-elev-2 text-fg" {...props}>
       重试
     </span>
   )
@@ -82,11 +82,11 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
   for (const p of popular || []) if (p.items.length) rows.push(p)
 
   if (popular === null && rows.length === 0) {
-    return <div className="home-status">加载中…</div>
+    return <div className="py-15 text-body text-fg-2">加载中…</div>
   }
   if (popular !== null && rows.length === 0) {
     return (
-      <div className="home-error">
+      <div className="flex h-[640px] flex-col items-center justify-center gap-7 text-heading text-fg-2">
         <div>内容加载失败</div>
         <RetryButton group={group} onRetry={retry} />
       </div>
@@ -94,7 +94,7 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
   }
 
   return (
-    <div className="home">
+    <div className="pt-4">
       {rows.map((r, i) => (
         <Shelf
           key={r.key}

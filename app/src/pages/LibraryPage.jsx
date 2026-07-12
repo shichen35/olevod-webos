@@ -34,17 +34,21 @@ function SegChip({ group, col, label, active, onHover, onSelect }) {
       if (f) onHover()
     },
   })
+  // Same look as the tab bar pills: focus (white fill) wins over selected.
   return (
-    <div className={`seg${active ? ' seg-active' : ''}`} {...props}>
+    <div
+      className={`focusable rounded-full px-7 py-2 text-label ${active ? 'bg-glass-active text-fg' : 'text-fg-2'}`}
+      {...props}
+    >
       {label}
     </div>
   )
 }
 
 function CardGrid({ items, group, onOpenDetail, withEp }) {
-  if (!items.length) return <div className="library-empty">这里还没有内容</div>
+  if (!items.length) return <div className="py-20 text-center text-body text-fg-3">这里还没有内容</div>
   return (
-    <div className="grid">
+    <div className="grid grid-cols-6 gap-x-gutter gap-y-6">
       {items.map((item, i) => (
         <VideoCard
           key={`${item.id}-${i}`}
@@ -62,10 +66,14 @@ function CardGrid({ items, group, onOpenDetail, withEp }) {
   )
 }
 
-function SettingsRow({ group, row, label, kind, onSelect }) {
+// tvOS-style list row: transparent at rest, solid white fill + dark text when
+// focused (from `focusable`).
+const SETTINGS_ROW = 'focusable rounded-[14px] px-6 py-5 text-body text-fg'
+
+function SettingsRow({ group, row, label, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row, col: 0, onSelect })
   return (
-    <div className={`settings-row focusable-row${kind ? ` settings-row-${kind}` : ''}`} {...props}>
+    <div className={SETTINGS_ROW} {...props}>
       {label}
     </div>
   )
@@ -74,10 +82,14 @@ function SettingsRow({ group, row, label, kind, onSelect }) {
 function SettingsToggle({ group, row, label, on, onToggle }) {
   const { props } = useFocusable({ layer: 'home', group, row, col: 0, onSelect: onToggle })
   return (
-    <div className="settings-row settings-row-toggle focusable-row" {...props}>
+    <div className={`${SETTINGS_ROW} flex items-center justify-between`} {...props}>
       <span>{label}</span>
-      <span className={`switch${on ? ' switch-on' : ''}`}>
-        <span className="switch-knob" />
+      {/* Apple-style switch: opaque track (accent when on), knob slides via
+          margin. The focused: shades keep it readable on the white focused row. */}
+      <span
+        className={`flex h-11 w-19 items-center rounded-full p-1 ${on ? 'bg-accent' : 'bg-elev-2 focused:bg-[#c9c9ce]'}`}
+      >
+        <span className={`size-9 rounded-full bg-fg focused:bg-white ${on ? 'ml-auto' : ''}`} />
       </span>
     </div>
   )
@@ -103,8 +115,9 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
   }, [])
 
   return (
-    <div className="library">
-      <div className="segments">
+    <div className="pt-4">
+      {/* Segment control (row 0): glass capsule, same material as the tab bar. */}
+      <div className="glass mb-7 inline-flex items-center gap-2 rounded-full border border-glass-edge px-2.5 py-1.5">
         {SEGMENTS.map((s, i) => (
           <SegChip
             key={s.key}
@@ -122,7 +135,8 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
       {seg === 'history' && <CardGrid items={history} group={group} onOpenDetail={onOpenDetail} withEp />}
       {seg === 'settings' && (
         <>
-          <div className="settings-list">
+          {/* iOS-style inset grouped list + version caption below. */}
+          <div className="glass max-w-[900px] rounded-[20px] border border-glass-edge p-1.5">
             <SettingsToggle
               group={group}
               row={1}
@@ -138,9 +152,9 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
               onToggle={() => toggleSetting('homeShowRecent')}
             />
             <SettingsRow group={group} row={3} label="调整标签栏顺序" onSelect={() => setTabOrderOpen(true)} />
-            <SettingsRow group={group} row={4} label="清除观看历史" kind="danger" onSelect={() => setConfirmClear(true)} />
+            <SettingsRow group={group} row={4} label="清除观看历史" onSelect={() => setConfirmClear(true)} />
           </div>
-          <div className="settings-version">版本 {__APP_VERSION__}</div>
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 text-center text-caption text-fg-3">版本 {__APP_VERSION__}</div>
         </>
       )}
 

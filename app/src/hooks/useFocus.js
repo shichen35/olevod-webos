@@ -349,11 +349,15 @@ export function useFocusable({ layer = DEFAULT_LAYER, group = 'content', row = 0
   }, [id, layer, group, row, col]) // deliberately NOT the callbacks
 
   // Self-healing: when React re-commits it can overwrite className and wipe the
-  // imperatively-added `.focused`. Reapply it to the current focus element after
-  // every commit.
+  // imperatively-added `.focused` — or move a keyed DOM node that still carries
+  // it. Re-assert the invariant (only the current focus id's element has
+  // `.focused`) after every commit.
   useLayoutEffect(() => {
-    if (currentFocusId === id && elRef.current) {
+    if (!elRef.current) return
+    if (currentFocusId === id) {
       elRef.current.classList.add('focused')
+    } else {
+      elRef.current.classList.remove('focused')
     }
   })
 

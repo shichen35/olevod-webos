@@ -16,7 +16,7 @@ import { historyStore } from '../store/history.js'
 import * as pageCache from '../store/pageCache.js'
 
 const LAYER = 'detail'
-const EP_COLS = 8
+const EP_COLS = 5
 
 function ActionButton({ col, label, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col, onSelect })
@@ -27,12 +27,13 @@ function ActionButton({ col, label, onSelect }) {
   )
 }
 
-function EpCell({ index, col, label, isResume, onSelect }) {
+function EpCell({ index, col, title, subtitle, isResume, onSelect }) {
   const row = 1 + Math.floor(index / EP_COLS)
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col, onSelect })
   return (
     <div className={`ep-cell${isResume ? ' ep-cell-resume' : ''}`} {...props}>
-      {label}
+      <div className="ep-title">{title}</div>
+      {subtitle && <div className="ep-sub">{subtitle}</div>}
       {isResume && <span className="ep-badge">继续</span>}
     </div>
   )
@@ -157,16 +158,25 @@ export default function DetailPage({ id, onPlay, style }) {
         </div>
 
         <div className="ep-grid">
-          {episodes.map((ep, i) => (
-            <EpCell
-              key={ep.index}
-              index={i}
-              col={i % EP_COLS}
-              label={`第${ep.index}集`}
-              isResume={ep.index === resumeIndex}
-              onSelect={() => onPlay(ep.index)}
-            />
-          ))}
+          {episodes.map((ep, i) => {
+            // Main line is the API's per-episode title; the ordinal drops to a
+            // sub line. Dramas title episodes as the zero-padded ordinal
+            // ("第06集"), which would just echo the sub line — omit it then.
+            const ordinal = `第${ep.index}集`
+            const title = ep.title || ordinal
+            const titleIsOrdinal = new RegExp(`^第0*${ep.index}集$`).test(title)
+            return (
+              <EpCell
+                key={ep.index}
+                index={i}
+                col={i % EP_COLS}
+                title={title}
+                subtitle={titleIsOrdinal ? null : ordinal}
+                isResume={ep.index === resumeIndex}
+                onSelect={() => onPlay(ep.index)}
+              />
+            )
+          })}
         </div>
       </div>
     </div>

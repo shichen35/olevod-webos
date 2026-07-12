@@ -81,22 +81,34 @@
   background: var(--bg-elev);
 }
 
-/* Episode grid: 8 equal tracks spanning the full content width (symmetric
+/* Episode grid: 5 equal tracks spanning the full content width (symmetric
    margins). Track count must match EP_COLS in DetailPage. */
 .ep-grid {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
 }
 .ep-cell {
   position: relative;
-  padding: 16px 0;
+  padding: 12px 20px;
   text-align: center;
   font-size: var(--fs-label);
   color: var(--text-2);
   background: var(--bg-elev-2);
   border: var(--focus-border) solid transparent;
   border-radius: 6px;
+}
+.ep-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Inherits the cell's current color (normal / focused / resume) and dims via
+   opacity so every state keeps readable contrast without extra overrides. */
+.ep-sub {
+  font-size: var(--fs-caption);
+  opacity: 0.65;
+  margin-top: 4px;
 }
 .ep-cell.focused {
   background: var(--focus);

@@ -7,6 +7,7 @@ import { createStore } from '../hooks/useStore.js'
 const DEFAULTS = {
   homeShowFavorites: true, // "我的收藏" shelf on Home
   homeShowRecent: true, // "继续观看" shelf on Home
+  tabOrder: null, // reorderable middle-tab keys (see nav.js orderedTabs); null = natural order
 }
 
 export const settingsStore = createStore('olevod:settings', DEFAULTS)
@@ -17,4 +18,8 @@ export function getSetting(snapshot, key) {
 
 export function toggleSetting(key) {
   settingsStore.set((prev) => ({ ...prev, [key]: !getSetting(prev, key) }))
+}
+
+export function setSetting(key, value) {
+  settingsStore.set((prev) => ({ ...prev, [key]: value }))
 }

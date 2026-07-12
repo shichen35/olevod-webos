@@ -12,7 +12,7 @@
  * The player is the one lazy() page: its chunk (and hls.js) must stay out of
  * the startup bundle, and it genuinely unmounts on back so playback stops.
  */
-import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import {
   initFocusEngine,
   focusTo,
@@ -23,7 +23,7 @@ import {
 // Each tab's content lives in its own focus group so all tabs can stay mounted
 // without their focus ids colliding.
 const contentGroup = (tabKey) => `content:${tabKey}`
-import { TABS } from './config/nav.js'
+import { orderedTabs } from './config/nav.js'
 import TabBar from './components/TabBar.jsx'
 import HomePage from './pages/HomePage.jsx'
 import CategoryPage from './pages/CategoryPage.jsx'
@@ -31,6 +31,8 @@ import FilterPanel from './components/FilterPanel.jsx'
 import DetailPage from './pages/DetailPage.jsx'
 import LibraryPage from './pages/LibraryPage.jsx'
 import { getFilter, setFilter } from './store/filters.js'
+import { settingsStore, getSetting } from './store/settings.js'
+import { useStoreValue } from './hooks/useStore.js'
 import { prefetchAll } from './api/feeds.js'
 import { exitApp } from './api/luna.js'
 import { DEFAULT_SORT } from './config/taxonomy.js'
@@ -54,10 +56,16 @@ export default function App() {
   const [filterPanel, setFilterPanel] = useState({ open: false, category: null })
   const [filterOverrides, setFilterOverrides] = useState({})
 
+  // Tab bar order follows the user's saved preference (settings 里可调整).
+  const settings = useStoreValue(settingsStore)
+  const tabs = useMemo(() => orderedTabs(getSetting(settings, 'tabOrder')), [settings])
+
   const activeTabRef = useRef(activeTab)
   activeTabRef.current = activeTab
   const stackRef = useRef(stack)
   stackRef.current = stack
+  const tabsRef = useRef(tabs)
+  tabsRef.current = tabs
 
   const top = stack[stack.length - 1]
   const hasDetail = stack.some((f) => f.type === 'detail')
@@ -120,7 +128,7 @@ export default function App() {
       // if it is already on the tab bar, hand Back to the system (exit prompt).
       const cur = getCurrentFocus() || ''
       if (cur.startsWith('home/content:')) {
-        const idx = Math.max(0, TABS.findIndex((t) => t.key === activeTabRef.current))
+        const idx = Math.max(0, tabsRef.current.findIndex((t) => t.key === activeTabRef.current))
         focusTo(`home/tabbar-0-${idx}`)
         return
       }
@@ -134,6 +142,7 @@ export default function App() {
     <>
       <div className="shell" style={vis('shell')}>
         <TabBar
+          tabs={tabs}
           activeTab={activeTab}
           onHoverTab={setActiveTab}
           onCommitTab={(key) => {
@@ -141,7 +150,7 @@ export default function App() {
             setRefreshNonce((n) => ({ ...n, [key]: (n[key] || 0) + 1 }))
           }}
         />
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <div key={tab.key} className="tab-content" style={{ display: tab.key === activeTab ? 'block' : 'none' }}>
             {activated.has(tab.key) &&
               (tab.kind === 'home' ? (

@@ -1,6 +1,6 @@
 /*
- * Top tab bar. Renders nav.js's TABS as focus group "tabbar" (row 0, col=index)
- * in the shell's "home" focus layer.
+ * Top tab bar. Renders the shell's ordered tabs (nav.js orderedTabs, applied in
+ * App.jsx) as focus group "tabbar" (row 0, col=index) in the "home" focus layer.
  *
  * Hover-switching: moving focus left/right across tabs switches the content area
  * below after a 150ms debounce (focus stays on the tab bar). Only Enter/click
@@ -9,7 +9,6 @@
  */
 import { useRef } from 'react'
 import { useFocusable } from '../hooks/useFocus.js'
-import { TABS } from '../config/nav.js'
 
 function TabItem({ tab, col, active, onHover, onSelect }) {
   const { props } = useFocusable({
@@ -29,13 +28,13 @@ function TabItem({ tab, col, active, onHover, onSelect }) {
   )
 }
 
-export default function TabBar({ activeTab, onHoverTab, onCommitTab }) {
+export default function TabBar({ tabs, activeTab, onHoverTab, onCommitTab }) {
   const debounceRef = useRef(null)
 
   return (
     <div className="tabbar">
       <div className="tabbar-glass">
-        {TABS.map((tab, i) => (
+        {tabs.map((tab, i) => (
           <TabItem
             key={tab.key}
             tab={tab}

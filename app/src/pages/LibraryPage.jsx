@@ -7,6 +7,7 @@
 import { useCallback, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import TabOrderDialog from '../components/TabOrderDialog.jsx'
 import { useFocusable } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore } from '../store/favorites.js'
@@ -85,6 +86,7 @@ function SettingsToggle({ group, row, label, on, onToggle }) {
 export default function LibraryPage({ group = 'content', onOpenDetail }) {
   const [seg, setSeg] = useState('fav')
   const [confirmClear, setConfirmClear] = useState(false)
+  const [tabOrderOpen, setTabOrderOpen] = useState(false)
   const debounceRef = useRef(null)
 
   const favorites = useStoreValue(favoritesStore)
@@ -135,11 +137,14 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
               on={getSetting(settings, 'homeShowRecent')}
               onToggle={() => toggleSetting('homeShowRecent')}
             />
-            <SettingsRow group={group} row={3} label="清除观看历史" kind="danger" onSelect={() => setConfirmClear(true)} />
+            <SettingsRow group={group} row={3} label="调整标签栏顺序" onSelect={() => setTabOrderOpen(true)} />
+            <SettingsRow group={group} row={4} label="清除观看历史" kind="danger" onSelect={() => setConfirmClear(true)} />
           </div>
           <div className="settings-version">版本 {__APP_VERSION__}</div>
         </>
       )}
+
+      {tabOrderOpen && <TabOrderDialog onClose={() => setTabOrderOpen(false)} />}
 
       {confirmClear && (
         <ConfirmDialog

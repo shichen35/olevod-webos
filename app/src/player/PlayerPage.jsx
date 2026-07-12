@@ -133,7 +133,8 @@ export default function PlayerPage({ id, episodeIndex }) {
   // "Next" in a newest-first list is the entry BEFORE the current one.
   const epList = data?.episodes || []
   const curIdx = epList.findIndex((e) => e.index === curEp)
-  const nextEpIndex = curIdx > 0 ? epList[curIdx - 1].index : null
+  const nextEp = curIdx > 0 ? epList[curIdx - 1] : null
+  const nextEpIndex = nextEp?.index ?? null
   const nextEpRef = useRef(null)
   nextEpRef.current = nextEpIndex
 
@@ -591,7 +592,9 @@ export default function PlayerPage({ id, episodeIndex }) {
   }, [data, curEp, attempt, showBar])
 
   const episodes = data?.episodes || []
-  const epLabel = episodes.length > 1 ? `第${curEp}集` : ''
+  // Per-episode API title (as on the detail grid), ordinal as fallback.
+  const epLabel =
+    episodes.length > 1 ? epList[curIdx]?.title || `第${curEp}集` : ''
 
   return (
     <div className="player">
@@ -639,7 +642,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       {upNext && nextEpIndex != null && (
         <div className="player-upnext">
           <div className="player-upnext-label">即将播放</div>
-          <div className="player-upnext-ep">第{nextEpIndex}集</div>
+          <div className="player-upnext-ep">{nextEp.title || `第${nextEpIndex}集`}</div>
           <div className="player-upnext-hint">按 OK 立即播放</div>
         </div>
       )}

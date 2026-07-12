@@ -46,7 +46,7 @@ export const SORTS = [
 ]
 export const DEFAULT_SORT = 'update'
 
-// Display order: Movies, Variety, TV Series, Anime (typeIds 1, 3, 2, 4).
+// Display order: Movies, TV Series, Variety, Anime (typeIds 1, 2, 3, 4).
 export const CATEGORIES = [
   {
     id: 1,
@@ -61,19 +61,19 @@ export const CATEGORIES = [
     years: stringOptions(YEARS),
   },
   {
-    id: 3,
-    name: '综艺',
+    id: 2,
+    name: '连续剧',
     genres: genreOptions([
-      [305, '真人秀'], [302, '音乐'], [304, '搞笑'], [301, '家庭'], [303, '曲艺'],
+      [202, '国产剧'], [201, '欧美剧'], [203, '港台剧'], [204, '日韩剧'], [1207, '短剧'],
     ]),
     areas: stringOptions(AREAS_COMMON),
     years: stringOptions(YEARS),
   },
   {
-    id: 2,
-    name: '连续剧',
+    id: 3,
+    name: '综艺',
     genres: genreOptions([
-      [202, '国产剧'], [201, '欧美剧'], [203, '港台剧'], [204, '日韩剧'], [1207, '短剧'],
+      [305, '真人秀'], [302, '音乐'], [304, '搞笑'], [301, '家庭'], [303, '曲艺'],
     ]),
     areas: stringOptions(AREAS_COMMON),
     years: stringOptions(YEARS),

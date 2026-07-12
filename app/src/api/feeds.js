@@ -10,11 +10,12 @@ import * as pageCache from '../store/pageCache.js'
 
 export const HOME_POPULAR_KEY = 'home:popular'
 
-// The home page's three popular rows.
+// The home page's popular rows, one per category in tab order.
 export const POPULAR = [
   { key: 'movie', title: '热门电影', category: 1 },
   { key: 'variety', title: '热门综艺', category: 3 },
   { key: 'series', title: '热门连续剧', category: 2 },
+  { key: 'anime', title: '热门动漫', category: 4 },
 ]
 
 // Concurrent within the row set (allSettled) but exposed as one cached unit.

@@ -1,8 +1,8 @@
 /*
  * Home — the default landing screen. Horizontal shelves in this order:
- *   Continue Watching -> My Favorites -> Popular Movies / Variety / TV Series.
+ *   Continue Watching -> My Favorites -> Popular Movies / Variety / TV Series / Anime.
  *
- * Only the three popular rows hit the network (concurrently, via allSettled, so
+ * Only the popular rows hit the network (concurrently, via allSettled, so
  * one category failing just empties that row). Continue Watching and Favorites
  * come from the local stores and update live. Empty rows are not rendered, and
  * focus rows are numbered in actual render order so up/down stays continuous.

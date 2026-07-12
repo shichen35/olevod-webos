@@ -57,8 +57,8 @@
    times at the edges and the play/pause icon dead-center --- */
 .player-bar {
   position: absolute;
-  left: var(--safe-x);
-  right: var(--safe-x);
+  left: 33%;
+  width: 34%;
   bottom: 48px;
   padding: 24px 36px 16px;
   border-radius: 28px;

@@ -208,7 +208,7 @@ export default function PlayerPage({ id, episodeIndex }) {
 
       // Long-press acceleration: 2x per held second, unbounded; a tap is always 1x.
       const heldS = isRepeat ? Math.floor((now - holdStartAtRef.current) / 1000) : 0
-      const mult = Math.max(1, heldS * 2)
+      const mult = Math.max(1, heldS * 4)
 
       const base = pendingSeekRef.current ?? v.currentTime
       const target = Math.min(Math.max(base + deltaS * mult, 0), Math.max(dur - 2, 0))

@@ -69,6 +69,12 @@
   padding: 14px 32px;
   border-radius: 8px;
 }
+/* Primary (play) action: accent fill at rest; the white focus fill still wins
+   via .focusable-chip.focused's higher specificity. */
+.detail-btn-primary {
+  background: var(--accent);
+  color: var(--focus-text);
+}
 
 /* Poster: same fixed footprint as a grid card (width + 2:3 ratio), so the
    image is never cropped to an arbitrary shape by the flex layout. */

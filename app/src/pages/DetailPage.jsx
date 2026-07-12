@@ -18,10 +18,10 @@ import * as pageCache from '../store/pageCache.js'
 const LAYER = 'detail'
 const EP_COLS = 6
 
-function ActionButton({ col, label, onSelect }) {
+function ActionButton({ col, label, primary, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col, onSelect })
   return (
-    <span className="detail-btn focusable-chip" {...props}>
+    <span className={`detail-btn focusable-chip${primary ? ' detail-btn-primary' : ''}`} {...props}>
       {label}
     </span>
   )
@@ -147,7 +147,7 @@ export default function DetailPage({ id, onPlay, style }) {
             <p className="detail-synopsis">{data.synopsis}</p>
             <div className="detail-crew">{crew}</div>
             <div className="detail-actions">
-              <ActionButton col={0} label={primaryLabel} onSelect={() => onPlay(primaryEp)} />
+              <ActionButton col={0} label={primaryLabel} primary onSelect={() => onPlay(primaryEp)} />
               <ActionButton
                 col={1}
                 label={isFav ? '★ 已收藏' : '☆ 收藏'}

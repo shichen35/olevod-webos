@@ -40,7 +40,6 @@ const LAYER = 'player'
 const STEP_S = 15 // seek step per tap, bar shown or hidden (long-press ramps it)
 const SEEK_SETTLE_MS = 500 // commit the pending seek once input settles
 const SEEK_REPEAT_MS = 200 // long-press step cadence (native key repeat, throttled)
-const SEEK_ACCEL_MAX = 10 // long-press: step multiplier grows 1x/held-second up to this
 const BADGE_LINGER_MS = 800 // keep the target badge up briefly after committing
 const BAR_HIDE_MS = 5000
 
@@ -207,9 +206,9 @@ export default function PlayerPage({ id, episodeIndex }) {
       if (isRepeat && now - lastStepAtRef.current < SEEK_REPEAT_MS) return
       lastStepAtRef.current = now
 
-      // Long-press acceleration: the step grows by 1x for every held second.
+      // Long-press acceleration: 2x per held second, unbounded; a tap is always 1x.
       const heldS = isRepeat ? Math.floor((now - holdStartAtRef.current) / 1000) : 0
-      const mult = Math.min(1 + heldS, SEEK_ACCEL_MAX)
+      const mult = Math.max(1, heldS * 2)
 
       const base = pendingSeekRef.current ?? v.currentTime
       const target = Math.min(Math.max(base + deltaS * mult, 0), Math.max(dur - 2, 0))

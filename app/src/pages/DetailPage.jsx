@@ -16,7 +16,7 @@ import { historyStore } from '../store/history.js'
 import * as pageCache from '../store/pageCache.js'
 
 const LAYER = 'detail'
-const EP_COLS = 5
+const EP_COLS = 6
 
 function ActionButton({ col, label, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col, onSelect })

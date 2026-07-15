@@ -90,8 +90,11 @@ function applyFocus(newId) {
     const el = document.querySelector(`[data-focus-id="${newId}"]`)
     if (el) {
       el.classList.add('focused')
-      // Always instant — no smooth scrolling anywhere in the app.
-      el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+      // Smooth scroll on every focus move — the app's sole scroll animation.
+      // Not governed by the CSS transition/animation ban (that doesn't touch
+      // scroll behavior); it's a deliberate motion exception (see index.css
+      // header). The top-row snap below still jumps instantly.
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
       // Topmost row of a scrolling page: snap the scroller all the way up so
       // the heading above the first row (which 'nearest' leaves clipped) shows.
       if (rec && rec.row === 0 && rec.group !== 'tabbar') {

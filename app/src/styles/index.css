@@ -16,11 +16,13 @@
  *     tab bar / segment capsules, the settings group, the filter panel sheet,
  *     dialogs, and the player chrome. Content surfaces stay fully opaque.
  *   - No motion of any kind: the transition/animation ban is enforced in the
- *     base layer with !important. Focus is instant border/color swaps only.
- *     ONE sanctioned exception: the white focus fill on the tab bar and the 我的
- *     segment control slides between cells as the D-pad cursor moves (driven in
- *     hooks/useSlidingCursor.js via the Web Animations API, which the ban does
- *     not govern) — a single compositor-cheap node, no cell repaint, focus
+ *     base layer with !important. Focus border/color swaps are instant. Two
+ *     sanctioned exceptions, both in JS (this CSS ban governs only CSS-declared
+ *     motion, not WAAPI or scroll behavior): (1) the white focus fill on the tab
+ *     bar and the 我的 segment control slides between cells as the D-pad cursor
+ *     moves (hooks/useSlidingCursor.js, via the Web Animations API) — a single
+ *     compositor-cheap node, no cell repaint; (2) focus moves scroll the target
+ *     into view with smooth scrollIntoView (useFocus.js). Both leave the focus
  *     engine untouched.
  *   - TV target is Chromium 108 (webOS 24): never use opacity modifiers like
  *     bg-x/50 (they compile to color-mix(), Chrome 111+) — every color an
@@ -121,15 +123,16 @@
 }
 
 /*
- * The single sanctioned motion exception lives in JS, not here: a white focus
- * fill is one pill that slides between cells as the D-pad cursor moves, shared
- * by the tab bar and the 我的 segment control (hooks/useSlidingCursor.js, via
- * the Web Animations API). WAAPI is used deliberately — it runs independently
- * of the `transition/animation: none !important` ban above (which only governs
- * CSS-declared motion), so no cascade-layer fight is needed. The motion is one
- * `transform` + `width` animation on a single absolutely-positioned node; cells
- * never repaint and the focus engine is untouched. The look at rest is identical
- * to the pre-animation solid white fill — only the cursor now glides.
+ * Sanctioned motion exceptions live in JS, not here (the two below; the other
+ * is smooth scrollIntoView in useFocus.js). A white focus fill is one pill that
+ * slides between cells as the D-pad cursor moves, shared by the tab bar and the
+ * 我的 segment control (hooks/useSlidingCursor.js, via the Web Animations API).
+ * WAAPI is used deliberately — it runs independently of the `transition/
+ * animation: none !important` ban above (which only governs CSS-declared
+ * motion), so no cascade-layer fight is needed. The motion is one `transform` +
+ * `width` animation on a single absolutely-positioned node; cells never repaint
+ * and the focus engine is untouched. The look at rest is identical to the
+ * pre-animation solid white fill — only the cursor now glides.
  */
 
 /* Hidden scrollbar for rows the focus engine scrolls. */

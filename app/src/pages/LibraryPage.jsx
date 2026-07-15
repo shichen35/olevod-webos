@@ -9,6 +9,7 @@ import VideoCard from '../components/VideoCard.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import TabOrderDialog from '../components/TabOrderDialog.jsx'
 import { useFocusable } from '../hooks/useFocus.js'
+import { useSlidingCursor } from '../hooks/useSlidingCursor.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore } from '../store/favorites.js'
 import { historyStore, clear as clearHistory } from '../store/history.js'
@@ -23,7 +24,7 @@ const SEGMENTS = [
   { key: 'settings', label: '设置' },
 ]
 
-function SegChip({ group, col, label, active, onHover, onSelect }) {
+function SegChip({ group, col, label, active, showSelection, onHover, onSelect }) {
   const { props } = useFocusable({
     layer: 'home',
     group,
@@ -34,10 +35,12 @@ function SegChip({ group, col, label, active, onHover, onSelect }) {
       if (f) onHover()
     },
   })
-  // Same look as the tab bar pills: focus (white fill) wins over selected.
+  // Same look as the tab bar pills: the sliding white cursor is the focus fill,
+  // so the focused chip clears its own background and darkens its label; the
+  // glass selection mark shows only when the cursor is off the bar.
   return (
     <div
-      className={`focusable rounded-full px-7 py-2 text-label ${active ? 'bg-glass-active text-fg' : 'text-fg-2'}`}
+      className={`relative z-1 rounded-full px-7 py-2 text-label focused:bg-transparent focused:text-inverse ${active && showSelection ? 'bg-glass-active text-fg' : 'text-fg-2'}`}
       {...props}
     >
       {label}
@@ -100,6 +103,11 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
   const [confirmClear, setConfirmClear] = useState(false)
   const [tabOrderOpen, setTabOrderOpen] = useState(false)
   const debounceRef = useRef(null)
+  const capsuleRef = useRef(null)
+
+  const activeIndex = SEGMENTS.findIndex((s) => s.key === seg)
+  // Same sliding white cursor as the top tab bar (shared hook).
+  const { pillProps, cursorOnBar } = useSlidingCursor({ containerRef: capsuleRef, group, activeIndex })
 
   const favorites = useStoreValue(favoritesStore)
   const history = useStoreValue(historyStore)
@@ -116,8 +124,14 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
 
   return (
     <div className="pt-4">
-      {/* Segment control (row 0): glass capsule, same material as the tab bar. */}
-      <div className="glass mb-7 inline-flex items-center gap-2 rounded-full border border-glass-edge px-2.5 py-1.5">
+      {/* Segment control (row 0): glass capsule, same material as the tab bar.
+          `relative` makes it the sliding pill's offsetParent. */}
+      <div
+        ref={capsuleRef}
+        className="glass relative mb-7 inline-flex items-center gap-2 rounded-full border border-glass-edge px-2.5 py-1.5"
+      >
+        {/* The single sliding white focus pill, behind the chips (z-0). */}
+        <div {...pillProps} />
         {SEGMENTS.map((s, i) => (
           <SegChip
             key={s.key}
@@ -125,6 +139,7 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
             col={i}
             label={s.label}
             active={seg === s.key}
+            showSelection={!cursorOnBar}
             onHover={() => hoverSeg(s.key)}
             onSelect={() => commitSeg(s.key)}
           />

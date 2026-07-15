@@ -14,6 +14,7 @@
  * for the whole app, and React components only register/unregister into it.
  */
 import { useEffect, useLayoutEffect, useRef, useCallback } from 'react'
+import { settingsStore, getSetting } from '../store/settings.js'
 
 // id -> { layer, group, row, col, onSelect, onFocusChange }
 const registry = new Map()
@@ -93,8 +94,10 @@ function applyFocus(newId) {
       // Smooth scroll on every focus move — the app's sole scroll animation.
       // Not governed by the CSS transition/animation ban (that doesn't touch
       // scroll behavior); it's a deliberate motion exception (see index.css
-      // header). The top-row snap below still jumps instantly.
-      el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+      // header). The top-row snap below still jumps instantly. Users can drop
+      // this to instant 'auto' via the 平滑滚动 setting.
+      const behavior = getSetting(settingsStore.get(), 'smoothScroll') ? 'smooth' : 'auto'
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior })
       // Topmost row of a scrolling page: snap the scroller all the way up so
       // the heading above the first row (which 'nearest' leaves clipped) shows.
       if (rec && rec.row === 0 && rec.group !== 'tabbar') {

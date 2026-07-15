@@ -64,7 +64,11 @@ downstream consumes only the tokens defined here.
      (so a focused item never sits flush against the screen/container edge);
    - a guard rule enforcing the global ban: `*,*::before,*::after { transition:none
      !important; animation:none !important; }` (prevents accidental reintroduction
-     later);
+     later). One sanctioned exception lives outside CSS in `TabBar.jsx`: the tab
+     bar's white focus fill (its D-pad cursor) slides between tabs via the Web
+     Animations API, which the CSS `transition/animation` ban does not govern —
+     a single compositor-cheap `transform`/`width` node, no tab repaint, focus
+     engine untouched, and identical to the old solid fill at rest;
    - `img` defaults to `display:block`; a `.cv-auto` utility class
      (`content-visibility:auto; contain:content`) that card components (T09)
      apply to skip layout/paint work for off-screen cards.

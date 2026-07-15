@@ -17,6 +17,10 @@
  *     dialogs, and the player chrome. Content surfaces stay fully opaque.
  *   - No motion of any kind: the transition/animation ban is enforced in the
  *     base layer with !important. Focus is instant border/color swaps only.
+ *     ONE sanctioned exception: the tab bar's white focus fill slides between
+ *     tabs as the D-pad cursor moves (driven in TabBar.jsx via the Web
+ *     Animations API, which the ban does not govern) — a single compositor-
+ *     cheap node, no tab repaint, focus engine untouched.
  *   - TV target is Chromium 108 (webOS 24): never use opacity modifiers like
  *     bg-x/50 (they compile to color-mix(), Chrome 111+) — every color an
  *     element needs must be its own token here.
@@ -114,6 +118,18 @@
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   backdrop-filter: blur(40px) saturate(180%);
 }
+
+/*
+ * The single sanctioned motion exception lives in JS, not here: the tab bar's
+ * white focus fill is one pill that slides between tabs as the D-pad cursor
+ * moves (TabBar.jsx, via the Web Animations API). WAAPI is used deliberately —
+ * it runs independently of the `transition/animation: none !important` ban
+ * above (which only governs CSS-declared motion), so no cascade-layer fight is
+ * needed. The motion is one `transform` + `width` animation on a single
+ * absolutely-positioned node; tabs never repaint and the focus engine is
+ * untouched. The look at rest is identical to the pre-animation solid white
+ * fill — only the cursor now glides instead of jumping.
+ */
 
 /* Hidden scrollbar for rows the focus engine scrolls. */
 @utility scrollbar-none {

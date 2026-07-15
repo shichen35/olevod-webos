@@ -94,15 +94,15 @@ function applyFocus(newId) {
       // Smooth scroll on every focus move — the app's sole scroll animation.
       // Not governed by the CSS transition/animation ban (that doesn't touch
       // scroll behavior); it's a deliberate motion exception (see index.css
-      // header). The top-row snap below still jumps instantly. Users can drop
-      // this to instant 'auto' via the 平滑滚动 setting.
+      // header). Users can drop this to instant 'auto' via the 平滑滚动 setting.
       const behavior = getSetting(settingsStore.get(), 'smoothScroll') ? 'smooth' : 'auto'
       el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior })
-      // Topmost row of a scrolling page: snap the scroller all the way up so
+      // Topmost row of a scrolling page: pull the scroller all the way up so
       // the heading above the first row (which 'nearest' leaves clipped) shows.
+      // Same smooth/auto behavior as the focus move above.
       if (rec && rec.row === 0 && rec.group !== 'tabbar') {
         const scroller = el.closest('.tab-content, .overlay')
-        if (scroller) scroller.scrollTop = 0
+        if (scroller) scroller.scrollTo({ top: 0, behavior })
       }
     }
     // If el is null the element is not mounted yet; useLayoutEffect self-heals

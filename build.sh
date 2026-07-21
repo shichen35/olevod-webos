@@ -4,11 +4,14 @@
 #
 #   bash build.sh
 #
-# Single source of truth for the app version: bump VERSION below and re-run.
+# Single source of truth for the app version: bump the default below and re-run.
 # appinfo.json and both package.json files are synced automatically before
 # packaging, so the .ipk filename, the webOS-reported version, and the
 # in-app "版本" label (__APP_VERSION__) always match.
-VERSION="1.0.2"
+#
+# Set the VERSION env var to override it without editing this file (used by CI):
+#   VERSION=1.0.0 bash build.sh
+VERSION="${VERSION:-1.0.0}"
 
 set -euo pipefail
 cd "$(dirname "$0")"

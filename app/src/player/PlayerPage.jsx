@@ -6,8 +6,12 @@
  *   bar hidden: Down = show bar · Up = show the key hint · Left/Right = seek
  *               step (long-press repeats, step grows each held second)
  *               OK = play/pause (pausing shows the bar) · Back = exit
- *   bar shown:  Up = hide bar · Left/Right = same seek step · OK = play/pause
- *               Back = hide bar
+ *   bar shown:  Up = hide bar · Down = episode strip · Left/Right = same seek
+ *               step · OK = play/pause · Back = hide bar
+ *   strip open: Left/Right = move between episodes (focus engine scrolls the
+ *               row) · OK = jump to it, strip stays up so you can keep hopping
+ *               (the stream reloads behind the strip, no loading takeover) ·
+ *               Up/Back = back to the plain bar
  *   Seeks accumulate into a pending target and only commit after the key has
  *   settled for ~500ms — no burst of segment requests while stepping.
  *
@@ -133,6 +137,22 @@ function RetryButton({ onRetry }) {
   )
 }
 
+// One cell in the episode strip. A real focusable (group 'episodes', single row)
+// so the focus engine drives horizontal navigation + scrollIntoView for free,
+// and a click jumps straight to that episode. The currently-playing cell is
+// tinted with the accent so it reads even before focus lands on it.
+function StripCell({ col, label, isCurrent, onSelect }) {
+  const { props } = useFocusable({ layer: LAYER, group: 'episodes', row: 0, col, onSelect })
+  return (
+    <div
+      className={`focusable shrink-0 max-w-[240px] truncate rounded-lg bg-glass-active px-6 py-2.5 text-label ${isCurrent ? 'text-accent' : 'text-fg-2'}`}
+      {...props}
+    >
+      {label}
+    </div>
+  )
+}
+
 export default function PlayerPage({ id, episodeIndex }) {
   const videoRef = useRef(null)
   const [data, setData] = useState(null) // normalized detail (title + episodes)
@@ -140,6 +160,7 @@ export default function PlayerPage({ id, episodeIndex }) {
   const [status, setStatus] = useState('loading') // loading | ok | error
   const [attempt, setAttempt] = useState(0) // bump to tear down and retry
   const [barVisible, setBarVisible] = useState(false)
+  const [stripVisible, setStripVisible] = useState(false) // bottom episode strip
   const [toast, setToast] = useState(null) // resume notice; static, 3s
   const toastTimerRef = useRef(null)
   const [upNext, setUpNext] = useState(false) // Up Next card visible
@@ -151,6 +172,8 @@ export default function PlayerPage({ id, episodeIndex }) {
   statusRef.current = status
   const barRef = useRef(barVisible)
   barRef.current = barVisible
+  const stripRef = useRef(stripVisible)
+  stripRef.current = stripVisible
   const upNextRef = useRef(upNext)
   upNextRef.current = upNext
   const upNextDismissedRef = useRef(false) // per-episode: Back/Up dismissed it
@@ -159,6 +182,8 @@ export default function PlayerPage({ id, episodeIndex }) {
 
   // "Next" in a newest-first list is the entry BEFORE the current one.
   const epList = data?.episodes || []
+  const epListRef = useRef(epList) // key handler reads the live list without re-binding
+  epListRef.current = epList
   const curIdx = epList.findIndex((e) => e.index === curEp)
   const nextEp = curIdx > 0 ? epList[curIdx - 1] : null
   const nextEpIndex = nextEp?.index ?? null
@@ -192,6 +217,7 @@ export default function PlayerPage({ id, episodeIndex }) {
         return
       }
       setBarVisible(false)
+      setStripVisible(false)
     }, BAR_HIDE_MS)
   }, [])
 
@@ -203,7 +229,21 @@ export default function PlayerPage({ id, episodeIndex }) {
   const hideBar = useCallback(() => {
     clearTimeout(hideTimerRef.current)
     setBarVisible(false)
+    setStripVisible(false)
   }, [])
+
+  // Episode strip is a sub-state of the shown bar: Down from the bar opens it,
+  // Up/Back closes it back to the plain bar. Either way the bar's auto-hide keeps
+  // running so both fade together after inactivity.
+  const showStrip = useCallback(() => {
+    setStripVisible(true)
+    armHideTimer()
+  }, [armHideTimer])
+
+  const hideStrip = useCallback(() => {
+    setStripVisible(false)
+    armHideTimer()
+  }, [armHideTimer])
 
   useEffect(
     () => () => {
@@ -285,15 +325,25 @@ export default function PlayerPage({ id, episodeIndex }) {
 
   // Switch episodes WITHOUT exiting the player: the playback effect's cleanup
   // flushes the outgoing episode's progress, then the new run reloads the URL
-  // through the same quality-selection path.
-  const switchEpisode = useCallback((n) => {
-    if (n == null) return
-    upNextDismissedRef.current = false
-    setUpNext(false)
-    setSwitching(true)
-    setBarVisible(false)
-    setCurEp(n)
-  }, [])
+  // through the same quality-selection path. `keepUi` leaves the control bar and
+  // episode strip up (picking from the strip) so you can keep hopping episodes;
+  // otherwise (Up Next, auto-advance) the overlay is cleared.
+  const switchEpisode = useCallback(
+    (n, { keepUi = false } = {}) => {
+      if (n == null) return
+      upNextDismissedRef.current = false
+      setUpNext(false)
+      setSwitching(true)
+      if (keepUi) {
+        armHideTimer() // keep bar + strip up, just refresh the auto-hide countdown
+      } else {
+        setBarVisible(false)
+        setStripVisible(false)
+      }
+      setCurEp(n)
+    },
+    [armHideTimer],
+  )
   const switchEpisodeRef = useRef(switchEpisode)
   switchEpisodeRef.current = switchEpisode
 
@@ -315,6 +365,27 @@ export default function PlayerPage({ id, episodeIndex }) {
   useEffect(() => {
     pushFocusLayer(LAYER)
     setCustomKeyHandler((e) => {
+      // Episode strip owns keys the moment it's open — evaluated before the
+      // status gate so it stays fully navigable while the next pick is still
+      // loading (the player never blanks to the loading screen mid-hop).
+      // Left/Right/OK go to the focus engine (move highlight, scroll, select);
+      // Up/Back peel the strip back to the plain bar; OK keeps the strip up.
+      if (stripRef.current) {
+        armHideTimer()
+        if (isBackKey(e) || e.key === 'ArrowUp') {
+          hideStrip()
+          return true
+        }
+        switch (e.key) {
+          case 'ArrowLeft':
+          case 'ArrowRight':
+          case 'Enter':
+            return false
+          default:
+            return true // swallow Down and the rest
+        }
+      }
+
       // Error state: normal navigation drives the Retry focusable; Back exits.
       if (statusRef.current === 'error') return false
       if (statusRef.current !== 'ok') {
@@ -354,6 +425,9 @@ export default function PlayerPage({ id, episodeIndex }) {
           case 'ArrowUp':
             hideBar()
             return true
+          case 'ArrowDown':
+            if (epListRef.current.length > 1) showStrip() // Down again -> episode strip
+            return true
           case 'ArrowLeft':
             stepSeek(-STEP_S, e.repeat)
             return true
@@ -392,12 +466,23 @@ export default function PlayerPage({ id, episodeIndex }) {
       setCustomKeyHandler(null)
       popFocusLayer()
     }
-  }, [armHideTimer, hideBar, showBar, stepSeek, togglePlay, showHint])
+  }, [armHideTimer, hideBar, showBar, showStrip, hideStrip, stepSeek, togglePlay, showHint])
 
-  // The error state has this layer's only focusable; land on it deterministically.
+  // The error state has this layer's only focusable; drop the bar/strip so their
+  // focusables don't compete, then land on Retry deterministically.
   useEffect(() => {
-    if (status === 'error') focusTo(`${LAYER}/content-0-0`)
+    if (status === 'error') {
+      setBarVisible(false)
+      setStripVisible(false)
+      focusTo(`${LAYER}/content-0-0`)
+    }
   }, [status])
+
+  // Opening the strip lands focus on the current episode. Child (cell) effects
+  // register before this parent effect runs, so the target id already exists.
+  useEffect(() => {
+    if (stripVisible) focusTo(`${LAYER}/episodes-0-${curIdx < 0 ? 0 : curIdx}`)
+  }, [stripVisible, curIdx])
 
   // ---------------------------------------------------------------------
   // data: detail (title + episode urls) from the shared page cache
@@ -753,8 +838,9 @@ export default function PlayerPage({ id, episodeIndex }) {
       )}
 
       {/* Control bar — always mounted so the DOM refs stay stable; visibility
-          is an instant display toggle. */}
-      <div className="glass-strong border border-glass-edge absolute bottom-12 left-[33%] w-[34%] rounded-[28px] px-9 pt-6 pb-4" style={{ display: barVisible ? 'block' : 'none' }}>
+          is an instant display toggle. Rides up above the episode strip when
+          that's open. */}
+      <div className={`glass-strong border border-glass-edge absolute ${stripVisible ? 'bottom-52' : 'bottom-12'} left-[33%] w-[34%] rounded-[28px] px-9 pt-6 pb-4`} style={{ display: barVisible ? 'block' : 'none' }}>
         <div className="relative mb-3 h-2 overflow-hidden rounded-full bg-glass-active">
           <div ref={bufferedRef} className="absolute inset-y-0 left-0 w-0 bg-fg-3" />
           <div ref={playedRef} className="absolute inset-y-0 left-0 w-0 bg-focus" />
@@ -777,6 +863,31 @@ export default function PlayerPage({ id, episodeIndex }) {
         </div>
       </div>
 
+      {/* Episode strip — full-width horizontal scroller pinned to the bottom,
+          shown by a second Down from the control bar. Cells are real focusables
+          so the engine scrolls the row and clicking jumps to that episode. */}
+      {stripVisible && episodes.length > 1 && (
+        <div className="glass-strong border border-glass-edge absolute bottom-8 left-safe right-safe rounded-[20px] px-7 py-5">
+          <div className="mb-3 text-caption text-fg-2">选集</div>
+          <div className="flex gap-3 overflow-x-auto scrollbar-none">
+            {epList.map((ep, i) => {
+              const ordinal = `第${ep.index}集`
+              const title = ep.title || ordinal
+              const titleIsOrdinal = new RegExp(`^第0*${ep.index}集$`).test(title)
+              return (
+                <StripCell
+                  key={ep.index}
+                  col={i}
+                  label={titleIsOrdinal ? ordinal : title}
+                  isCurrent={ep.index === curEp}
+                  onSelect={() => switchEpisode(ep.index, { keepUi: true })}
+                />
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Seek target badge (« / » + mm:ss), shared by both seek modes. */}
       <div ref={badgeRef} className="glass-strong border border-glass-edge absolute bottom-55 left-1/2 -translate-x-1/2 rounded-full px-8 py-2.5 text-heading text-fg" style={{ display: 'none' }} />
 
@@ -795,11 +906,14 @@ export default function PlayerPage({ id, episodeIndex }) {
         <div className="glass-strong border border-glass-edge absolute top-30 left-1/2 -translate-x-1/2 rounded-[20px] px-10 py-6 text-center text-label text-fg-2">
           <div className="mb-3 text-heading text-fg">遥控键位</div>
           <div>OK 播放 / 暂停 · 左右键快退快进（长按加速）</div>
-          <div className="mt-1.5">下键调出控制条 · 上键查看本提示 · 返回键退出</div>
+          <div className="mt-1.5">下键调出控制条 · 控制条上再按下键选集</div>
+          <div className="mt-1.5">上键查看本提示 · 返回键退出</div>
         </div>
       )}
 
-      {status === 'loading' && (
+      {/* Full-screen loading takeover — suppressed while the strip is open so a
+          strip pick reloads the stream behind the strip instead of blanking it. */}
+      {status === 'loading' && !stripVisible && (
         <div className="absolute inset-0 flex items-center justify-center bg-black text-heading text-fg">
           {switching ? `正在加载 第${curEp}集…` : '加载中…'}
         </div>

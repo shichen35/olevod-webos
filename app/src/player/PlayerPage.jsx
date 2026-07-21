@@ -19,9 +19,11 @@
  * `timeupdate` — playback must not re-render the component every second.
  *
  * hls.js arrives via dynamic import() so it never enters the startup bundle
- * (PlayerPage itself is lazy() — see App.jsx). On the real device the webOS
- * webview plays HLS natively (canPlayType), so the TV path never downloads
- * the hls.js chunk at all.
+ * (PlayerPage itself is lazy() — see App.jsx). It drives playback everywhere,
+ * the TV included: only hls.js lets us set a deep, memory-bounded forward
+ * buffer, and the native webOS HLS pipeline (shallow, untunable buffer)
+ * stuttered on heavy 1080p streams — it would drain and stall repeatedly.
+ * Native canPlayType is kept only as a fallback for when MSE is unavailable.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { detail as fetchDetail, streamUrl } from '../api/olevod.js'
@@ -47,6 +49,32 @@ const PROGRESS_FLUSH_MS = 5000 // persist watch progress cadence
 const RESUME_MIN_S = 30 // only resume when more than this was watched
 const FINISHED_TAIL_S = 15 // this close to the end counts as finished
 const TOAST_MS = 3000
+
+// Native-path stall watchdog. The on-device webOS pipeline has no built-in
+// gap/nudge recovery (hls.js runs its own gapController on the dev path), so a
+// buffer hole or a decoder stall freezes playback until a manual seek — the
+// "卡住，只能快进快退救回来" symptom. These drive the auto-recovery ladder:
+// jump a hole -> nudge the decoder -> soft-reload from the last position ->
+// finally surface the error screen.
+const STALL_CHECK_MS = 1000
+const STALL_NUDGE_AFTER_MS = 3000 // currentTime frozen this long -> jump/nudge
+const STALL_RELOAD_AFTER_MS = 8000 // frozen + buffer not filling -> soft reload
+const STALL_HARD_MS = 15000 // frozen this long -> reload even while "buffering"
+const STALL_ADVANCE_EPS_S = 0.25 // currentTime moving less than this = frozen
+const STALL_HOLE_MAX_S = 1 // a buffered-range gap up to this counts as a hole
+const MAX_SOFT_RELOADS = 3 // consecutive soft reloads before the error screen
+const RECOVERY_RESET_MS = 30000 // sustained playback clears the reload count
+
+// hls.js buffering — the actual fix for stutter on heavy 1080p/high-bitrate
+// streams. A deep forward buffer means a slow segment or a busy-CPU moment
+// can't drain playback; maxBufferSize keeps that buffer bounded so a small-RAM
+// TV never blows up. Back buffer is trimmed to return decoded memory.
+const HLS_CONFIG = {
+  maxBufferLength: 60, // target forward buffer, seconds (hls.js default 30)
+  maxMaxBufferLength: 120, // hard ceiling on buffer length, seconds
+  maxBufferSize: 60 * 1000 * 1000, // memory ceiling, ~60 MB
+  backBufferLength: 30, // reclaim decoded data this far behind the playhead
+}
 
 const UP_NEXT_S = 30 // remaining time that surfaces the Up Next card
 
@@ -400,6 +428,7 @@ export default function PlayerPage({ id, episodeIndex }) {
     let cancelled = false
     let started = false // first 'playing' of THIS episode load
     let resumeCorrected = false
+    let currentSrc = null // captured for the watchdog's soft reload
     setStatus('loading')
 
     // Resume decision (T18): same episode, meaningfully into it.
@@ -429,6 +458,116 @@ export default function PlayerPage({ id, episodeIndex }) {
     const flushTimer = setInterval(() => {
       if (started && !video.paused) flushProgress()
     }, PROGRESS_FLUSH_MS)
+
+    // Re-attach the stream in place and seek back to `pos`, without tearing the
+    // page down or flashing the loading screen. hls.js just re-arms its loader
+    // (it can re-fetch from an exact position); the native pipeline needs the
+    // src set again, then a seek once metadata is back.
+    const softReload = (pos) => {
+      const wantPos = Number.isFinite(pos) && pos > 1 ? pos : lastKnown.pos > 1 ? lastKnown.pos : 0
+      if (hls) {
+        try {
+          hls.startLoad(wantPos > 0 ? wantPos : -1)
+        } catch {
+          /* loader already gone */
+        }
+        video.play().catch(() => {})
+        return
+      }
+      if (!currentSrc) return
+      const onMeta = () => {
+        video.removeEventListener('loadedmetadata', onMeta)
+        if (wantPos > 0) {
+          try {
+            video.currentTime = wantPos
+          } catch {
+            /* duration not ready yet; timeupdate resume covers it */
+          }
+        }
+        video.play().catch(() => {})
+      }
+      video.addEventListener('loadedmetadata', onMeta)
+      video.src = currentSrc
+      video.load()
+    }
+
+    // Watchdog: once playback has started, currentTime must keep advancing.
+    // With hls.js managing a deep buffer this rarely fires — it's the safety
+    // net for a true stall. Crucially it is buffering-aware: while the buffer
+    // is still filling, playback is rebuffering normally and we leave it be
+    // (interrupting a healthy refill is what made recovery feel choppy). We
+    // only intervene when frozen AND the buffer has stopped growing — or when
+    // frozen past a hard ceiling (a decoder deadlock that never resumes).
+    const bufferedEndNearby = () => {
+      const b = video.buffered
+      let end = 0
+      for (let i = 0; i < b.length; i++) {
+        if (b.start(i) <= video.currentTime + 0.5 && b.end(i) > end) end = b.end(i)
+      }
+      return end
+    }
+    let lastAdvancePos = NaN
+    let lastAdvanceAt = Date.now()
+    let lastBufEnd = 0
+    let nudged = false
+    let softReloads = 0
+    let lastReloadAt = 0
+    const watchdog = setInterval(() => {
+      const now = Date.now()
+      if (!started || video.paused || video.ended || video.seeking || pendingSeekRef.current != null) {
+        lastAdvanceAt = now // not our kind of stall — keep the clock fresh
+        return
+      }
+      const t = video.currentTime
+      if (!Number.isFinite(lastAdvancePos) || Math.abs(t - lastAdvancePos) > STALL_ADVANCE_EPS_S) {
+        lastAdvancePos = t
+        lastAdvanceAt = now
+        nudged = false
+        if (now - lastReloadAt > RECOVERY_RESET_MS) softReloads = 0 // clean run
+        return
+      }
+      const frozenMs = now - lastAdvanceAt
+      // Buffer still growing? Healthy rebuffering — wait it out (up to the hard
+      // ceiling), don't touch it. The freeze clock keeps running so a buffer
+      // that grows forever without playback resuming still escalates.
+      const end = bufferedEndNearby()
+      const bufferGrowing = end > lastBufEnd + 0.1
+      lastBufEnd = end
+      if (bufferGrowing && frozenMs < STALL_HARD_MS) return
+
+      if (frozenMs >= STALL_RELOAD_AFTER_MS) {
+        if (softReloads >= MAX_SOFT_RELOADS) {
+          setStatus('error')
+          return
+        }
+        softReloads += 1
+        lastReloadAt = now
+        lastAdvanceAt = now
+        nudged = false
+        softReload(t) // hls.js: re-arm its loader; native: re-attach + seek
+        return
+      }
+      // Native fallback only — hls.js runs its own gapController/nudge, so a
+      // second nudge on top would fight it.
+      if (!hls && frozenMs >= STALL_NUDGE_AFTER_MS && !nudged) {
+        nudged = true
+        const b = video.buffered
+        let jumped = false
+        for (let i = 0; i < b.length; i++) {
+          if (b.start(i) > t && b.start(i) - t <= STALL_HOLE_MAX_S) {
+            video.currentTime = b.start(i) + 0.01 // jump a buffered-range hole
+            jumped = true
+            break
+          }
+        }
+        // Data present but the decoder is wedged — micro-nudge. Nothing buffered
+        // (readyState low) means true starvation; leave it for the reload step.
+        if (!jumped && video.readyState >= 2 /* HAVE_CURRENT_DATA */) {
+          video.currentTime = t + 0.1
+        }
+        video.play().catch(() => {})
+      }
+    }, STALL_CHECK_MS)
 
     const onPlaying = () => {
       setStatus('ok')
@@ -529,41 +668,46 @@ export default function PlayerPage({ id, episodeIndex }) {
           data.episodes.find((e) => e.index === curEp) || data.episodes[data.episodes.length - 1]
         if (!ep?.url) throw new Error('no playable url')
         const src = streamUrl(ep.url)
+        currentSrc = src // the watchdog reloads from here on a native-path stall
 
+        // hls.js first — everywhere, TV included. The light build is enough (no
+        // subtitles/alt-audio/DRM) and stays under the bundler's 500 kB warning.
+        const { default: Hls } = await import('hls.js/light')
+        if (cancelled) return
+        if (Hls.isSupported()) {
+          hls = new Hls({
+            autoStartLoad: false, // wait for MANIFEST_PARSED to pick the start level
+            ...HLS_CONFIG,
+            manifestLoadPolicy: LOAD_POLICY,
+            playlistLoadPolicy: LOAD_POLICY,
+            fragLoadPolicy: LOAD_POLICY,
+          })
+          hls.on(Hls.Events.MANIFEST_PARSED, (_evt, parsed) => {
+            const lvl = pickStartLevel(parsed.levels || [])
+            if (lvl >= 0) {
+              hls.startLevel = lvl
+              hls.autoLevelCapping = lvl // ABR stays below the UHD tier
+            }
+            // Resume at load time — starting at 0 and seeking would double-buffer.
+            hls.startLoad(resumePos > 0 ? resumePos : -1)
+            video.play().catch(() => {})
+          })
+          hls.on(Hls.Events.ERROR, (_evt, info) => {
+            if (info.fatal) setStatus('error')
+          })
+          hls.attachMedia(video)
+          hls.loadSource(src)
+          return
+        }
+
+        // Fallback: native HLS (untunable, shallow buffer). Only reached where
+        // MSE is unavailable; the watchdog's full recovery ladder covers it.
         if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          // Native HLS — the on-device webOS path; ABR is the system's own.
           video.src = src
           video.play().catch(() => {})
           return
         }
-
-        // Desktop-browser dev path: hls.js, loaded on demand. The light build
-        // is enough — no subtitles/alt-audio/DRM here — and stays under the
-        // bundler's 500 kB chunk warning.
-        const { default: Hls } = await import('hls.js/light')
-        if (cancelled) return
-        if (!Hls.isSupported()) throw new Error('hls.js unsupported')
-        hls = new Hls({
-          autoStartLoad: false, // wait for MANIFEST_PARSED to pick the start level
-          manifestLoadPolicy: LOAD_POLICY,
-          playlistLoadPolicy: LOAD_POLICY,
-          fragLoadPolicy: LOAD_POLICY,
-        })
-        hls.on(Hls.Events.MANIFEST_PARSED, (_evt, parsed) => {
-          const lvl = pickStartLevel(parsed.levels || [])
-          if (lvl >= 0) {
-            hls.startLevel = lvl
-            hls.autoLevelCapping = lvl // ABR stays below the UHD tier
-          }
-          // Resume at load time — starting at 0 and seeking would double-buffer.
-          hls.startLoad(resumePos > 0 ? resumePos : -1)
-          video.play().catch(() => {})
-        })
-        hls.on(Hls.Events.ERROR, (_evt, info) => {
-          if (info.fatal) setStatus('error')
-        })
-        hls.attachMedia(video)
-        hls.loadSource(src)
+        throw new Error('no HLS support')
       } catch {
         if (!cancelled) setStatus('error')
       }
@@ -574,6 +718,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       // Flush the outgoing episode's progress before teardown — covers exit,
       // retry, and episode switches alike.
       clearInterval(flushTimer)
+      clearInterval(watchdog)
       flushProgress()
       video.removeEventListener('playing', onPlaying)
       video.removeEventListener('loadedmetadata', onLoadedMeta)

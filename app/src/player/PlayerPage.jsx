@@ -480,8 +480,16 @@ export default function PlayerPage({ id, episodeIndex }) {
 
   // Opening the strip lands focus on the current episode. Child (cell) effects
   // register before this parent effect runs, so the target id already exists.
+  // Jump the row to that cell with NO animation first; focusTo's own (possibly
+  // smooth) scroll then finds it already in view and is a no-op — so opening
+  // snaps into place and only later cursor moves animate.
   useEffect(() => {
-    if (stripVisible) focusTo(`${LAYER}/episodes-0-${curIdx < 0 ? 0 : curIdx}`)
+    if (!stripVisible) return
+    const id = `${LAYER}/episodes-0-${curIdx < 0 ? 0 : curIdx}`
+    document
+      .querySelector(`[data-focus-id="${id}"]`)
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+    focusTo(id)
   }, [stripVisible, curIdx])
 
   // ---------------------------------------------------------------------

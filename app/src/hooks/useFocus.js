@@ -21,6 +21,16 @@ const registry = new Map()
 
 let currentFocusId = null
 
+// Timestamp of the last focus-driven scroll. Rapid D-pad repeats (key auto-
+// repeat, ~100-150ms apart) come in faster than a native smooth scroll can
+// finish its fixed-duration animation, so each move restarts the animation from
+// a position that never caught up — the cursor races off-screen and the scroll
+// only settles once the user stops. Below RAPID_MS we drop to instant scroll so
+// the scroller stays locked to the cursor; deliberate single moves (slower than
+// this) keep the smooth animation.
+let lastScrollTs = 0
+const RAPID_MS = 220
+
 // The base layer is the root page (Home). Overlays push on top of it.
 const DEFAULT_LAYER = 'home'
 const layerStack = [DEFAULT_LAYER]
@@ -95,7 +105,17 @@ function applyFocus(newId) {
       // Not governed by the CSS transition/animation ban (that doesn't touch
       // scroll behavior); it's a deliberate motion exception (see index.css
       // header). Users can drop this to instant 'auto' via the 平滑滚动 setting.
-      const behavior = getSetting(settingsStore.get(), 'smoothScroll') ? 'smooth' : 'auto'
+      //
+      // But during rapid D-pad repeats we force 'auto' regardless of the
+      // setting: smooth's fixed-duration animation can't keep up with fast key
+      // repeats, so it would lag the scroll behind the cursor (see lastScrollTs
+      // above). Instant scroll keeps the scroller pinned to the cursor; the
+      // remaining slow, deliberate moves still animate smoothly.
+      const now = typeof performance !== 'undefined' ? performance.now() : 0
+      const rapid = now - lastScrollTs < RAPID_MS
+      lastScrollTs = now
+      const behavior =
+        getSetting(settingsStore.get(), 'smoothScroll') && !rapid ? 'smooth' : 'auto'
       el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior })
       // Topmost row of a scrolling page: pull the scroller all the way up so
       // the heading above the first row (which 'nearest' leaves clipped) shows.

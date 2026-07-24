@@ -14,7 +14,7 @@ import { useStoreValue } from '../hooks/useStore.js'
 import { historyStore } from '../store/history.js'
 import { favoritesStore } from '../store/favorites.js'
 import { settingsStore, getSetting } from '../store/settings.js'
-import { useFocusable, setRowCursorGroup } from '../hooks/useFocus.js'
+import { useFocusable, setGeometryVerticalGroup } from '../hooks/useFocus.js'
 import * as pageCache from '../store/pageCache.js'
 
 function RetryButton({ group, onRetry }) {
@@ -45,12 +45,13 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
     load()
   }, [load])
 
-  // Shelves are independent rows: each keeps its own focus cursor (remembered
-  // column, first card if never visited) instead of inheriting the column the
-  // cursor came from.
+  // Shelves scroll independently, so up/down can't rely on a column index — it
+  // moves by screen geometry instead, landing on the card in the adjacent shelf
+  // whose horizontal center is nearest the current one (same spatial logic as
+  // the filter panel).
   useEffect(() => {
-    setRowCursorGroup('home', group)
-    return () => setRowCursorGroup('home', group, false)
+    setGeometryVerticalGroup('home', group)
+    return () => setGeometryVerticalGroup('home', group, false)
   }, [group])
 
   // refreshNonce bump (tab Enter, T15): drop the cache and refetch WITHOUT

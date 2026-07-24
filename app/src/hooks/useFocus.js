@@ -91,6 +91,19 @@ export function setRowCursorGroup(layer, group, on = true) {
   else rowCursorGroups.delete(key)
 }
 
+// Groups whose vertical (up/down) moves are resolved by SCREEN GEOMETRY instead
+// of column arithmetic: land on the card in the adjacent row whose horizontal
+// center is closest to the current one. Home shelves scroll independently, so a
+// remembered/carried column index doesn't line up with what the eye sees —
+// picking by pixel position does. Horizontal moves stay arithmetic (col +/- 1),
+// which for a single shelf already equals the visual order.
+const geometryVerticalGroups = new Set() // "{layer}/{group}"
+export function setGeometryVerticalGroup(layer, group, on = true) {
+  const key = `${layer}/${group}`
+  if (on) geometryVerticalGroups.add(key)
+  else geometryVerticalGroups.delete(key)
+}
+
 // ---------------------------------------------------------------------------
 // id helpers
 // ---------------------------------------------------------------------------
@@ -249,6 +262,28 @@ function nearestColInRow(layer, group, row, preferCol) {
   return null
 }
 
+// Geometry-vertical column pick: among the cells that exist in `row`, the one
+// whose on-screen horizontal center is closest to `centerX`. Columns are
+// contiguous from 0 (cards render col = index), so a bounded probe covers the
+// row without a registry scan. Returns null if the row has no mounted cells.
+function geometryColInRow(layer, group, row, centerX) {
+  let bestId = null
+  let bestDx = Infinity
+  for (let c = 0; c <= PROBE_LIMIT; c++) {
+    const id = buildId(layer, group, row, c)
+    if (!registry.has(id)) continue
+    const el = document.querySelector(`[data-focus-id="${id}"]`)
+    if (!el) continue
+    const r = el.getBoundingClientRect()
+    const dx = Math.abs(r.left + r.width / 2 - centerX)
+    if (dx < bestDx) {
+      bestDx = dx
+      bestId = id
+    }
+  }
+  return bestId
+}
+
 // ---------------------------------------------------------------------------
 // navigation — O(1) arithmetic + a Map.has() probe, never a registry scan
 // ---------------------------------------------------------------------------
@@ -268,8 +303,20 @@ function navigate(dir) {
 
   if (dir === 'up' || dir === 'down') {
     const tr = dir === 'up' ? row - 1 : row + 1
-    // Move to the target row honoring that row's column memory.
-    const within = tr >= 0 ? nearestColInRow(layer, group, tr, col) : null
+    // Geometry-vertical groups (home shelves) land on the adjacent row's card
+    // nearest the current horizontal center; everyone else honors column memory.
+    let within = null
+    if (tr >= 0) {
+      if (geometryVerticalGroups.has(`${layer}/${group}`)) {
+        const el = document.querySelector(`[data-focus-id="${currentFocusId}"]`)
+        const cr = el?.getBoundingClientRect()
+        within = cr
+          ? geometryColInRow(layer, group, tr, cr.left + cr.width / 2)
+          : nearestColInRow(layer, group, tr, col)
+      } else {
+        within = nearestColInRow(layer, group, tr, col)
+      }
+    }
     if (within) {
       setFocus(within)
       return

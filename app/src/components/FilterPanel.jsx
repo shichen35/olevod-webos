@@ -49,10 +49,32 @@ function isBackKey(e) {
   return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
 }
 
+// The chips of the wrapped row immediately above/below `cr` (`vdir` 'up'/'down'),
+// or [] if `cr` is already on the edge row. "Nearest row" = the closest top edge
+// in that direction, then everything sharing that top within ROW_TOL.
+function adjacentRowEls(els, rects, cr, vdir) {
+  const cand = els.filter((el) => {
+    const t = rects.get(el).top
+    return vdir === 'down' ? t > cr.top + ROW_TOL : t < cr.top - ROW_TOL
+  })
+  if (!cand.length) return []
+  const rowTop = cand.reduce(
+    (best, el) => {
+      const t = rects.get(el).top
+      if (vdir === 'down') return t < best ? t : best
+      return t > best ? t : best
+    },
+    vdir === 'down' ? Infinity : -Infinity,
+  )
+  return cand.filter((el) => Math.abs(rects.get(el).top - rowTop) <= ROW_TOL)
+}
+
 // Move focus to the nearest chip in `dir`, reading live layout from `root`.
-// left/right stay on the current wrapped row; up/down jump to the adjacent
-// wrapped row and land on the chip whose center is closest horizontally — which
-// is exactly what the eye expects when rows hold different numbers of chips.
+// up/down jump to the adjacent wrapped row and land on the chip whose center is
+// closest horizontally — what the eye expects when rows hold different counts.
+// left/right walk the current wrapped row and, at a row edge, wrap onward: Right
+// past the last chip lands on the next row's first chip, Left past the first
+// lands on the previous row's last chip (if such a row exists).
 function moveByGeometry(dir, root) {
   if (!root) return
   const els = Array.from(root.querySelectorAll('[data-focus-id]'))
@@ -68,6 +90,7 @@ function moveByGeometry(dir, root) {
   let target = null
 
   if (dir === 'left' || dir === 'right') {
+    // Same wrapped row, nearest neighbor toward the press.
     for (const el of els) {
       if (el === cur) continue
       const r = rects.get(el)
@@ -78,31 +101,28 @@ function moveByGeometry(dir, root) {
         target = el
       }
     }
-  } else {
-    // Chips strictly above / below the current row.
-    const candidates = els.filter((el) => {
-      const t = rects.get(el).top
-      return dir === 'down' ? t > cr.top + ROW_TOL : t < cr.top - ROW_TOL
-    })
-    if (candidates.length) {
-      // The immediately adjacent wrapped row: the nearest top edge in `dir`.
-      const rowTop = candidates.reduce(
-        (best, el) => {
-          const t = rects.get(el).top
-          if (dir === 'down') return t < best ? t : best
-          return t > best ? t : best
-        },
-        dir === 'down' ? Infinity : -Infinity,
-      )
-      for (const el of candidates) {
+    // At a row edge: wrap to the adjacent row's opposite end.
+    if (!target) {
+      const rowEls = adjacentRowEls(els, rects, cr, dir === 'right' ? 'down' : 'up')
+      for (const el of rowEls) {
         const r = rects.get(el)
-        if (Math.abs(r.top - rowTop) > ROW_TOL) continue // not that adjacent row
-        const dx = Math.abs(r.left + r.width / 2 - curCenterX)
-        const bestDx = target
-          ? Math.abs(rects.get(target).left + rects.get(target).width / 2 - curCenterX)
-          : Infinity
-        if (dx < bestDx) target = el
+        if (!target) {
+          target = el
+          continue
+        }
+        const tr = rects.get(target)
+        // Right -> leftmost chip of the next row; Left -> rightmost of the prev row.
+        target = dir === 'right' ? (r.left < tr.left ? el : target) : (r.left > tr.left ? el : target)
       }
+    }
+  } else {
+    for (const el of adjacentRowEls(els, rects, cr, dir)) {
+      const r = rects.get(el)
+      const dx = Math.abs(r.left + r.width / 2 - curCenterX)
+      const bestDx = target
+        ? Math.abs(rects.get(target).left + rects.get(target).width / 2 - curCenterX)
+        : Infinity
+      if (dx < bestDx) target = el
     }
   }
 

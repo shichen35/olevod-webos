@@ -9,14 +9,19 @@ reset / done, on its own focus layer, applying selections immediately.
 
 ## Implementation requirements
 
-1. **Visuals**: a fixed-width panel on the right (560px @1080p), a frosted-glass sheet
+1. **Visuals**: a fixed-width panel on the right (600px @1080p), a frosted-glass sheet
    (`--glass-strong` fill + backdrop blur + a `--glass-edge` hairline left border — a sanctioned chrome
    surface per T02's glass exception); scrolls internally when tall;
    no slide-in animation (it's in place as soon as it opens), no scrim over the content underneath (it shows through as-is; since
    focus isn't on it, there's no risk of accidental input).
 2. **Focus layer**: opening calls `pushFocusLayer('filter')` and lands focus on `filter/panel-0-0`; closing (on unmount) calls `popFocusLayer()`, which automatically
-   restores focus to the "筛选" button. Inside the panel, everything lives in the `panel` group: the three chip groups wrap
-   at 4 chips per row with consecutive row numbers, and the bottom "重置 / 完成" buttons share the final row.
+   restores focus to the "筛选" button. Inside the panel, everything lives in the `panel` group. The chips flow in a
+   `flex-wrap` container, so how many sit on a visual row depends on their pixel widths rather than a fixed column count;
+   directional movement is therefore **spatial**, not arithmetic — the layer's `setCustomKeyHandler` reads the chips' live
+   layout on each key press and moves to the nearest chip in the pressed direction (up/down step to the adjacent row and
+   keep the closest horizontal center; left/right walk the wrapped row and, at a row edge, wrap onward — Right past the
+   last chip lands on the next row's first, Left past the first lands on the previous row's last). The bottom "重置 / 完成"
+   buttons are just the last row the same navigation reaches.
 3. **Behavior**: selecting a chip applies immediately — the change flows through the app shell's per-category
    filter override into CategoryPage, which refreshes using T11's token mechanism; "重置" restores
    that category's default filters (all dimensions, including the genre chip, back to "All" + default sort); "完成" and the back key (intercepted via `setCustomKeyHandler`) both close the panel.

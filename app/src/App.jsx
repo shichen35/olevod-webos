@@ -30,6 +30,7 @@ import CategoryPage from './pages/CategoryPage.jsx'
 import FilterPanel from './components/FilterPanel.jsx'
 import DetailPage from './pages/DetailPage.jsx'
 import LibraryPage from './pages/LibraryPage.jsx'
+import SearchPage from './pages/SearchPage.jsx'
 import { getFilter, setFilter } from './store/filters.js'
 import { settingsStore, getSetting } from './store/settings.js'
 import { useStoreValue } from './hooks/useStore.js'
@@ -165,6 +166,8 @@ export default function App() {
             {activated.has(tab.key) &&
               (tab.kind === 'home' ? (
                 <HomePage group={contentGroup(tab.key)} onOpenDetail={openDetail} refreshNonce={refreshNonce[tab.key]} />
+              ) : tab.kind === 'search' ? (
+                <SearchPage group={contentGroup(tab.key)} onOpenDetail={openDetail} />
               ) : tab.kind === 'category' ? (
                 <CategoryPage
                   category={tab.categoryId}

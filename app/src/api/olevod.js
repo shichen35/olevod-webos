@@ -95,6 +95,54 @@ export async function categoryList({
 }
 
 // ---------------------------------------------------------------------------
+// search
+// ---------------------------------------------------------------------------
+// All three search endpoints group results by content type; we only consume
+// the `vod` group (`live` etc. are out of scope for this app).
+function vodGroup(groups) {
+  return (groups || []).find((g) => g.type === 'vod')
+}
+
+/**
+ * Autocomplete suggestions while typing.
+ * Path: /v1/pub/index/search/keywords/{keyword}
+ * Returns a deduped list of suggestion words (the API repeats some).
+ */
+export async function searchSuggest(keyword) {
+  const data = await apiGet(`/v1/pub/index/search/keywords/${encodeURIComponent(keyword)}`)
+  return [...new Set(vodGroup(data)?.words || [])]
+}
+
+/**
+ * Trending search terms, shown before the user has typed anything.
+ * Path: /v1/pub/index/search/hot/keywords?limit={n}
+ */
+export async function searchHotKeywords(limit = 10) {
+  const data = await apiGet(`/v1/pub/index/search/hot/keywords?limit=${limit}`)
+  return [...new Set(vodGroup(data)?.words || [])]
+}
+
+/**
+ * Full-text search, paginated.
+ * Path: /v1/pub/index/search/{keyword}/vod/0/{page}/{size}
+ * (the `0` segment is the sub-type filter; 0 = all).
+ * Response nests the list one level deeper than categoryList:
+ * data = { total, data: [{ type: 'vod', list: [...] }] }.
+ */
+export async function searchList({ keyword, page = 1, size = 24 }) {
+  const data = await apiGet(
+    `/v1/pub/index/search/${encodeURIComponent(keyword)}/vod/0/${page}/${size}`,
+  )
+  const list = vodGroup(data?.data)?.list || []
+  return {
+    items: list.map(normalizeItem),
+    total: data?.total || 0,
+    page,
+    size,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // detail
 // ---------------------------------------------------------------------------
 /**

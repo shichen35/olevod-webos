@@ -387,6 +387,23 @@ export function initFocusEngine() {
   keyHandlerAttached = true
 
   window.addEventListener('keydown', (e) => {
+    // While a text field has real DOM focus (system keyboard open / browser
+    // caret), every key belongs to the field: arrows move the caret (on TV the
+    // VKB consumes them before we ever see them), Backspace deletes, Enter is
+    // the field's own commit (handled by the field's onKeyDown). Only Back /
+    // Escape is intercepted here — it closes the keyboard and returns to D-pad
+    // navigation instead of triggering the app back-chain. Backspace must NOT
+    // be treated as Back in this state.
+    const t = e.target
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) {
+      if (e.keyCode === BACK_KEYCODE || e.key === 'GoBack' || e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        t.blur()
+      }
+      return
+    }
+
     if (customKeyHandler && customKeyHandler(e)) return
 
     // Back: webOS keyCode 461, plus browser-dev equivalents.

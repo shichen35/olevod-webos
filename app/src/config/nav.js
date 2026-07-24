@@ -5,9 +5,10 @@
  */
 import { CATEGORIES } from './taxonomy.js'
 
-// kind: 'home' | 'category' | 'mine'
+// kind: 'home' | 'search' | 'category' | 'mine'
 export const TABS = [
   { key: 'home', label: '首页', kind: 'home' },
+  { key: 'search', label: '搜索', kind: 'search' },
   ...CATEGORIES.map((c) => ({
     key: `cat-${c.id}`,
     label: c.name,

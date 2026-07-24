@@ -31,6 +31,33 @@ let currentFocusId = null
 let lastScrollTs = 0
 const RAPID_MS = 220
 
+// Horizontal breathing room kept between a focused chip and the edges of its
+// scrolling strip — mirrors the inline scroll-margin in index.css (--spacing-safe).
+const STRIP_SAFE = 84
+
+// Reveal `el` within its nearest horizontally-scrollable ancestor by scrolling
+// that ancestor directly. Deliberately NOT scrollIntoView: this targets only the
+// horizontal strip, so a separate vertical scroll on a different ancestor (a top
+// row's snap-to-top) can neither cancel it nor be cancelled by it. Returns
+// silently when the element isn't inside a horizontal scroller (e.g. grid cards).
+function scrollStripIntoView(el, behavior) {
+  let strip = el.parentElement
+  while (strip) {
+    if (strip.scrollWidth > strip.clientWidth + 1) {
+      const overflowX = getComputedStyle(strip).overflowX
+      if (overflowX === 'auto' || overflowX === 'scroll') break
+    }
+    strip = strip.parentElement
+  }
+  if (!strip) return
+  const er = el.getBoundingClientRect()
+  const sr = strip.getBoundingClientRect()
+  let delta = 0
+  if (er.left < sr.left + STRIP_SAFE) delta = er.left - (sr.left + STRIP_SAFE)
+  else if (er.right > sr.right - STRIP_SAFE) delta = er.right - (sr.right - STRIP_SAFE)
+  if (delta !== 0) strip.scrollBy({ left: delta, behavior })
+}
+
 // The base layer is the root page (Home). Overlays push on top of it.
 const DEFAULT_LAYER = 'home'
 const layerStack = [DEFAULT_LAYER]
@@ -116,13 +143,21 @@ function applyFocus(newId) {
       lastScrollTs = now
       const behavior =
         getSetting(settingsStore.get(), 'smoothScroll') && !rapid ? 'smooth' : 'auto'
-      el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior })
-      // Topmost row of a scrolling page: pull the scroller all the way up so
-      // the heading above the first row (which 'nearest' leaves clipped) shows.
-      // Same smooth/auto behavior as the focus move above.
       if (rec && rec.row === 0 && rec.group !== 'tabbar') {
+        // A top-row element sits in a horizontal strip (genre chips, a home
+        // shelf). Drive its two scroll containers SEPARATELY: pull the page
+        // scroller all the way up so the heading above row 0 shows (block:'nearest'
+        // would leave it clipped), and reveal the element within its own strip.
+        // We must NOT do this as scrollIntoView + scrollTo: issuing a scrollTo on
+        // the vertical ancestor cancels scrollIntoView's in-flight smooth scroll
+        // on the strip, so slow (smooth) horizontal moves along a top row weren't
+        // scrolling at all. Targeting each container directly keeps them
+        // independent — neither cancels the other, both animate.
         const scroller = el.closest('.tab-content, .overlay')
         if (scroller) scroller.scrollTo({ top: 0, behavior })
+        scrollStripIntoView(el, behavior)
+      } else {
+        el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior })
       }
     }
     // If el is null the element is not mounted yet; useLayoutEffect self-heals

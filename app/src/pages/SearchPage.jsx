@@ -8,7 +8,7 @@
  * (useFocus.js input guard) — the VKB owns the arrows, Enter commits the
  * search via the input's own onKeyDown, Back just closes the keyboard.
  *
- * Focus rows in the content group: row 0 = search box + 搜索 button, row 1 =
+ * Focus rows in the content group: row 0 = the (centered) search box, row 1 =
  * suggestion chips (hot keywords until the user types, autocomplete after,
  * debounced), results follow. When the chip row is empty (both fetches failed)
  * the grid moves up a row so vertical navigation never crosses a gap —
@@ -49,6 +49,13 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
   // Set while a commit (Enter) is the reason the input is about to blur, so the
   // blur handler can tell "search submitted" apart from "keyboard dismissed".
   const committingRef = useRef(false)
+  // Cursor restore for chip picks: picking a chip re-runs the suggest fetch and
+  // rebuilds the strip, which would unmount the focused chip and strand the
+  // cursor. pickWord arms { col, kw } here; once the refreshed suggestions land
+  // (suggestForRef tells whose keyword the current list answers) the cursor is
+  // put back on the same column, clamped to the new strip.
+  const restoreRef = useRef(null)
+  const suggestForRef = useRef('')
   const suggestGenRef = useRef(0)
   const genRef = useRef(0)
   const pageRef = useRef(1)
@@ -81,7 +88,9 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
     const timer = setTimeout(() => {
       searchSuggest(kw)
         .then((words) => {
-          if (token === suggestGenRef.current) setSuggests(words)
+          if (token !== suggestGenRef.current) return
+          suggestForRef.current = kw
+          setSuggests(words)
         })
         .catch(() => {})
     }, SUGGEST_DEBOUNCE_MS)
@@ -150,13 +159,40 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
     return () => io.disconnect()
   }, [loadMore])
 
+  const chips = keyword.trim() ? suggests : hotWords
+  // Rows must stay contiguous for the focus grid: with no chips the results
+  // slide up to row 1.
+  const resultRow = chips.length > 0 ? 2 : 1
+
   const pickWord = useCallback(
-    (word) => {
+    (word, col) => {
+      // Freeze the strip through the pick: on the hot-words branch, changing
+      // the keyword would instantly swap in the still-empty suggest list and
+      // unmount the chip under the cursor. Seeding suggests with the current
+      // strip keeps every chip (and the cursor) in place until the refreshed
+      // suggestions arrive; the armed restore then re-seats the cursor.
+      restoreRef.current = { col, kw: word.trim() }
+      setSuggests(chips)
       setKeyword(word)
       runSearch(word)
     },
-    [runSearch],
+    [chips, runSearch],
   )
+
+  // Re-seat the cursor once the pick's refreshed suggestions are in (the
+  // seeding update above doesn't match armed.kw and leaves the restore armed):
+  // same column clamped to the new strip, or the box if the strip vanished.
+  useEffect(() => {
+    const armed = restoreRef.current
+    if (!armed || suggestForRef.current !== armed.kw) return
+    restoreRef.current = null
+    if (suggests.length > 0) {
+      focusTo(`home/${group}-1-${Math.min(armed.col, suggests.length - 1)}`)
+    } else {
+      focusTo(`home/${group}-0-0`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggests])
 
   // OK on the box hands DOM focus to the input, which opens the VKB.
   const box = useFocusable({
@@ -166,18 +202,6 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
     col: 0,
     onSelect: () => inputRef.current?.focus(),
   })
-  const button = useFocusable({
-    layer: 'home',
-    group,
-    row: 0,
-    col: 1,
-    onSelect: () => runSearch(keyword),
-  })
-
-  const chips = keyword.trim() ? suggests : hotWords
-  // Rows must stay contiguous for the focus grid: with no chips the results
-  // slide up to row 1.
-  const resultRow = chips.length > 0 ? 2 : 1
 
   const fullyLoaded = status === 'ok' && items.length > 0 && items.length >= total
 
@@ -191,7 +215,10 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
           <input
             ref={inputRef}
             value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+            onChange={(e) => {
+              restoreRef.current = null // manual typing cancels a pending chip-pick restore
+              setKeyword(e.target.value)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault()
@@ -217,9 +244,6 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
             className="w-full bg-transparent text-label text-fg outline-none placeholder:text-fg-3 focused:text-inverse"
           />
         </div>
-        <span className="focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label text-fg" {...button.props}>
-          搜索
-        </span>
       </div>
 
       {chips.length > 0 && (
@@ -227,7 +251,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
           {!keyword.trim() && <div className="text-caption text-fg-3">热门搜索</div>}
           <div className="flex gap-3 overflow-x-auto scrollbar-none">
             {chips.map((word, i) => (
-              <Chip key={word} group={group} row={1} col={i} label={word} onSelect={() => pickWord(word)} />
+              <Chip key={word} group={group} row={1} col={i} label={word} onSelect={() => pickWord(word, i)} />
             ))}
           </div>
         </div>

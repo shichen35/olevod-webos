@@ -22,13 +22,22 @@ Focus defaults to the primary play button (the shortest path to pressing OK and 
    in this fetch and `position > 30s`, it reads "▶ Continue Watching Episode N"; otherwise "▶ Play Episode 1"
    (episodes are in reverse order, so episode 1 = `episodes[length-1]`); the secondary button "☆ Favorite / ★ Favorited"
    toggles immediately (favorites store). **After data resolves, `focusTo` deterministically lands focus on the play button**.
-4. **Episode grid (row 1 onward)**: an 8-column grid of numbered cells (a multi-row grid is more efficient than a single horizontal
-   row for shows with hundreds of episodes); the episode currently in progress carries a "Continue" badge; OK jumps straight into the player
-   (carrying the episode index).
-5. **Overlay mechanics**: the overlay calls `pushFocusLayer('detail')` on mount (popped on unmount); the shell beneath stays
+4. **Playlist controls (row 1)**: a chip row labelled "播放列表" holding a single order toggle that shows the order the list is
+   IN, with an arrow carrying the direction ("↓ 降序" / "↑ 升序") — a plain action chip, not a selection, so the accent-text
+   selected state stays reserved for the range chips. For lists longer than 60 episodes those follow: one chip per 50-episode
+   window, labelled with its episode span ("184-233"). Order is a **display** concern only — `olevod.js::detail` keeps returning episodes
+   newest-first because the player derives "next episode" from that order, so this page reverses a copy. The choice persists per
+   title in `store/episodeOrder.js`, which stores only the exceptions (descending is the default). Picking a range pins it; the
+   pin survives a sort flip, so flipping the order keeps the same stretch of episodes on screen. With no pin, the visible range
+   is the one holding the resume episode, else the head of the list. The whole row is omitted for a single-episode title.
+5. **Episode grid (row 2 onward, or row 1 with no controls)**: a 6-column grid of numbered cells (a multi-row grid is more
+   efficient than a single horizontal row for shows with hundreds of episodes); only the selected range renders, and its rows are
+   numbered from the top of the grid so vertical navigation never crosses a gap; the episode currently in progress carries a
+   "Continue" badge; OK jumps straight into the player (carrying the episode index).
+6. **Overlay mechanics**: the overlay calls `pushFocusLayer('detail')` on mount (popped on unmount); the shell beneath stays
    mounted and is hidden via `display:none` by the App view stack. Data is cached via `pageCache.loadOnce(detail:${id})`.
    Loading/error states show large centered text, with a focusable "Retry" on failure.
-6. Back key: closes the detail view, pops the layer, and restores the shell's display and focus.
+7. Back key: closes the detail view, pops the layer, and restores the shell's display and focus.
 
 ## Explicitly out of scope
 
@@ -40,5 +49,7 @@ Focus defaults to the primary play button (the shortest path to pressing OK and 
 - [ ] Entering via OK from a home/category card, once loading completes focus is on the play button;
 - [ ] Content with watch history shows "Continue Watching Episode N", and the matching cell in the episode grid carries a "Continue" badge;
 - [ ] Toggling favorite applies instantly, and after returning to the home page the "My Favorites" row reflects it;
-- [ ] Navigation through an episode grid with hundreds of entries stays smooth (moving down one row = advancing 8 episodes);
+- [ ] Navigation through an episode grid with hundreds of entries stays smooth (moving down one row = advancing 6 episodes);
+- [ ] The order toggle flips the grid, survives leaving and reopening the title, and does not change which episode the player
+      queues up next; on a 200+ episode show the range chips keep the grid to one screenful and the pinned range survives a flip;
 - [ ] Pressing back closes the detail view and restores shell focus to the card that was focused before entering.

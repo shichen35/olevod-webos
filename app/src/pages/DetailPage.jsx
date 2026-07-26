@@ -3,8 +3,18 @@
  *
  * No blown-up-poster-with-scrim treatment (that violates the performance red
  * lines): a solid info column on the left and a plain poster <img> on the right,
- * with all text on opaque backgrounds. Action row is focus row 0 (focus lands on
- * the play button once data resolves); the episode grid is row 1 onward.
+ * with all text on opaque backgrounds.
+ *
+ * Focus rows in the content group:
+ *   row 0     action buttons (focus lands on Play once data resolves)
+ *   row 1     playlist controls — 升序/降序, plus range chips on long lists
+ *             (omitted entirely for a single-episode title, i.e. a movie)
+ *   row 2+    the episode grid (row 1+ when there are no playlist controls)
+ *
+ * Episode order is a DISPLAY concern only. `olevod.js::detail` returns episodes
+ * newest-first and the player derives "next episode" from that order, so the
+ * canonical list is never reordered — this page reverses a copy for rendering
+ * and remembers the choice per title (`store/episodeOrder.js`).
  */
 import { useCallback, useEffect, useState } from 'react'
 import { detail as fetchDetail } from '../api/olevod.js'
@@ -13,10 +23,16 @@ import { useFocusable, pushFocusLayer, popFocusLayer, focusTo } from '../hooks/u
 import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore, toggle as toggleFavorite } from '../store/favorites.js'
 import { historyStore } from '../store/history.js'
+import { episodeOrderStore, setAscending } from '../store/episodeOrder.js'
 import * as pageCache from '../store/pageCache.js'
 
 const LAYER = 'detail'
 const EP_COLS = 6
+const CONTROLS_ROW = 1
+// Past this many episodes the grid is split into range chips — a 233-episode
+// anime is a 39-row scroll otherwise.
+const RANGE_MIN = 60
+const RANGE_SIZE = 50
 
 // Primary (play) action: accent fill at rest; `focusable`'s .focused rules
 // still win, so the white focus fill overrides it instantly.
@@ -31,8 +47,23 @@ function ActionButton({ col, label, primary, onSelect }) {
   )
 }
 
-function EpCell({ index, col, title, subtitle, isResume, onSelect }) {
-  const row = 1 + Math.floor(index / EP_COLS)
+// Playlist control chip (row 1). Same shape as the category page's chips, and
+// the same vocabulary: accent text marks a SELECTED one (the range chips),
+// while a plain chip is an action (the order toggle) — both distinct from the
+// white focus fill.
+function ControlChip({ col, label, selected = false, onSelect }) {
+  const { props } = useFocusable({ layer: LAYER, group: 'content', row: CONTROLS_ROW, col, onSelect })
+  return (
+    <span
+      className={`focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label ${selected ? 'text-accent' : 'text-fg'}`}
+      {...props}
+    >
+      {label}
+    </span>
+  )
+}
+
+function EpCell({ row, col, title, subtitle, isResume, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col, onSelect })
   return (
     <div
@@ -59,14 +90,35 @@ function RetryCell({ onRetry }) {
   )
 }
 
+// Split a list into fixed-size chunks (the range chips' windows).
+function chunkList(list, size) {
+  const out = []
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size))
+  return out
+}
+
+// A chunk's label spans its episode numbers, always written low-high so it
+// reads the same in either sort direction ("184-233", not "233-184").
+function rangeLabel(chunk) {
+  const a = chunk[0].index
+  const b = chunk[chunk.length - 1].index
+  return a <= b ? `${a}-${b}` : `${b}-${a}`
+}
+
 export default function DetailPage({ id, onPlay, style }) {
   const [data, setData] = useState(null)
   const [status, setStatus] = useState('loading')
+  // Episode number pinning the visible range. Set by picking a range chip and
+  // deliberately kept across a sort flip, so flipping the order leaves the same
+  // stretch of episodes on screen instead of jumping back to the start.
+  // null = fall back to the resume episode, then to the head of the list.
+  const [anchorEp, setAnchorEp] = useState(null)
   const favorites = useStoreValue(favoritesStore)
   const isFav = favorites.some((x) => x.id === id)
   // Subscribed (not a one-shot read): closing the player must immediately flip
   // the primary button to "continue watching episode N" (T18).
   const history = useStoreValue(historyStore)
+  const ascending = !!useStoreValue(episodeOrderStore)[id]
 
   const load = useCallback(() => {
     setStatus('loading')
@@ -82,6 +134,9 @@ export default function DetailPage({ id, onPlay, style }) {
   useEffect(() => {
     load()
   }, [load])
+
+  // A different title starts over at its own default range.
+  useEffect(() => setAnchorEp(null), [id])
 
   // Own the detail focus layer for this overlay's lifetime.
   useEffect(() => {
@@ -139,6 +194,19 @@ export default function DetailPage({ id, onPlay, style }) {
     area: data.region,
   }
 
+  // Display list: a reversed COPY when ascending — `episodes` stays canonical.
+  const ordered = ascending ? [...episodes].reverse() : episodes
+  const showControls = episodes.length > 1
+  const chunks = episodes.length > RANGE_MIN ? chunkList(ordered, RANGE_SIZE) : [ordered]
+  // The visible chunk is the one holding the anchor (a picked range, else the
+  // resume episode); with neither, the head of the list — which follows the
+  // sort, so it is the newest episode descending and episode 1 ascending.
+  const pinned = anchorEp ?? resumeIndex
+  const pinnedChunk = pinned == null ? -1 : chunks.findIndex((c) => c.some((e) => e.index === pinned))
+  const activeChunk = pinnedChunk >= 0 ? pinnedChunk : 0
+  const shown = chunks[activeChunk] || []
+  const epRow0 = showControls ? CONTROLS_ROW + 1 : CONTROLS_ROW
+
   return (
     <div className="fixed inset-0 overflow-y-auto bg-bg px-safe pt-content-top pb-content-bottom" style={style}>
       <div className="flex min-h-full flex-col gap-10">
@@ -168,26 +236,52 @@ export default function DetailPage({ id, onPlay, style }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-6 gap-3.5">
-          {episodes.map((ep, i) => {
-            // Main line is the API's per-episode title; the ordinal drops to a
-            // sub line. Dramas title episodes as the zero-padded ordinal
-            // ("第06集"), which would just echo the sub line — omit it then.
-            const ordinal = `第${ep.index}集`
-            const title = ep.title || ordinal
-            const titleIsOrdinal = new RegExp(`^第0*${ep.index}集$`).test(title)
-            return (
-              <EpCell
-                key={ep.index}
-                index={i}
-                col={i % EP_COLS}
-                title={title}
-                subtitle={titleIsOrdinal ? null : ordinal}
-                isResume={ep.index === resumeIndex}
-                onSelect={() => onPlay(ep.index)}
+        <div>
+          {showControls && (
+            <div className="mb-6 flex items-center gap-3 overflow-x-auto scrollbar-none">
+              <span className="shrink-0 pr-2 text-label text-fg-3">播放列表</span>
+              {/* One toggle showing the order it is IN, not the one it would
+                  switch to — the arrow carries the direction so it reads at a
+                  glance from across the room. */}
+              <ControlChip
+                col={0}
+                label={ascending ? '↑ 升序' : '↓ 降序'}
+                onSelect={() => setAscending(id, !ascending)}
               />
-            )
-          })}
+              {chunks.length > 1 &&
+                chunks.map((c, i) => (
+                  <ControlChip
+                    key={c[0].index}
+                    col={1 + i}
+                    label={rangeLabel(c)}
+                    selected={i === activeChunk}
+                    onSelect={() => setAnchorEp(c[0].index)}
+                  />
+                ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-6 gap-3.5">
+            {shown.map((ep, i) => {
+              // Main line is the API's per-episode title; the ordinal drops to a
+              // sub line. Dramas title episodes as the zero-padded ordinal
+              // ("第06集"), which would just echo the sub line — omit it then.
+              const ordinal = `第${ep.index}集`
+              const title = ep.title || ordinal
+              const titleIsOrdinal = new RegExp(`^第0*${ep.index}集$`).test(title)
+              return (
+                <EpCell
+                  key={ep.index}
+                  row={epRow0 + Math.floor(i / EP_COLS)}
+                  col={i % EP_COLS}
+                  title={title}
+                  subtitle={titleIsOrdinal ? null : ordinal}
+                  isResume={ep.index === resumeIndex}
+                  onSelect={() => onPlay(ep.index)}
+                />
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>

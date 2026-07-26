@@ -36,7 +36,10 @@ Focus defaults to the primary play button (the shortest path to pressing OK and 
    "Continue" badge; OK jumps straight into the player (carrying the episode index).
 6. **Overlay mechanics**: the overlay calls `pushFocusLayer('detail')` on mount (popped on unmount); the shell beneath stays
    mounted and is hidden via `display:none` by the App view stack. Data is cached via `pageCache.loadOnce(detail:${id})`.
-   Loading/error states show large centered text, with a focusable "Retry" on failure.
+   Loading/error states show large centered text, with a focusable "Retry" on failure. The scroll container carries the
+   style-free `overlay` marker class that `useFocus.js` looks for: without it, moving up to the action row only scrolls the
+   minimum needed to reveal the buttons, leaving the poster and title block clipped above the viewport — row 0 must snap the
+   scroller to the very top.
 7. Back key: closes the detail view, pops the layer, and restores the shell's display and focus.
 
 ## Explicitly out of scope

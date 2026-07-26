@@ -6,9 +6,11 @@
  * with all text on opaque backgrounds.
  *
  * Focus rows in the content group:
- *   row 0     action buttons (focus lands on Play once data resolves)
- *   row 1     playlist controls — 升序/降序, plus range chips on long lists
- *             (omitted entirely for a single-episode title, i.e. a movie)
+ *   row 0     action buttons (focus lands on Play once data resolves; landing
+ *             here also snaps the overlay's scroller to the very top — see
+ *             OVERLAY_ROOT — so the poster and title block are never clipped)
+ *   row 1     playlist controls — the order toggle, plus range chips on long
+ *             lists (omitted entirely for a single-episode title, i.e. a movie)
  *   row 2+    the episode grid (row 1+ when there are no playlist controls)
  *
  * Episode order is a DISPLAY concern only. `olevod.js::detail` returns episodes
@@ -33,6 +35,13 @@ const CONTROLS_ROW = 1
 // anime is a 39-row scroll otherwise.
 const RANGE_MIN = 60
 const RANGE_SIZE = 50
+
+// The overlay's scroll container. The literal `overlay` class carries no styles
+// — it is the marker useFocus.js looks for (alongside `tab-content`) to snap a
+// focused row-0 element's scroller back to the very top. Without it, moving up
+// to the action row only scrolls the minimum needed to reveal the buttons, which
+// leaves the poster and the title block clipped above the viewport.
+const OVERLAY_ROOT = 'overlay fixed inset-0 overflow-y-auto bg-bg px-safe pt-content-top pb-content-bottom'
 
 // Primary (play) action: accent fill at rest; `focusable`'s .focused rules
 // still win, so the white focus fill overrides it instantly.
@@ -151,14 +160,14 @@ export default function DetailPage({ id, onPlay, style }) {
 
   if (status === 'loading') {
     return (
-      <div className="fixed inset-0 overflow-y-auto bg-bg px-safe pt-content-top pb-content-bottom" style={style}>
+      <div className={OVERLAY_ROOT} style={style}>
         <div className="absolute inset-0 flex items-center justify-center text-heading text-fg">加载中…</div>
       </div>
     )
   }
   if (status === 'error') {
     return (
-      <div className="fixed inset-0 overflow-y-auto bg-bg px-safe pt-content-top pb-content-bottom" style={style}>
+      <div className={OVERLAY_ROOT} style={style}>
         <div className="absolute inset-0 flex items-center justify-center text-heading text-fg">
           <RetryCell onRetry={load} />
         </div>
@@ -208,7 +217,7 @@ export default function DetailPage({ id, onPlay, style }) {
   const epRow0 = showControls ? CONTROLS_ROW + 1 : CONTROLS_ROW
 
   return (
-    <div className="fixed inset-0 overflow-y-auto bg-bg px-safe pt-content-top pb-content-bottom" style={style}>
+    <div className={OVERLAY_ROOT} style={style}>
       <div className="flex min-h-full flex-col gap-10">
         <div className="flex gap-14">
           <div className="aspect-2/3 w-card shrink-0 overflow-hidden rounded-xl bg-elev">

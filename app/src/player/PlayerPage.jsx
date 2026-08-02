@@ -15,6 +15,9 @@
  *   Seeks accumulate into a pending target and only commit after the key has
  *   settled for ~500ms — no burst of segment requests while stepping.
  *
+ * The strip lists episodes in the order the user picked for this title on the
+ * detail page, so Left/Right walks them the same way in both places.
+ *
  * The title chip (top-left) shows/hides together with the control bar.
  * Quality is fully automatic (ABR capped below the UHD tier); playback speed
  * is always 1x — there is no bottom panel.
@@ -33,6 +36,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detail as fetchDetail, streamUrl } from '../api/olevod.js'
 import * as pageCache from '../store/pageCache.js'
 import { recordHistory, recordProgress, clearProgress, getWatchState } from '../store/history.js'
+import { episodeOrderStore } from '../store/episodeOrder.js'
+import { useStoreValue } from '../hooks/useStore.js'
 import {
   useFocusable,
   pushFocusLayer,
@@ -189,6 +194,15 @@ export default function PlayerPage({ id, episodeIndex }) {
   const nextEpIndex = nextEp?.index ?? null
   const nextEpRef = useRef(null)
   nextEpRef.current = nextEpIndex
+
+  // The 选集 strip mirrors the order the user picked on the detail page, so
+  // Left/Right walk the episodes the same way in both places. `epList` itself
+  // stays canonical — "next episode" above is derived from its newest-first
+  // order — so only a reversed COPY is rendered, and the strip's own cursor
+  // index has to be mirrored along with it.
+  const ascending = !!useStoreValue(episodeOrderStore)[id]
+  const stripList = ascending ? [...epList].reverse() : epList
+  const stripIdx = curIdx < 0 ? 0 : ascending ? epList.length - 1 - curIdx : curIdx
 
   // High-frequency playback feedback goes straight to these DOM nodes.
   const playedRef = useRef(null)
@@ -485,12 +499,12 @@ export default function PlayerPage({ id, episodeIndex }) {
   // snaps into place and only later cursor moves animate.
   useEffect(() => {
     if (!stripVisible) return
-    const id = `${LAYER}/episodes-0-${curIdx < 0 ? 0 : curIdx}`
+    const target = `${LAYER}/episodes-0-${stripIdx}`
     document
-      .querySelector(`[data-focus-id="${id}"]`)
+      .querySelector(`[data-focus-id="${target}"]`)
       ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
-    focusTo(id)
-  }, [stripVisible, curIdx])
+    focusTo(target)
+  }, [stripVisible, stripIdx])
 
   // ---------------------------------------------------------------------
   // data: detail (title + episode urls) from the shared page cache
@@ -878,7 +892,7 @@ export default function PlayerPage({ id, episodeIndex }) {
         <div className="glass-strong border border-glass-edge absolute bottom-8 left-safe right-safe rounded-[20px] px-7 py-5">
           <div className="mb-3 text-caption text-fg-2">选集</div>
           <div className="flex gap-3 overflow-x-auto scrollbar-none">
-            {epList.map((ep, i) => {
+            {stripList.map((ep, i) => {
               const ordinal = `第${ep.index}集`
               const title = ep.title || ordinal
               const titleIsOrdinal = new RegExp(`^第0*${ep.index}集$`).test(title)

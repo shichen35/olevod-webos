@@ -1,29 +1,37 @@
 # OleVod webOS TV
 
-A video client for LG webOS TV, targeting the OleVod service. Top tab bar +
-full-width content area, 10-foot UI, fully operated via remote D-pad,
-performance-first — zero re-render focus, no animation, no translucency.
+A video client for LG webOS televisions, serving the OleVod service. The layout
+is a top tab bar above a full-width content area — a 10-foot UI meant to be read
+from across the room and driven entirely by the remote's directional pad
+(D-pad). Performance comes first: moving the focus never re-renders React, and
+there is no animation and no translucency anywhere in the interface.
 
-- **Target device**: LG webOS 24 (Chromium 108, service side Node.js 16) / 1080p /
-  D-pad remote (aligned to LG C4).
-- **Stack**: Vite + React 19.2 (frontend) · Node.js 16 Luna background service
-  (API/media dual channel) · hls.js (playback).
-- **Feature scope**: home shelves · Movies/Variety/TV Series sections · detail page ·
-  HLS playback · Library (favorites/history/settings).
-  No login, VIP, search, live streaming, screen casting, or danmaku (comment overlay).
+| | |
+| --- | --- |
+| **Target device** | LG webOS 24 — Chromium 108 on the frontend, Node.js 16 on the service side — at 1080p with a D-pad remote. The reference set is the LG C4. |
+| **Stack** | Vite with React 19.2 for the frontend, a Node.js 16 Luna background service carrying both the API and media channels, and hls.js for playback. |
+| **Feature scope** | Home shelves, the Movies / Variety / TV Series sections, the detail page, HLS playback, and a Library holding favorites, history, and settings. |
+
+Several things are deliberately absent: there is no login, no VIP tier, no
+search, no live streaming, no screen casting, and no danmaku (scrolling comment
+overlay).
 
 ## Directory Structure
+
+Four top-level entries carry the whole project:
 
 ```
 app/        frontend (Vite + React 19.2)
   src/{config,api,hooks,store,components,pages,player,styles}
-  webos-meta/   appinfo.json + icons (for packaging)
-service/    Luna background service (Node 16 CommonJS): API fetch + local HLS proxy
+  webos-meta/   appinfo.json + icons, consumed at packaging time
+service/    Luna background service (Node 16, CommonJS): API fetch + local HLS proxy
 doc/        per-task development docs (T01-T25)
-build.sh    build -> package .ipk
+build.sh    builds the app, then packages it into an .ipk
 ```
 
 ## Development
+
+Everyday work happens inside `app/`:
 
 ```bash
 cd app
@@ -33,40 +41,80 @@ npm run build      # production build to app/dist (target chrome108, base './')
 npm run preview    # preview the build output locally
 ```
 
-No automated tests; verification is via `npm run build` passing plus manual
-remote-control walkthroughs in the browser/preview and the webOS Simulator.
+There are no automated tests. Verification means two things: `npm run build`
+has to pass, and someone has to walk the app manually with remote-control input
+in the browser, the preview server, or the webOS Simulator.
 
-In the browser, use the keyboard to simulate the remote: arrow keys to
-navigate, Enter to select, Esc to go back (the real device's back key is
-webOS keyCode 461).
+In the browser, the keyboard stands in for the remote — arrow keys navigate,
+Enter selects, and Esc goes back. On a real device that back action arrives as
+webOS keyCode 461.
 
 ## Build and Package (webOS)
 
-Requires the official LG CLI:
+Packaging needs LG's official command-line tools, which provide the `ares-*`
+commands:
 
 ```bash
 npm install -g @webos-tools/cli     # ares-* commands; verify with ares -V
-
 bash build.sh                       # build + package .ipk into out/
 ```
 
-See [doc/T23](doc/T23-packaging-deploy.md) for packaging details.
+[doc/T23](doc/T23-packaging-deploy.md) covers the packaging details.
 
 ## Architecture Highlights
 
-- **Dual-channel data layer**: API JSON goes through the Luna service; media
-  (m3u8/.ts) goes through the local `127.0.0.1` proxy opened by the service;
-  in the browser dev environment everything connects directly. Channel
-  selection is centralized in `app/src/api/luna.js`, transparent to the
-  business layer. All data fetching goes through `apiGet` in
-  `app/src/api/http.js` (sign -> transport -> validate -> decrypt).
-- **Config-driven navigation**: the section tree lives in
-  `app/src/config/taxonomy.js`; adding a section only requires editing this
-  file — tab bar / routing / section pages pick it up automatically.
-- **Zero re-render focus**: `app/src/hooks/useFocus.js` — focus movement only
-  toggles a DOM class + `scrollIntoView`.
-- **Request signing**: every GET carries `?_vv=<signature>`
-  (`app/src/api/sign.js`, generated locally from a timestamp).
+**Dual-channel data layer.** API responses and media travel over separate
+paths on the device. JSON goes through the Luna service; media segments
+(`m3u8` and `.ts`) go through a local proxy on `127.0.0.1` that the service
+opens. In the browser dev environment neither hop exists and everything
+connects directly:
 
-See the per-task docs in [doc/](doc/) (T01-T25) for the design and acceptance
-criteria of each subsystem.
+```mermaid
+graph LR
+    subgraph device["On device (webOS)"]
+        UI["React app<br/>app/src"]
+        Luna["Luna service<br/>Node 16"]
+        Proxy["Local HLS proxy<br/>127.0.0.1"]
+    end
+    Remote["OleVod API + CDN"]
+
+    UI -->|"API JSON"| Luna
+    UI -->|"m3u8 / .ts"| Proxy
+    Luna --> Remote
+    Proxy --> Remote
+    UI -.->|"browser dev: direct"| Remote
+```
+
+Which channel a request takes is decided in one place, `app/src/api/luna.js`,
+so the business layer never has to know where it is running. Every fetch then
+funnels through `apiGet` in `app/src/api/http.js`, which signs the request,
+sends it over the selected transport, validates what comes back, and decrypts
+the payload.
+
+**Config-driven navigation.** The section tree lives in
+`app/src/config/taxonomy.js`. Adding a section is a single-file edit — the tab
+bar, the routing, and the section pages all read from that config and pick the
+change up on their own.
+
+**Zero re-render focus.** `app/src/hooks/useFocus.js` keeps focus movement out
+of React entirely: it toggles a DOM class and calls `scrollIntoView`, nothing
+more.
+
+**Request signing.** Every GET carries a `?_vv=<signature>` query parameter,
+generated locally from a timestamp in `app/src/api/sign.js`.
+
+For the design rationale and acceptance criteria behind each subsystem, see the
+per-task docs in [doc/](doc/) (T01-T25).
+
+## Glossary
+
+| Term | Meaning |
+| --- | --- |
+| **10-foot UI** | An interface sized and spaced to stay legible from couch distance rather than desk distance. |
+| **D-pad** | The remote's directional pad — up / down / left / right plus a select key. The only input this app supports. |
+| **Luna service** | A webOS background service (here, Node.js 16 CommonJS) that the frontend calls for work the browser sandbox can't do. |
+| **HLS** | HTTP Live Streaming — the playback format, delivered as an `m3u8` playlist pointing at `.ts` segments. |
+| **`.ipk`** | The installable package format for webOS apps, produced by `build.sh` into `out/`. |
+| **`ares-*`** | LG's official webOS command-line tools, installed via `@webos-tools/cli`. |
+| **danmaku** | Viewer comments that scroll across the video as it plays. Out of scope here. |
+| **`_vv`** | The signature query parameter attached to every API GET. |

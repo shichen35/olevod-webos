@@ -152,15 +152,17 @@ export default function App() {
           }}
         />
         {/* Per-tab content areas (the sole scroll containers). Each starts at
-            the very top so content passes under the translucent tab bar; the
-            top padding keeps the resting position below it, and the global
-            [data-focus-id] scroll-margin (120px) exceeds the bar height. The
-            literal `tab-content` class is a marker for CategoryPage's
+            the very top so content passes under the translucent tab bar; the top
+            padding keeps the resting position below it, and scroll-py-focus-safe
+            (120px, > the bar's 84px) keeps every focus scroll from parking a card
+            under the bar — it must be scroll-padding here rather than
+            scroll-margin on the card, see the [data-focus-id] rule in index.css.
+            The literal `tab-content` class is a marker for CategoryPage's
             closest(). */}
         {tabs.map((tab) => (
           <div
             key={tab.key}
-            className="tab-content absolute inset-0 overflow-y-auto px-safe pt-content-top pb-content-bottom"
+            className="tab-content absolute inset-0 overflow-y-auto px-safe pt-content-top pb-content-bottom scroll-py-focus-safe"
             style={{ display: tab.key === activeTab ? 'block' : 'none' }}
           >
             {activated.has(tab.key) &&

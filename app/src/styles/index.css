@@ -80,6 +80,11 @@
   /* Layout / safe area (the numeric spacing scale stays: 1 unit = 4px) */
   --spacing-safe: 84px;         /* left/right safe margin */
   --spacing-content-top: 92px;  /* content start offset (tab bar + 8px) */
+  /* Vertical breathing room a focus scroll keeps between the focused element and
+     the top/bottom edge of its scroll container. Exceeds the tab bar height (84px)
+     so a focused card can never come to rest under the bar; applied as
+     scroll-padding on the scrollers, see the [data-focus-id] rule below. */
+  --spacing-focus-safe: 120px;
   --spacing-content-bottom: 60px;
   /* Poster lists fill the full content width symmetrically: 6 cards per row
      (must match COLS in CategoryPage/LibraryPage), fixed gutter, card width
@@ -185,9 +190,22 @@
     cursor: default;
   }
 
-  /* A focused element must never sit flush against the screen/container edge:
-     scrollIntoView({block:'nearest'}) will honor this margin. */
+  /* A focused element must never sit flush against the screen/container edge.
+     The two axes are kept in DIFFERENT places on purpose:
+       - inline (left/right) rides on the element as scroll-margin. Its scroller
+         is the element's own horizontal strip — the innermost one — so nothing
+         can clip this away (useFocus.js mirrors it as STRIP_SAFE).
+       - block (top/bottom) lives on the SCROLL CONTAINERS as scroll-padding
+         (scroll-py-focus-safe on .tab-content, DetailPage's .overlay and the
+         filter sheet), NOT here. A home shelf's card sits inside the shelf's own
+         overflow-x scroller, whose box is exactly the card's height;
+         scrollIntoView resolves nested scrollers inside-out and clips the target
+         rect to each inner scroller before handing it outward, so a vertical
+         scroll-margin is thrown away on the way to the page scroller and the card
+         comes to rest flush at y=0 — under the tab bar (seen on the TV's Chromium
+         108). scroll-padding shrinks the page scroller's own snapport, which no
+         inner scroller can take away. */
   [data-focus-id] {
-    scroll-margin: 120px var(--spacing-safe);
+    scroll-margin-inline: var(--spacing-safe);
   }
 }

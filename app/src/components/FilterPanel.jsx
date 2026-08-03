@@ -199,7 +199,7 @@ export default function FilterPanel({ category, filter, onChange, onReset, onClo
   return (
     <div
       ref={rootRef}
-      className="glass-strong fixed inset-y-0 right-0 w-[600px] overflow-y-auto border-l border-glass-edge px-10 py-12"
+      className="glass-strong fixed inset-y-0 right-0 w-[600px] overflow-y-auto border-l border-glass-edge px-10 py-12 scroll-py-focus-safe"
     >
       <Group title="地区" options={cfg.areas} value={filter.area} row={AREA_ROW} onPick={(v) => onChange({ ...filter, area: v })} />
       <Group title="年份" options={cfg.years} value={filter.year} row={YEAR_ROW} onPick={(v) => onChange({ ...filter, year: v })} />

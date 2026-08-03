@@ -15,7 +15,7 @@ import VideoCard from '../components/VideoCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
 import { categoryList } from '../api/olevod.js'
 import { defaultFilter, loadCategoryFirstPage } from '../api/feeds.js'
-import { getFilter, setFilter } from '../store/filters.js'
+import { setFilter } from '../store/filters.js'
 import { useFocusable } from '../hooks/useFocus.js'
 import * as pageCache from '../store/pageCache.js'
 
@@ -24,7 +24,10 @@ const PAGE_SIZE = 24
 const FILTER_ROWS = 2 // genre chips (row 0) + filter button line (row 1)
 
 export default function CategoryPage({ category, group = 'content', onOpenDetail, onOpenFilter, refreshNonce, filterOverride }) {
-  const [filter, setFilterState] = useState(() => getFilter(category) || defaultFilter())
+  // Always opens at the category's default filter — selections are not persisted
+  // across launches. `setFilter` publishes the live selection to the session
+  // store so the shell's filter panel opens on what the page is actually showing.
+  const [filter, setFilterState] = useState(defaultFilter)
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
   const [status, setStatus] = useState('loading') // loading | ok | error
@@ -81,7 +84,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
     })
   }, [category, filter, total])
 
-  // Initial load + restore persisted filter.
+  // Initial load, at the default filter.
   useEffect(() => {
     load(filter)
     // eslint-disable-next-line react-hooks/exhaustive-deps

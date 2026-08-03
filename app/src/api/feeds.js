@@ -5,7 +5,6 @@
  */
 import { categoryList } from './olevod.js'
 import { CATEGORIES, DEFAULT_SORT } from '../config/taxonomy.js'
-import { getFilter } from '../store/filters.js'
 import * as pageCache from '../store/pageCache.js'
 
 export const HOME_POPULAR_KEY = 'home:popular'
@@ -35,10 +34,6 @@ export function defaultFilter() {
   return { genre: '0', area: '0', year: '0', sort: DEFAULT_SORT }
 }
 
-export function currentFilterFor(category) {
-  return getFilter(category) || defaultFilter()
-}
-
 export function categoryFirstPageKey(category, f) {
   return `cat:${category}:${f.genre}:${f.area}:${f.year}:${f.sort}:p1`
 }
@@ -52,9 +47,12 @@ export function loadCategoryFirstPage(category, f, size = 24) {
 /**
  * Sequential background prefetch. Signed requests starve each other when fired
  * concurrently, so warm the caches one at a time: home first (the default
- * landing tab), then each category's first screen. Failures are swallowed — a
- * tab that's actually opened runs its own loading/retry path. Pass a
- * `shouldStop()` predicate to abort early (e.g. on unmount).
+ * landing tab), then each category's first screen. Every category is warmed at
+ * its DEFAULT filter, which is also what its page opens with (filters are not
+ * persisted across launches), so the prefetch and the page share one cache key.
+ * Failures are swallowed — a tab that's actually opened runs its own
+ * loading/retry path. Pass a `shouldStop()` predicate to abort early (e.g. on
+ * unmount).
  */
 export async function prefetchAll(shouldStop = () => false) {
   try {
@@ -65,7 +63,7 @@ export async function prefetchAll(shouldStop = () => false) {
   for (const c of CATEGORIES) {
     if (shouldStop()) return
     try {
-      await loadCategoryFirstPage(c.id, currentFilterFor(c.id))
+      await loadCategoryFirstPage(c.id, defaultFilter())
     } catch {
       /* silent */
     }

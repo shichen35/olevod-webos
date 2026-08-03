@@ -28,9 +28,10 @@ One component is instantiated three times, configured by `taxonomy`.
    No pagination buttons.
 5. **In-flight request invalidation**: a monotonically increasing `genRef` token — changing the filter bumps the token; when an
    awaited request (first page or load-more) returns and finds itself superseded, it's discarded, preventing a stale filter's results from overwriting a newer filter's.
-6. **Caching and restore**: each category's first-page slice is keyed by filter dimensions into `pageCache`
-   (`cat:{id}:{genre}:{area}:{year}:{sort}:p1`, via `api/feeds.js`'s `loadCategoryFirstPage`); the most recent filter is stored in
-   `store/filters` and restored on next launch. On load failure, show a focusable "加载失败，重试" chip.
+6. **Caching**: each category's first-page slice is keyed by filter dimensions into `pageCache`
+   (`cat:{id}:{genre}:{area}:{year}:{sort}:p1`, via `api/feeds.js`'s `loadCategoryFirstPage`). The page always opens at the
+   category's default filter — the selection is held in `store/filters` for the session only, never persisted, so a launch can
+   never land on a stale 地区/年代 choice the tab bar gives no hint of. On load failure, show a focusable "加载失败，重试" chip.
    A `refreshNonce` bump (tab Enter, T15) invalidates the `cat:{id}:` prefix and refetches without blanking the current grid.
 7. All three category instances stay mounted once first activated (toggled via `display:none`); each instance registers
    into its own per-tab focus group (`content:{tabKey}`, passed down as the `group` prop), so row/column numbers are reused

@@ -19,8 +19,8 @@ device, this is the single point where storage swaps to Luna file I/O
    unchanged. On read failure (corrupt JSON, storage unavailable), fall back to
    the default value; on write failure (quota exceeded, storage disabled), keep
    working from memory for the session. localStorage keys are namespaced
-   `olevod:*` (`olevod:favorites` / `olevod:history` / `olevod:settings` /
-   `olevod:filters`). Provide `useStoreValue(store, selector)`, built on
+   `olevod:*` (`olevod:favorites` / `olevod:history` / `olevod:settings`).
+   Provide `useStoreValue(store, selector)`, built on
    **`useSyncExternalStore`** (the React 19 idiomatic approach). Note that
    `getSnapshot` must return a stable reference (the snapshot object is only
    replaced on write) to avoid infinite re-renders — so a selector must pick,
@@ -44,8 +44,11 @@ device, this is the single point where storage swaps to Luna file I/O
    anywhere, so such toggles would be meaningless. Backed by `DEFAULTS`, with
    `getSetting(snapshot, key)` (falls back to the default when a persisted
    snapshot predates a key) and `toggleSetting(key)`.
-5. **filters**: the most recent filter selection per category,
-   `{ [categoryId]: {genre,area,year,sort} }`, restored on startup;
+5. **filters**: the current filter selection per category,
+   `{ [categoryId]: {genre,area,year,sort} }` — **in-memory, session-scoped**
+   (a plain module, not a `createStore` instance), so every launch starts from
+   the category's default filter. It exists only so the shell's filter panel can
+   open on what the category page is currently showing;
    `getFilter(categoryId)` / `setFilter(categoryId, selection)`.
 6. **pageCache**: an **in-memory** (non-persisted), session-scoped page-data
    cache — a plain module, not a `createStore` instance; `loadOnce(key, loader)`
@@ -63,8 +66,8 @@ device, this is the single point where storage swaps to Luna file I/O
 ## Acceptance criteria
 
 - [ ] Console testing confirms read/write/subscribe/default-fallback behavior
-      for all five stores; after a page refresh, favorites/history/settings/filters
-      persist while pageCache is cleared;
+      for all five stores; after a page refresh, favorites/history/settings
+      persist while filters/pageCache are cleared;
 - [ ] two components subscribed to the same store: a write in one updates the
       other immediately with no extra re-renders (confirming `getSnapshot`
       reference stability);

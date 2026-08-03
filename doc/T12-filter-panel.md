@@ -27,7 +27,7 @@ reset / done, on its own focus layer, applying selections immediately.
    that category's default filters (all dimensions, including the genre chip, back to "All" + default sort); "完成" and the back key (intercepted via `setCustomKeyHandler`) both close the panel.
 4. Option data comes from that category's `areas` / `years` in `taxonomy.js` plus the shared `SORTS`; the currently selected option is highlighted
    (an `--accent` indicator dot + `--accent` text, distinct from the focus state's white fill, which still wins while focused).
-5. Filter changes are written to `store/filters` in sync (the shell's apply handler persists and pushes the override in one step — confirm the linkage here).
+5. Filter changes are written to `store/filters` in sync (the shell's apply handler records the session selection and pushes the override in one step — confirm the linkage here). That store is in-memory only, so it just keeps the panel opening on what the page currently shows; nothing survives a restart.
 
 ## Explicitly out of scope
 
@@ -39,4 +39,4 @@ reset / done, on its own focus layer, applying selections immediately.
 - [ ] Focus enters/exits the panel without loss: opening lands focus on the panel's first cell, closing returns focus to the "筛选" button;
 - [ ] While the panel is open, directional keys don't affect the grid underneath; the back key closes the panel rather than leaving the page;
 - [ ] Selecting a region/year/sort option refreshes the list immediately and the summary text (next to the "筛选" button in FilterBar) updates in sync;
-- [ ] "重置" restores the list and summary to defaults; restarting the app restores the selected filters.
+- [ ] "重置" restores the list and summary to defaults; restarting the app comes back up on the default filter, not the last selection.

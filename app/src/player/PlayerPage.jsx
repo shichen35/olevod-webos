@@ -35,7 +35,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { detail as fetchDetail, streamUrl } from '../api/olevod.js'
 import * as pageCache from '../store/pageCache.js'
-import { recordHistory, recordProgress, clearProgress, getWatchState } from '../store/history.js'
+import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
 import { episodeOrderStore } from '../store/episodeOrder.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import {
@@ -538,10 +538,12 @@ export default function PlayerPage({ id, episodeIndex }) {
     let currentSrc = null // captured for the watchdog's soft reload
     setStatus('loading')
 
-    // Resume decision (T18): same episode, meaningfully into it.
+    // Resume decision (T18): same episode, meaningfully into it. A `finished`
+    // watch point holds position at the episode's end purely so a title that
+    // later airs a new episode can still resume there — never resume INTO it.
     const watch = getWatchState(id)
     const resumePos =
-      watch && watch.lastEpisodeIndex === curEp && watch.position > RESUME_MIN_S
+      watch && !watch.finished && watch.lastEpisodeIndex === curEp && watch.position > RESUME_MIN_S
         ? watch.position
         : 0
 
@@ -557,7 +559,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       if (dur - pos <= FINISHED_TAIL_S) {
         const next = nextEpRef.current
         if (next != null) recordProgress(id, next, 0, dur)
-        else clearProgress(id)
+        else recordProgress(id, curEp, dur, dur, true)
       } else {
         recordProgress(id, curEp, pos, dur)
       }
@@ -741,7 +743,8 @@ export default function PlayerPage({ id, episodeIndex }) {
       }
     }
     const onEnded = () => {
-      // The finished-tail rule zeroes this episode's progress on flush.
+      // The finished-tail rule marks this episode `finished` on flush (or
+      // rolls the resume point to the next episode, if there is one).
       flushProgress()
       if (nextEpRef.current != null) {
         switchEpisodeRef.current(nextEpRef.current)

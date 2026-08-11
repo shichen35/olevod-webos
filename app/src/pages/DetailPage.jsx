@@ -180,14 +180,22 @@ export default function DetailPage({ id, onPlay, style }) {
   // Episodes are newest-first, so episode 1 is the last entry.
   const firstEp = episodes[episodes.length - 1]
   const watch = history.find((x) => x.id === id)?.watch || null
-  // Any surviving watch entry is resumable: position 0 is a queued next
-  // episode, and positions under the player's resume threshold just restart
-  // that episode. Guard only against episodes that no longer exist.
-  const canResume = watch && episodes.some((e) => e.index === watch.lastEpisodeIndex)
-  const resumeIndex = canResume ? watch.lastEpisodeIndex : null
+  // A live (unfinished) watch entry is resumable as long as its episode still
+  // exists. `finished` means that episode was watched to the end with nothing
+  // after it at the time — if a later episode has since aired, resume moves
+  // there instead; if not, there's nothing left to continue and the primary
+  // button offers a rewatch rather than silently resetting to "播放 第1集".
+  const watchEpExists = watch && episodes.some((e) => e.index === watch.lastEpisodeIndex)
+  const canResume = !!(watch && watchEpExists && !watch.finished)
+  const newEp = watch?.finished
+    ? episodes.filter((e) => e.index > watch.lastEpisodeIndex).sort((a, b) => a.index - b.index)[0]
+    : null
+  const caughtUp = !!(watch?.finished && watchEpExists && !newEp)
+  const resumeIndex = canResume ? watch.lastEpisodeIndex : newEp ? newEp.index : null
 
-  const primaryLabel = canResume ? `▶ 继续观看 第${resumeIndex}集` : '▶ 播放 第1集'
-  const primaryEp = canResume ? resumeIndex : firstEp?.index ?? 1
+  const primaryLabel =
+    resumeIndex != null ? `▶ 继续观看 第${resumeIndex}集` : caughtUp ? '▶ 重新观看 第1集' : '▶ 播放 第1集'
+  const primaryEp = resumeIndex ?? firstEp?.index ?? 1
 
   const eyebrow = [data.genreName, data.year, data.region, data.remarks].filter(Boolean).join(' · ')
   const crew = [data.director && `导演：${data.director}`, data.cast && `主演：${data.cast}`]

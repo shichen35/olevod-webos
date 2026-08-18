@@ -11,7 +11,7 @@
     "sim": "vite build && cp -r webos-meta/. dist/ && ares-launch -s 26 -sp /Applications dist"
   },
   "dependencies": {
-    "hls.js": "^1.6.16",
+    "hls.js": "^1.7.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

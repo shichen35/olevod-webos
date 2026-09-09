@@ -228,6 +228,7 @@ export default function App() {
         <DetailPage
           id={stack.find((f) => f.type === 'detail').id}
           onPlay={(episodeIndex) => openPlayer({ id: stack.find((f) => f.type === 'detail').id, episodeIndex })}
+          onRequireLogin={() => openAccount('detail')}
           style={vis('detail')}
         />
       )}

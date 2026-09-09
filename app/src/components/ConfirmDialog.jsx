@@ -3,6 +3,10 @@
  * layer — no translucent backdrop (the focus layer already blocks input to
  * whatever is behind it). Buttons are full-width and stacked, addressed by row;
  * focus defaults to Cancel, and the back key acts as Cancel.
+ *
+ * `cancelLabel={null}` makes it a single-button notice: the confirm button is
+ * the only row, holds focus, and Back acts as it. `confirmKind` 'default' drops
+ * the destructive accent for a non-destructive action (去登录, 知道了).
  */
 import { useEffect } from 'react'
 import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler } from '../hooks/useFocus.js'
@@ -30,15 +34,19 @@ export default function ConfirmDialog({
   description,
   confirmLabel = '确定',
   cancelLabel = '取消',
+  confirmKind = 'danger',
   onConfirm,
   onCancel,
 }) {
+  const single = cancelLabel == null
+
   useEffect(() => {
     pushFocusLayer(LAYER)
-    focusTo(`${LAYER}/content-0-0`) // default focus = Cancel (row 0)
+    focusTo(`${LAYER}/content-0-0`) // default focus = Cancel (row 0), or the only button
     const popKeys = pushCustomKeyHandler((e) => {
       if (isBackKey(e)) {
-        onCancel()
+        if (single) onConfirm()
+        else onCancel()
         return true
       }
       return false
@@ -57,8 +65,14 @@ export default function ConfirmDialog({
         <div className="mb-4 text-title text-fg">{title}</div>
         {description && <div className="mb-8 text-body leading-normal text-fg-2">{description}</div>}
         <div className="flex flex-col gap-3.5">
-          <DialogButton row={0} label={cancelLabel} onSelect={onCancel} />
-          <DialogButton row={1} label={confirmLabel} kind="danger" onSelect={onConfirm} />
+          {single ? (
+            <DialogButton row={0} label={confirmLabel} kind={confirmKind} onSelect={onConfirm} />
+          ) : (
+            <>
+              <DialogButton row={0} label={cancelLabel} onSelect={onCancel} />
+              <DialogButton row={1} label={confirmLabel} kind={confirmKind} onSelect={onConfirm} />
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -17,10 +17,18 @@
  * newest-first and the player derives "next episode" from that order, so the
  * canonical list is never reordered — this page reverses a copy for rendering
  * and remembers the choice per title (`store/episodeOrder.js`).
+ *
+ * VIP gate: a VIP episode the current session can't play comes back with an
+ * empty url. Playing one never opens the player — signed out, a dialog offers
+ * 去登录 (onRequireLogin); signed in, pub/user/info tells "needs VIP" apart from
+ * "source unavailable". An account change reloads the detail so a fresh login
+ * brings the urls in.
  */
-import { useCallback, useEffect, useState } from 'react'
-import { detail as fetchDetail } from '../api/olevod.js'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { detail as fetchDetail, userInfo } from '../api/olevod.js'
 import Thumb from '../components/Thumb.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import { sessionStore } from '../store/session.js'
 import { useFocusable, pushFocusLayer, popFocusLayer, focusTo } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore, toggle as toggleFavorite } from '../store/favorites.js'
@@ -48,6 +56,14 @@ const OVERLAY_ROOT =
 // still win, so the white focus fill overrides it instantly.
 const DETAIL_BTN = 'focusable rounded-lg px-8 py-3.5 text-label'
 
+// Single-button notices for a signed-in session that still can't play a VIP
+// episode.
+const GATE_NOTICE = {
+  novip: { title: '需要 VIP 权益', description: '此影片需要有效的 VIP 权益。' },
+  unavailable: { title: '暂时无法播放', description: '此影片的播放源暂不可用，请稍后重试。' },
+  unknown: { title: '暂时无法播放', description: '暂时无法确认会员状态，请稍后重试。' },
+}
+
 function ActionButton({ col, label, primary, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col, onSelect })
   return (
@@ -73,7 +89,7 @@ function ControlChip({ col, label, selected = false, onSelect }) {
   )
 }
 
-function EpCell({ row, col, title, subtitle, isResume, onSelect }) {
+function EpCell({ row, col, title, subtitle, isResume, vip, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col, onSelect })
   return (
     <div
@@ -86,6 +102,9 @@ function EpCell({ row, col, title, subtitle, isResume, onSelect }) {
       {subtitle && <div className="mt-0.5 text-caption leading-[1.25] opacity-65">{subtitle}</div>}
       {isResume && (
         <span className="absolute -top-2 -right-1.5 rounded-[10px] bg-accent px-2 py-0.5 text-caption text-inverse">继续</span>
+      )}
+      {vip && (
+        <span className="absolute -top-2 -left-1.5 rounded-[10px] bg-uhd px-2 py-0.5 text-caption text-inverse">VIP</span>
       )}
     </div>
   )
@@ -115,7 +134,7 @@ function rangeLabel(chunk) {
   return a <= b ? `${a}-${b}` : `${b}-${a}`
 }
 
-export default function DetailPage({ id, onPlay, style }) {
+export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
   const [data, setData] = useState(null)
   const [status, setStatus] = useState('loading')
   // Episode number pinning the visible range. Set by picking a range chip and
@@ -130,20 +149,43 @@ export default function DetailPage({ id, onPlay, style }) {
   const history = useStoreValue(historyStore)
   const ascending = !!useStoreValue(episodeOrderStore)[id]
 
+  // Generation token: a reload (account change) supersedes a still-running load.
+  const loadGenRef = useRef(0)
   const load = useCallback(() => {
+    const gen = ++loadGenRef.current
     setStatus('loading')
     pageCache
       .loadOnce(`detail:${id}`, () => fetchDetail(id))
       .then((d) => {
+        if (gen !== loadGenRef.current) return
         setData(d)
         setStatus('ok')
       })
-      .catch(() => setStatus('error'))
+      .catch(() => {
+        if (gen === loadGenRef.current) setStatus('error')
+      })
   }, [id])
 
   useEffect(() => {
     load()
   }, [load])
+
+  // Login / logout / expiry changes which episode urls come back: reload. Drop
+  // this title's entry first — App.jsx flushes the whole cache too, but its
+  // effect runs after this child's.
+  const session = useStoreValue(sessionStore)
+  const sessionToken = session?.token || null
+  const loadedTokenRef = useRef(sessionToken)
+  useEffect(() => {
+    if (loadedTokenRef.current === sessionToken) return
+    loadedTokenRef.current = sessionToken
+    pageCache.invalidate(`detail:${id}`)
+    load()
+  }, [sessionToken, id, load])
+
+  // VIP gate dialog: null | 'login' | 'novip' | 'unavailable' | 'unknown'.
+  const [gate, setGate] = useState(null)
+  const checkingRef = useRef(false)
 
   // A different title starts over at its own default range.
   useEffect(() => setAnchorEp(null), [id])
@@ -225,6 +267,30 @@ export default function DetailPage({ id, onPlay, style }) {
   const shown = chunks[activeChunk] || []
   const epRow0 = showControls ? CONTROLS_ROW + 1 : CONTROLS_ROW
 
+  // Every play action goes through the VIP gate: an episode with no url that is
+  // marked VIP never reaches the player.
+  const playEpisode = (index) => {
+    const ep = episodes.find((e) => e.index === index)
+    if (!ep || ep.url || !ep.vip) {
+      onPlay(index)
+      return
+    }
+    if (!sessionStore.get()) {
+      setGate('login')
+      return
+    }
+    if (checkingRef.current) return
+    checkingRef.current = true
+    userInfo()
+      .then((u) => setGate(u.groupId === 3 ? 'unavailable' : 'novip'))
+      // An expired session signs out inside the request; offer login again.
+      .catch(() => setGate(sessionStore.get() ? 'unknown' : 'login'))
+      .finally(() => {
+        checkingRef.current = false
+      })
+  }
+  const notice = GATE_NOTICE[gate]
+
   return (
     <div className={OVERLAY_ROOT} style={style}>
       <div className="flex min-h-full flex-col gap-10">
@@ -244,7 +310,7 @@ export default function DetailPage({ id, onPlay, style }) {
             <p className="mb-5 line-clamp-3 text-body leading-normal text-fg-2">{data.synopsis}</p>
             <div className="mb-8 truncate text-caption text-fg-3">{crew}</div>
             <div className="flex gap-5">
-              <ActionButton col={0} label={primaryLabel} primary onSelect={() => onPlay(primaryEp)} />
+              <ActionButton col={0} label={primaryLabel} primary onSelect={() => playEpisode(primaryEp)} />
               <ActionButton
                 col={1}
                 label={isFav ? '★ 已收藏' : '☆ 收藏'}
@@ -295,13 +361,38 @@ export default function DetailPage({ id, onPlay, style }) {
                   title={title}
                   subtitle={titleIsOrdinal ? null : ordinal}
                   isResume={ep.index === resumeIndex}
-                  onSelect={() => onPlay(ep.index)}
+                  vip={!!ep.vip}
+                  onSelect={() => playEpisode(ep.index)}
                 />
               )
             })}
           </div>
         </div>
       </div>
+
+      {gate === 'login' && (
+        <ConfirmDialog
+          title="登录后观看"
+          description="此影片为会员内容，登录欧乐账号后即可播放。"
+          confirmLabel="去登录"
+          confirmKind="default"
+          onCancel={() => setGate(null)}
+          onConfirm={() => {
+            setGate(null)
+            onRequireLogin?.()
+          }}
+        />
+      )}
+      {notice && (
+        <ConfirmDialog
+          title={notice.title}
+          description={notice.description}
+          confirmLabel="知道了"
+          confirmKind="default"
+          cancelLabel={null}
+          onConfirm={() => setGate(null)}
+        />
+      )}
     </div>
   )
 }

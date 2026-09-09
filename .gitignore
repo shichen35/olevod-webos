@@ -29,3 +29,6 @@ tv-key*
 
 # local Claude Code tooling (never committed)
 .claude/
+
+# local issue tracker: specs and tickets (docs/agents/issue-tracker.md)
+.scratch/

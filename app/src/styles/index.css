@@ -13,8 +13,9 @@
  *     darker opaque surface token, never with alpha.
  *   - Single sanctioned exception: the glass-* material (translucent fill +
  *     backdrop blur, Apple Liquid Glass style), reserved for chrome surfaces —
- *     tab bar / segment capsules, the settings group, the filter panel sheet,
- *     dialogs, and the player chrome. Content surfaces stay fully opaque.
+ *     tab bar / segment capsules, the settings group, the account page's
+ *     captcha panel, the filter panel sheet, dialogs, and the player chrome.
+ *     Content surfaces stay fully opaque.
  *   - No motion of any kind: the transition/animation ban is enforced in the
  *     base layer with !important. Focus border/color swaps are instant. Two
  *     sanctioned exceptions, both in JS (this CSS ban governs only CSS-declared
@@ -63,6 +64,10 @@
   /* Player surface + switch knob still need plain black/white */
   --color-black: #000000;
   --color-white: #ffffff;
+
+  /* Light backing for the login captcha: the server's PNG is transparent with
+     dark strokes, unreadable straight on the dark background. */
+  --color-captcha-bg: #f3f4eb;
 
   /* Type scale (actual 1080p px, minimum 22px for 10-foot legibility).
      Defaults are wiped so no stock size can slip under the minimum. */

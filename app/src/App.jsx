@@ -6,8 +6,9 @@
  * is beneath it with display:none (never unmount — state and scroll survive).
  *
  * Focus layers mirror the view stack: shell = "home", detail = "detail",
- * player = "player". Each overlay pushes its focus layer on mount and pops it on
- * unmount, so the back chain and focus memory stay in lockstep with the stack.
+ * account = "account", player = "player". Each overlay pushes its focus layer on
+ * mount and pops it on unmount, so the back chain and focus memory stay in
+ * lockstep with the stack.
  *
  * The player is the one lazy() page: its chunk (and hls.js) must stay out of
  * the startup bundle, and it genuinely unmounts on back so playback stops.
@@ -31,6 +32,7 @@ import FilterPanel from './components/FilterPanel.jsx'
 import DetailPage from './pages/DetailPage.jsx'
 import LibraryPage from './pages/LibraryPage.jsx'
 import SearchPage from './pages/SearchPage.jsx'
+import AccountPage from './pages/AccountPage.jsx'
 import { getFilter, setFilter } from './store/filters.js'
 import { settingsStore, getSetting } from './store/settings.js'
 import { sessionStore } from './store/session.js'
@@ -72,9 +74,20 @@ export default function App() {
 
   const top = stack[stack.length - 1]
   const hasDetail = stack.some((f) => f.type === 'detail')
+  const accountFrame = stack.find((f) => f.type === 'account')
   const vis = (type) => ({ display: top.type === type ? 'block' : 'none' })
 
   const openDetail = useCallback((id) => setStack((s) => [...s, { type: 'detail', id }]), [])
+  // Account page: from settings (stays open after login) or from detail (closes
+  // after login so the detail page reloads under the new session).
+  const openAccount = useCallback(
+    (from) => setStack((s) => (s[s.length - 1].type === 'account' ? s : [...s, { type: 'account', from }])),
+    [],
+  )
+  const closeAccount = useCallback(
+    () => setStack((s) => (s[s.length - 1].type === 'account' ? s.slice(0, -1) : s)),
+    [],
+  )
   // Ignore a second OK while the player frame is already on top (the lazy chunk
   // takes a beat to mount, during which the detail button can still fire).
   const openPlayer = useCallback(
@@ -191,7 +204,11 @@ export default function App() {
                   refreshNonce={refreshNonce[tab.key]}
                 />
               ) : (
-                <LibraryPage group={contentGroup(tab.key)} onOpenDetail={openDetail} />
+                <LibraryPage
+                  group={contentGroup(tab.key)}
+                  onOpenDetail={openDetail}
+                  onOpenAccount={() => openAccount('settings')}
+                />
               ))}
           </div>
         ))}
@@ -214,6 +231,8 @@ export default function App() {
           style={vis('detail')}
         />
       )}
+
+      {accountFrame && <AccountPage from={accountFrame.from} onDone={closeAccount} style={vis('account')} />}
 
       {top.type === 'player' && (
         <Suspense

@@ -3,6 +3,8 @@
  * the same focus-hover auto-switch as the tab bar. Favorites and History are
  * 6-column card grids fed live from the stores; Settings is a grouped list
  * (clear history via ConfirmDialog) with the app version as a plain label below.
+ * Its first row is the OleVod account: nickname or 未登录, opening the account
+ * page (App.jsx view stack).
  */
 import { useCallback, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
@@ -14,6 +16,7 @@ import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore } from '../store/favorites.js'
 import { historyStore, clear as clearHistory } from '../store/history.js'
 import { settingsStore, getSetting, toggleSetting } from '../store/settings.js'
+import { sessionStore } from '../store/session.js'
 
 const COLS = 6
 const CONTENT_ROW0 = 1 // segment control is row 0; content starts at row 1
@@ -82,6 +85,17 @@ function SettingsRow({ group, row, label, onSelect }) {
   )
 }
 
+// Row with a trailing value (secondary text, dark on the focused white fill).
+function SettingsValueRow({ group, row, label, value, onSelect }) {
+  const { props } = useFocusable({ layer: 'home', group, row, col: 0, onSelect })
+  return (
+    <div className={`${SETTINGS_ROW} flex items-center justify-between`} {...props}>
+      <span>{label}</span>
+      <span className="text-fg-2 focused:text-inverse">{value}</span>
+    </div>
+  )
+}
+
 function SettingsToggle({ group, row, label, on, onToggle }) {
   const { props } = useFocusable({ layer: 'home', group, row, col: 0, onSelect: onToggle })
   return (
@@ -98,7 +112,7 @@ function SettingsToggle({ group, row, label, on, onToggle }) {
   )
 }
 
-export default function LibraryPage({ group = 'content', onOpenDetail }) {
+export default function LibraryPage({ group = 'content', onOpenDetail, onOpenAccount }) {
   const [seg, setSeg] = useState('fav')
   const [confirmClear, setConfirmClear] = useState(false)
   const [tabOrderOpen, setTabOrderOpen] = useState(false)
@@ -112,6 +126,7 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
   const favorites = useStoreValue(favoritesStore)
   const history = useStoreValue(historyStore)
   const settings = useStoreValue(settingsStore)
+  const session = useStoreValue(sessionStore)
 
   const hoverSeg = useCallback((key) => {
     clearTimeout(debounceRef.current)
@@ -152,29 +167,36 @@ export default function LibraryPage({ group = 'content', onOpenDetail }) {
         <>
           {/* iOS-style inset grouped list + version caption below. */}
           <div className="glass max-w-[900px] rounded-[20px] border border-glass-edge p-1.5">
-            <SettingsToggle
+            <SettingsValueRow
               group={group}
               row={1}
+              label="欧乐账号"
+              value={session ? session.name : '未登录'}
+              onSelect={() => onOpenAccount?.()}
+            />
+            <SettingsToggle
+              group={group}
+              row={2}
               label="首页显示收藏"
               on={getSetting(settings, 'homeShowFavorites')}
               onToggle={() => toggleSetting('homeShowFavorites')}
             />
             <SettingsToggle
               group={group}
-              row={2}
+              row={3}
               label="首页显示最近观看"
               on={getSetting(settings, 'homeShowRecent')}
               onToggle={() => toggleSetting('homeShowRecent')}
             />
             <SettingsToggle
               group={group}
-              row={3}
+              row={4}
               label="平滑滚动"
               on={getSetting(settings, 'smoothScroll')}
               onToggle={() => toggleSetting('smoothScroll')}
             />
-            <SettingsRow group={group} row={4} label="调整标签栏顺序" onSelect={() => setTabOrderOpen(true)} />
-            <SettingsRow group={group} row={5} label="清除观看历史" onSelect={() => setConfirmClear(true)} />
+            <SettingsRow group={group} row={5} label="调整标签栏顺序" onSelect={() => setTabOrderOpen(true)} />
+            <SettingsRow group={group} row={6} label="清除观看历史" onSelect={() => setConfirmClear(true)} />
           </div>
           <div className="fixed bottom-8 left-1/2 -translate-x-1/2 text-center text-caption text-fg-3">版本 {__APP_VERSION__}</div>
         </>

@@ -64,11 +64,12 @@ var UPSTREAM_TIMEOUT_MS = 10000
 
 // ---------------------------------------------------------------------------
 // upstream request helper shared by both channels.
-// `forceIdentity` is REQUIRED on the byte path: the proxy pipes bytes through
+// Identity encoding is REQUIRED on the byte path: the proxy pipes bytes through
 // without re-emitting Content-Encoding, so a gzip response there would corrupt
 // Content-Range/Content-Length and break the player's range requests.
+// `extra.body` (JSON text) turns the request into a POST — API channel only.
 // ---------------------------------------------------------------------------
-function upstreamGet(parsed, extra, cb) {
+function upstreamRequest(parsed, extra, cb) {
   var headers = {
     'User-Agent': UA,
     Accept: extra.media ? '*/*' : 'application/json, text/plain, */*',
@@ -77,6 +78,11 @@ function upstreamGet(parsed, extra, cb) {
   // CDN requests carry the site Referer; NEVER an Origin header (403).
   if (extra.media) headers.Referer = 'https://www.olevod.com/'
   if (extra.range) headers.Range = extra.range
+  var isPost = typeof extra.body === 'string'
+  if (isPost) {
+    headers['Content-Type'] = 'application/json; charset=utf-8'
+    headers['Content-Length'] = Buffer.byteLength(extra.body)
+  }
 
   var done = false
   var req = https.request(
@@ -84,7 +90,7 @@ function upstreamGet(parsed, extra, cb) {
       hostname: parsed.hostname,
       port: parsed.port ? parseInt(parsed.port, 10) : 443,
       path: parsed.pathname + (parsed.search || ''),
-      method: 'GET',
+      method: isPost ? 'POST' : 'GET',
       headers: headers,
       agent: agent,
     },
@@ -103,7 +109,7 @@ function upstreamGet(parsed, extra, cb) {
     done = true
     cb(err)
   })
-  req.end()
+  req.end(isPost ? extra.body : undefined)
   return req
 }
 
@@ -167,7 +173,7 @@ var proxyServer = http.createServer(function (req, res) {
     return res.end('bad url')
   }
 
-  upstreamGet(parsed, { media: true, range: req.headers.range }, function (err, up) {
+  upstreamRequest(parsed, { media: true, range: req.headers.range }, function (err, up) {
     if (err) {
       log('proxy 502 ' + hostname + ' ' + err.message)
       if (!res.headersSent) {
@@ -230,10 +236,13 @@ if (service) {
     m.respond({ returnValue: true, ok: true, proxyPort: proxyPort })
   })
 
-  // { url } -> decompressed response text. API host only; the URL arrives
-  // fully built and _vv-signed from the frontend.
+  // { url, method?, body? } -> decompressed response text. API host only; the
+  // URL arrives fully built (and _vv-signed for GET) from the frontend. method
+  // 'POST' sends `body` as JSON (captcha / login / user info); anything else is
+  // a GET.
   service.register('fetch', function (m) {
-    var rawUrl = m.payload && m.payload.url
+    var payload = m.payload || {}
+    var rawUrl = payload.url
     var parsed
     try {
       parsed = new URL(rawUrl)
@@ -243,7 +252,11 @@ if (service) {
     if (parsed.hostname !== API_HOST) {
       return m.respond({ returnValue: false, error: 'host not allowed' })
     }
-    upstreamGet(parsed, { media: false }, function (err, res) {
+    var extra = { media: false }
+    if (payload.method === 'POST') {
+      extra.body = typeof payload.body === 'string' ? payload.body : '{}'
+    }
+    upstreamRequest(parsed, extra, function (err, res) {
       if (err) return m.respond({ returnValue: false, error: err.message })
       decompress(res, function (buf) {
         m.respond({

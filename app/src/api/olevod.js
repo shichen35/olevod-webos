@@ -2,7 +2,7 @@
  * Business endpoint wrappers. Everything above this layer works with normalized
  * shapes and never sees raw gateway responses or builds URLs by hand.
  */
-import { apiGet } from './http.js'
+import { apiGet, apiPost, ApiError } from './http.js'
 import { mediaUrl } from './luna.js'
 
 const IMG_BASE = 'https://static.olelive.com/'
@@ -178,4 +178,50 @@ export async function detail(id) {
     episodeCount: episodes.length, // d.total is unreliable; derive from urls
     episodes,
   }
+}
+
+// ---------------------------------------------------------------------------
+// account (POST endpoints: no `v1` prefix, no `_vv`)
+// ---------------------------------------------------------------------------
+/**
+ * A fresh captcha challenge. Every call invalidates the previous image.
+ * Path: POST /pub/captcha
+ * `image` is a `data:image/png;base64,...` URI (160x80, transparent background,
+ * four digits).
+ */
+export async function captcha() {
+  const d = await apiPost('/pub/captcha')
+  if (!d?.captchaId || !d?.picPath) throw new Error('empty captcha')
+  return { id: d.captchaId, image: d.picPath }
+}
+
+/**
+ * Exchange credentials + captcha answer for a session.
+ * Path: POST /pub/user/login
+ * Returns { token, name, userId }; `token` is the three-part value http.js
+ * splits into _he/_pl/_si.
+ */
+export async function login({ username, password, captcha: answer, captchaId }) {
+  const d = await apiPost('/pub/user/login', {
+    username,
+    password,
+    captcha: answer,
+    captcha_id: captchaId,
+  })
+  if (!d?.token) throw new ApiError('登录失败，请重试', -1)
+  const user = d.user || {}
+  return {
+    token: d.token,
+    name: user.userNickName || user.userName || '已登录',
+    userId: user.userId != null ? String(user.userId) : '',
+  }
+}
+
+/**
+ * The signed-in account's profile. groupId 3 = active VIP.
+ * Path: POST /pub/user/info (code 12 when called without a session)
+ */
+export async function userInfo() {
+  const d = await apiPost('/pub/user/info')
+  return { userId: d?.userId, groupId: d?.groupId }
 }

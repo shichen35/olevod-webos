@@ -98,10 +98,24 @@ async function directGet(url, opts = {}) {
   return res.text()
 }
 
+// Direct JSON POST — the browser/dev path. The API's CORS preflight allows any
+// origin with a Content-Type header.
+async function directPost(url, body, opts = {}) {
+  const res = await fetch(url, {
+    method: 'POST',
+    signal: opts.signal,
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body,
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.text()
+}
+
 // Real-device Luna transport: the service fetches api.olelive.com and returns
-// decompressed text. The URL arrives fully built and _vv-signed.
-async function lunaFetch(url) {
-  const res = await lunaCall('fetch', { url }, FETCH_TIMEOUT_MS)
+// decompressed text. The URL arrives fully built (and _vv-signed for GET).
+async function lunaFetch(url, method = 'GET', body) {
+  const params = method === 'POST' ? { url, method, body } : { url }
+  const res = await lunaCall('fetch', params, FETCH_TIMEOUT_MS)
   if (!res || res.returnValue !== true) {
     throw new Error(`luna fetch failed: ${res?.error || 'unknown'}`)
   }
@@ -124,6 +138,20 @@ export async function transportGet(url, opts = {}) {
     }
   }
   return directGet(url, opts)
+}
+
+/**
+ * POST a JSON body via the appropriate channel.
+ * Unlike transportGet there is no fall back to direct fetch on the device: a
+ * Luna timeout doesn't mean the request never reached the server, and sending
+ * a login twice would consume the captcha and report a bogus failure.
+ * @param {string} url fully-built URL
+ * @param {string} body JSON text
+ * @param {{signal?: AbortSignal}} opts
+ */
+export async function transportPost(url, body, opts = {}) {
+  if (isTV && serviceReady) return lunaFetch(url, 'POST', body)
+  return directPost(url, body, opts)
 }
 
 /**

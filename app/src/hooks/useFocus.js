@@ -372,12 +372,20 @@ export function getActiveLayer() {
 // keyboard
 // ---------------------------------------------------------------------------
 let keyHandlerAttached = false
-let customKeyHandler = null
+// Stack of layer key handlers; only the topmost one sees keys. A stack (not a
+// single slot) so a dialog opened over a page that has its own handler (the
+// account page's digit keys) hands the keys back when it closes.
+const customKeyHandlers = []
 
-// Overlays (filter panel, player, etc.) intercept keys in place; return true to
-// consume the event before the default navigation runs.
-export function setCustomKeyHandler(fn) {
-  customKeyHandler = fn
+// Overlays (filter panel, player, dialogs, etc.) intercept keys in place;
+// return true to consume the event before the default navigation runs.
+// Returns the matching pop function — call it on unmount.
+export function pushCustomKeyHandler(fn) {
+  customKeyHandlers.push(fn)
+  return () => {
+    const i = customKeyHandlers.lastIndexOf(fn)
+    if (i >= 0) customKeyHandlers.splice(i, 1)
+  }
 }
 
 const BACK_KEYCODE = 461 // webOS remote Back — NOT Backspace
@@ -404,6 +412,7 @@ export function initFocusEngine() {
       return
     }
 
+    const customKeyHandler = customKeyHandlers[customKeyHandlers.length - 1]
     if (customKeyHandler && customKeyHandler(e)) return
 
     // Back: webOS keyCode 461, plus browser-dev equivalents.

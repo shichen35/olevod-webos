@@ -2,7 +2,7 @@
  * Full-screen HLS player (the "player" focus layer, above "detail").
  *
  * Key machine (all keys intercepted at the player layer via
- * setCustomKeyHandler; Back unwinds one level at a time):
+ * pushCustomKeyHandler; Back unwinds one level at a time):
  *   bar hidden: Down = show bar · Up = show the key hint · Left/Right = seek
  *               step (long-press repeats, step grows each held second)
  *               OK = play/pause (pausing shows the bar) · Back = exit
@@ -43,7 +43,7 @@ import {
   pushFocusLayer,
   popFocusLayer,
   focusTo,
-  setCustomKeyHandler,
+  pushCustomKeyHandler,
 } from '../hooks/useFocus.js'
 
 const LAYER = 'player'
@@ -378,7 +378,7 @@ export default function PlayerPage({ id, episodeIndex }) {
   // ---------------------------------------------------------------------
   useEffect(() => {
     pushFocusLayer(LAYER)
-    setCustomKeyHandler((e) => {
+    const popKeys = pushCustomKeyHandler((e) => {
       // Episode strip owns keys the moment it's open — evaluated before the
       // status gate so it stays fully navigable while the next pick is still
       // loading (the player never blanks to the loading screen mid-hop).
@@ -477,7 +477,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       }
     })
     return () => {
-      setCustomKeyHandler(null)
+      popKeys()
       popFocusLayer()
     }
   }, [armHideTimer, hideBar, showBar, showStrip, hideStrip, stepSeek, togglePlay, showHint])

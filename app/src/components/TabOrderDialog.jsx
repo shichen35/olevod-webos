@@ -9,7 +9,7 @@
  * the row count never changes, so the target id is always registered).
  */
 import { useEffect, useMemo } from 'react'
-import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, setCustomKeyHandler } from '../hooks/useFocus.js'
+import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { settingsStore, getSetting, setSetting } from '../store/settings.js'
 import { orderedTabs } from '../config/nav.js'
@@ -49,7 +49,7 @@ export default function TabOrderDialog({ onClose }) {
   useEffect(() => {
     pushFocusLayer(LAYER)
     focusTo(`${LAYER}/content-0-1`) // first row's 下移 (its 上移 is a no-op)
-    setCustomKeyHandler((e) => {
+    const popKeys = pushCustomKeyHandler((e) => {
       if (isBackKey(e)) {
         onClose()
         return true
@@ -57,7 +57,7 @@ export default function TabOrderDialog({ onClose }) {
       return false
     })
     return () => {
-      setCustomKeyHandler(null)
+      popKeys()
       popFocusLayer()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

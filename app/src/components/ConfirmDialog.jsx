@@ -5,7 +5,7 @@
  * focus defaults to Cancel, and the back key acts as Cancel.
  */
 import { useEffect } from 'react'
-import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, setCustomKeyHandler } from '../hooks/useFocus.js'
+import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler } from '../hooks/useFocus.js'
 
 const LAYER = 'confirm'
 
@@ -36,7 +36,7 @@ export default function ConfirmDialog({
   useEffect(() => {
     pushFocusLayer(LAYER)
     focusTo(`${LAYER}/content-0-0`) // default focus = Cancel (row 0)
-    setCustomKeyHandler((e) => {
+    const popKeys = pushCustomKeyHandler((e) => {
       if (isBackKey(e)) {
         onCancel()
         return true
@@ -44,7 +44,7 @@ export default function ConfirmDialog({
       return false
     })
     return () => {
-      setCustomKeyHandler(null)
+      popKeys()
       popFocusLayer()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

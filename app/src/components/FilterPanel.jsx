@@ -27,7 +27,7 @@ import {
   focusTo,
   setFocus,
   getCurrentFocus,
-  setCustomKeyHandler,
+  pushCustomKeyHandler,
 } from '../hooks/useFocus.js'
 import { getCategory, SORTS } from '../config/taxonomy.js'
 
@@ -173,7 +173,7 @@ export default function FilterPanel({ category, filter, onChange, onReset, onClo
     focusTo(`${LAYER}/${GROUP}-${AREA_ROW}-0`)
     // Intercept keys for this layer: back closes the panel; arrows navigate the
     // wrapped chips spatially; Enter falls through to the engine's onSelect.
-    setCustomKeyHandler((e) => {
+    const popKeys = pushCustomKeyHandler((e) => {
       if (isBackKey(e)) {
         onClose()
         return true
@@ -187,7 +187,7 @@ export default function FilterPanel({ category, filter, onChange, onReset, onClo
       return false
     })
     return () => {
-      setCustomKeyHandler(null)
+      popKeys()
       popFocusLayer() // restores focus to the "Filter" button in the home layer
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

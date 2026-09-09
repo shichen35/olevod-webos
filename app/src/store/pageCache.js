@@ -7,6 +7,9 @@
  */
 const cache = new Map() // key -> resolved data
 const inflight = new Map() // key -> Promise (dedupe concurrent loads)
+// Bumped by clear(). A load that started before a clear (e.g. under the
+// previous account) must not write its result back into the fresh cache.
+let epoch = 0
 
 // Synchronous cache read; undefined on a miss.
 export function get(key) {
@@ -25,15 +28,16 @@ export function loadOnce(key, loader) {
   if (cache.has(key)) return Promise.resolve(cache.get(key))
   if (inflight.has(key)) return inflight.get(key)
 
+  const started = epoch
   const p = Promise.resolve()
     .then(loader)
     .then((data) => {
-      cache.set(key, data)
-      inflight.delete(key)
+      if (started === epoch) cache.set(key, data)
+      if (inflight.get(key) === p) inflight.delete(key)
       return data
     })
     .catch((err) => {
-      inflight.delete(key) // don't cache failures — allow a retry
+      if (inflight.get(key) === p) inflight.delete(key) // don't cache failures — allow a retry
       throw err
     })
 
@@ -48,6 +52,7 @@ export function invalidate(prefix = '') {
 }
 
 export function clear() {
+  epoch++
   cache.clear()
   inflight.clear()
 }

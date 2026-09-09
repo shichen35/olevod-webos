@@ -33,6 +33,8 @@ import LibraryPage from './pages/LibraryPage.jsx'
 import SearchPage from './pages/SearchPage.jsx'
 import { getFilter, setFilter } from './store/filters.js'
 import { settingsStore, getSetting } from './store/settings.js'
+import { sessionStore } from './store/session.js'
+import * as pageCache from './store/pageCache.js'
 import { useStoreValue } from './hooks/useStore.js'
 import { prefetchAll } from './api/feeds.js'
 import { exitApp } from './api/luna.js'
@@ -96,13 +98,22 @@ export default function App() {
 
   // Background prefetch: warm every tab's cache sequentially so switching tabs
   // is spinner-free. Shares pageCache keys with the pages (no duplicate fetch).
+  // An account change (login / logout / expiry) flushes every cached response
+  // and warms again under the new session.
+  const session = useStoreValue(sessionStore)
+  const sessionToken = session?.token || null
+  const prefetchTokenRef = useRef(sessionToken)
   useEffect(() => {
+    if (prefetchTokenRef.current !== sessionToken) {
+      prefetchTokenRef.current = sessionToken
+      pageCache.clear()
+    }
     let stopped = false
     prefetchAll(() => stopped)
     return () => {
       stopped = true
     }
-  }, [])
+  }, [sessionToken])
 
   // Remember every tab that has been shown so it stays mounted afterwards, and
   // point the tab bar's down-bridge at the active tab's content group.

@@ -56,6 +56,30 @@ export function createStore(key, defaultValue) {
 }
 
 /**
+ * Create a store that lives only in memory — same get/set/subscribe contract
+ * as createStore, for state that is persisted some other way (the encrypted
+ * vault) or not at all.
+ * @param {*} initialValue
+ */
+export function createMemoryStore(initialValue) {
+  let snapshot = initialValue
+  const listeners = new Set()
+  return {
+    get: () => snapshot,
+    set: (updater) => {
+      const next = typeof updater === 'function' ? updater(snapshot) : updater
+      if (next === snapshot) return
+      snapshot = next
+      listeners.forEach((l) => l())
+    },
+    subscribe: (l) => {
+      listeners.add(l)
+      return () => listeners.delete(l)
+    },
+  }
+}
+
+/**
  * Subscribe a component to a store.
  * @param store a store from createStore
  * @param selector picks a slice; MUST return a stable reference (pick, don't

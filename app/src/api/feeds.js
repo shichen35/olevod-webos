@@ -3,11 +3,18 @@
  * through these so they hit the SAME pageCache keys — a prefetch and a page's
  * own fetch dedupe into one request (first caller wins, the rest read cache).
  */
-import { categoryList } from './olevod.js'
+import { categoryList, banners } from './olevod.js'
 import { CATEGORIES, DEFAULT_SORT } from '../config/taxonomy.js'
 import * as pageCache from '../store/pageCache.js'
 
 export const HOME_POPULAR_KEY = 'home:popular'
+export const HOME_BANNERS_KEY = 'home:banners'
+
+// The home page's featured row. Failure is not an error state: the page simply
+// opens on its shelves instead.
+export function loadHomeBanners() {
+  return pageCache.loadOnce(HOME_BANNERS_KEY, banners)
+}
 
 // The home page's popular rows, one per category in tab order.
 export const POPULAR = [
@@ -57,6 +64,12 @@ export function loadCategoryFirstPage(category, f, size = 24) {
 export async function prefetchAll(shouldStop = () => false) {
   try {
     await loadHomePopular()
+  } catch {
+    /* silent */
+  }
+  if (shouldStop()) return
+  try {
+    await loadHomeBanners()
   } catch {
     /* silent */
   }

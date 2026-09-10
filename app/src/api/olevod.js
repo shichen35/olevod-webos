@@ -95,6 +95,22 @@ export async function categoryList({
 }
 
 // ---------------------------------------------------------------------------
+// home banners
+// ---------------------------------------------------------------------------
+/**
+ * Featured titles for the home page.
+ * Path: /v1/pub/index/banners
+ * The endpoint mixes several banner kinds; type 4 is the editorial pick, and
+ * its `id` is a vod id the detail page can open directly.
+ */
+export async function banners() {
+  const data = await apiGet('/v1/pub/index/banners')
+  return (data || [])
+    .filter((b) => b.bannerType === 4)
+    .map((b) => ({ id: b.id, title: b.title, pic: b.img, remarks: b.desc }))
+}
+
+// ---------------------------------------------------------------------------
 // search
 // ---------------------------------------------------------------------------
 // All three search endpoints group results by content type; we only consume

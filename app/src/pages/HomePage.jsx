@@ -1,15 +1,20 @@
 /*
- * Home — the default landing screen. Horizontal shelves in this order:
+ * Home — the default landing screen. A featured row on top, then horizontal
+ * shelves in this order:
  *   Continue Watching -> My Favorites -> Popular Movies / Variety / TV Series / Anime.
  *
- * Only the popular rows hit the network (concurrently, via allSettled, so
- * one category failing just empties that row). Continue Watching and Favorites
+ * The featured row is the first two editorial banners; with none (or a failed
+ * request) the page simply opens on its shelves.
+ *
+ * Only the popular rows and the banners hit the network (the popular rows
+ * concurrently, via allSettled, so one category failing just empties that row). Continue Watching and Favorites
  * come from the local stores and update live. Empty rows are not rendered, and
  * focus rows are numbered in actual render order so up/down stays continuous.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Shelf from '../components/Shelf.jsx'
-import { loadHomePopular, POPULAR } from '../api/feeds.js'
+import Thumb from '../components/Thumb.jsx'
+import { loadHomePopular, loadHomeBanners, POPULAR } from '../api/feeds.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { historyStore } from '../store/history.js'
 import { favoritesStore } from '../store/favorites.js'
@@ -26,11 +31,28 @@ function RetryButton({ group, onRetry }) {
   )
 }
 
+// Featured card: a wide still instead of a poster, so it gets its own card
+// rather than VideoCard's 2:3 frame. Same focus ring and title treatment.
+function FeaturedCard({ item, group, col, onSelect }) {
+  const { props } = useFocusable({ layer: 'home', group, row: 0, col, onSelect })
+  return (
+    <div className="min-w-0 flex-1" {...props}>
+      <div className="h-[300px] overflow-hidden rounded-[15px] border-3 border-transparent bg-elev focused:border-focus">
+        {/* Banner stills have no sized thumbnail form — request the original. */}
+        <Thumb pic={item.pic} alt={item.title} size="" />
+      </div>
+      <div className="mt-2.5 truncate text-heading text-fg-2 focused:text-fg">{item.title}</div>
+      <div className="mt-1 truncate text-caption text-fg-3">{item.remarks}</div>
+    </div>
+  )
+}
+
 export default function HomePage({ group = 'content', onOpenDetail, refreshNonce }) {
   const history = useStoreValue(historyStore)
   const favorites = useStoreValue(favoritesStore)
   const settings = useStoreValue(settingsStore)
   const [popular, setPopular] = useState(null) // null while loading; array once resolved
+  const [featured, setFeatured] = useState([]) // the two editorial banners, if any
 
   // `clear` blanks to a loading state (initial load / retry); a refresh keeps
   // the old rows on screen until the new data lands (no blank flash).
@@ -39,6 +61,9 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
     loadHomePopular()
       .then(setPopular)
       .catch(() => setPopular(POPULAR.map((p) => ({ ...p, items: [] }))))
+    loadHomeBanners()
+      .then((list) => setFeatured(list.slice(0, 2)))
+      .catch(() => setFeatured([]))
   }, [])
 
   useEffect(() => {
@@ -77,15 +102,33 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
     : []
   const favItems = getSetting(settings, 'homeShowFavorites') ? favorites.slice(0, 12) : []
 
+  // The featured row owns row 0 when it is there, pushing the shelves down one.
+  const featuredRow = featured.length ? (
+    <section className="mb-11">
+      <h2 className="mb-[18px] text-heading font-semibold text-fg">精选推荐</h2>
+      <div className="flex gap-gutter">
+        {featured.map((item, i) => (
+          <FeaturedCard key={item.id} item={item} group={group} col={i} onSelect={() => onOpenDetail(item.id)} />
+        ))}
+      </div>
+    </section>
+  ) : null
+  const rowOffset = featured.length ? 1 : 0
+
   const rows = []
   if (continueItems.length) rows.push({ key: 'continue', title: '继续观看', items: continueItems, isContinue: true })
   if (favItems.length) rows.push({ key: 'fav', title: '我的收藏', items: favItems })
   for (const p of popular || []) if (p.items.length) rows.push(p)
 
   if (popular === null && rows.length === 0) {
-    return <div className="py-15 text-body text-fg-2">加载中…</div>
+    return (
+      <div className="pt-4">
+        {featuredRow}
+        <div className="py-15 text-body text-fg-2">加载中…</div>
+      </div>
+    )
   }
-  if (popular !== null && rows.length === 0) {
+  if (popular !== null && rows.length === 0 && !featuredRow) {
     return (
       <div className="flex h-[640px] flex-col items-center justify-center gap-7 text-heading text-fg-2">
         <div>内容加载失败</div>
@@ -96,6 +139,7 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
 
   return (
     <div className="pt-4">
+      {featuredRow}
       {rows.map((r, i) => (
         <Shelf
           key={r.key}
@@ -103,7 +147,7 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
           items={r.items}
           layer="home"
           group={group}
-          row={i}
+          row={rowOffset + i}
           onSelectItem={(it) => onOpenDetail(it.id)}
           cardExtras={
             r.isContinue

@@ -39,6 +39,15 @@ function stringOptions(values) {
 
 // Sort options apply to every category. The `order` segment must never be empty
 // (an empty order makes the server return total-only with a null list).
+// Membership range — the list path's `member` segment. 3 returns everything,
+// 1 only member titles (empty outside VIP Blu-ray), 2 only free ones.
+export const MEMBERS = [
+  { value: '3', label: '全部影片' },
+  { value: '1', label: '会员' },
+  { value: '2', label: '免费' },
+]
+export const DEFAULT_MEMBER = '3'
+
 export const SORTS = [
   { value: 'update', label: '最新' },
   { value: 'hot', label: '最热' },

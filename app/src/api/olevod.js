@@ -63,7 +63,7 @@ function normalizeItem(raw) {
 // ---------------------------------------------------------------------------
 /**
  * Filtered, sorted, paginated category listing.
- * Path: /v1/pub/vod/list/{flag}/{vip}/{letter}/{area}/{category}/{genre}/{year}/{order}/{page}/{size}
+ * Path: /v1/pub/vod/list/{flag}/{member}/{letter}/{area}/{category}/{genre}/{year}/{order}/{page}/{size}
  * Returns { items, total, page, size }.
  */
 export async function categoryList({
@@ -71,12 +71,13 @@ export async function categoryList({
   genre = '0',
   area = '0',
   year = '0',
+  member = '3',
   sort = 'update',
   page = 1,
   size = 24,
 }) {
   const flag = 'true'
-  const vip = 3 // never filter by membership tier
+  const vip = member || '3' // membership range: 3 all, 1 members only, 2 free
   const letter = 0
   const areaSeg = area && area !== '0' ? encodeURIComponent(area) : '0'
   const genreSeg = genre && genre !== '0' ? genre : '0'

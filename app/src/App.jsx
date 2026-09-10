@@ -40,9 +40,9 @@ import * as pageCache from './store/pageCache.js'
 import { useStoreValue } from './hooks/useStore.js'
 import { prefetchAll } from './api/feeds.js'
 import { exitApp } from './api/luna.js'
-import { DEFAULT_SORT } from './config/taxonomy.js'
+import { DEFAULT_SORT, DEFAULT_MEMBER } from './config/taxonomy.js'
 
-const DEFAULT_FILTER = { genre: '0', area: '0', year: '0', sort: DEFAULT_SORT }
+const DEFAULT_FILTER = { genre: '0', area: '0', year: '0', member: DEFAULT_MEMBER, sort: DEFAULT_SORT }
 
 // Lazy: the player chunk (and hls.js inside it) loads on first playback, never
 // at startup.

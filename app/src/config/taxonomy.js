@@ -46,8 +46,8 @@ export const SORTS = [
 ]
 export const DEFAULT_SORT = 'update'
 
-// Display order: Movies, TV Series, Variety, Anime, VIP Blu-ray (typeIds 1, 2,
-// 3, 4, 6). VIP titles only play for a signed-in VIP session; the detail page
+// Display order: Movies, TV Series, Variety, Anime, Short Drama, VIP Blu-ray
+// (typeIds 1, 2, 3, 4, 14, 6). VIP titles only play for a signed-in VIP session; the detail page
 // gates playback (DetailPage.jsx), the tab itself is always shown.
 export const CATEGORIES = [
   {
@@ -87,6 +87,18 @@ export const CATEGORIES = [
       [401, '日本'], [402, '国产'], [403, '欧美'],
     ]),
     areas: stringOptions(AREAS_COMMON),
+    years: stringOptions(YEARS),
+  },
+  {
+    id: 14,
+    name: '短剧',
+    genres: genreOptions([
+      [1209, '言情'], [1210, '都市'], [1211, '甜宠'], [1212, '逆袭'],
+      [1213, '玄幻'], [1214, '仙侠'], [1215, '穿越'], [1216, '重生'],
+      [1217, '王妃'], [1218, '总裁'], [1219, '离婚'], [1220, '其他'],
+    ]),
+    // Short dramas carry the movie region list (德国 included) in the live data.
+    areas: stringOptions(AREAS_MOVIE),
     years: stringOptions(YEARS),
   },
   {

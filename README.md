@@ -10,11 +10,11 @@ there is no animation and no translucency anywhere in the interface.
 | --- | --- |
 | **Target device** | LG webOS 24 — Chromium 108 on the frontend, Node.js 16 on the service side — at 1080p with a D-pad remote. The reference set is the LG C4. |
 | **Stack** | Vite with React 19.2 for the frontend, a Node.js 16 Luna background service carrying both the API and media channels, and hls.js for playback. |
-| **Feature scope** | Home shelves, the Movies / Variety / TV Series sections, the detail page, HLS playback, and a Library holding favorites, history, and settings. |
+| **Feature scope** | Home shelves, the Movies / TV Series / Variety / Anime / VIP Blu-ray sections, search, the detail page, HLS playback, OleVod account sign-in with a captcha (which unlocks VIP playback), and a Library holding favorites, history, and settings. |
 
-Several things are deliberately absent: there is no login, no VIP tier, no
-search, no live streaming, no screen casting, and no danmaku (scrolling comment
-overlay).
+Several things are deliberately absent: there is no live streaming, no screen
+casting, no danmaku (scrolling comment overlay), and no cloud sync — favorites
+and watch history stay on the TV even when signed in.
 
 ## Directory Structure
 
@@ -87,9 +87,9 @@ graph LR
 
 Which channel a request takes is decided in one place, `app/src/api/luna.js`,
 so the business layer never has to know where it is running. Every fetch then
-funnels through `apiGet` in `app/src/api/http.js`, which signs the request,
-sends it over the selected transport, validates what comes back, and decrypts
-the payload.
+funnels through `apiGet` or `apiPost` in `app/src/api/http.js`, which signs the
+request, sends it over the selected transport, validates what comes back, and
+decrypts the payload.
 
 **Config-driven navigation.** The section tree lives in
 `app/src/config/taxonomy.js`. Adding a section is a single-file edit — the tab
@@ -101,7 +101,19 @@ of React entirely: it toggles a DOM class and calls `scrollIntoView`, nothing
 more.
 
 **Request signing.** Every GET carries a `?_vv=<signature>` query parameter,
-generated locally from a timestamp in `app/src/api/sign.js`.
+generated locally from a timestamp in `app/src/api/sign.js`. POSTs (captcha,
+login, user info) go without it. When signed in, every request also carries the
+session token, split into the `_he` / `_pl` / `_si` query parameters.
+
+**Account session.** Signing in happens on a full-screen account page reached
+from 我的 → 设置 → 欧乐账号: a captcha image, an on-screen digit keypad, and the
+remembered username and password filled in. Both the remembered login and the
+session token are encrypted at rest (`app/src/store/vault.js`): an AES-GCM key
+generated as non-extractable lives in IndexedDB, and localStorage only ever
+holds ciphertext. This keeps plaintext out of storage dumps and logs, but it is
+not hardware-backed — code running inside the app's origin can still decrypt.
+A token-bearing request answered with an auth-expired code signs the session
+out silently; the detail page then offers sign-in when a VIP episode is played.
 
 For the design rationale and acceptance criteria behind each subsystem, see the
 per-task docs in [doc/](doc/) (T01-T25).
@@ -118,3 +130,5 @@ per-task docs in [doc/](doc/) (T01-T25).
 | **`ares-*`** | LG's official webOS command-line tools, installed via `@webos-tools/cli`. |
 | **danmaku** | Viewer comments that scroll across the video as it plays. Out of scope here. |
 | **`_vv`** | The signature query parameter attached to every API GET. |
+| **Session token** | The three-part value returned by login, sent on every request as `_he` / `_pl` / `_si` while signed in. |
+| **VIP episode** | An episode flagged `vip`; without a session holding VIP rights the detail API returns it with an empty URL. |

@@ -8,11 +8,12 @@
  * (useFocus.js input guard) — the VKB owns the arrows, Enter commits the
  * search via the input's own onKeyDown, Back just closes the keyboard.
  *
- * Focus rows in the content group: row 0 = the (centered) search box, row 1 =
- * suggestion chips (hot keywords until the user types, autocomplete after,
- * debounced), results follow. When the chip row is empty (both fetches failed)
- * the grid moves up a row so vertical navigation never crosses a gap —
- * navigate() only probes the adjacent row.
+ * Focus rows in the content group: row 0 = the (centered) search box, then the
+ * recent-search strip (only while the box is empty and something was searched
+ * before), then suggestion chips (hot keywords until the user types,
+ * autocomplete after, debounced), then results. Rows stay contiguous — an
+ * absent strip shifts everything below it up, because navigate() only probes
+ * the adjacent row.
  *
  * Same stale-response discipline as CategoryPage: a monotonically increasing
  * token per fetch family (suggest / results), late responses are dropped.
@@ -21,6 +22,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
 import { searchList, searchSuggest, searchHotKeywords } from '../api/olevod.js'
 import { useFocusable, focusTo } from '../hooks/useFocus.js'
+import { useStoreValue } from '../hooks/useStore.js'
+import { searchHistoryStore, remember, clear as clearSearchHistory } from '../store/searchHistory.js'
 
 const COLS = 6
 const PAGE_SIZE = 24
@@ -44,6 +47,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
   const [status, setStatus] = useState('idle') // idle | loading | ok | error
+  const history = useStoreValue(searchHistoryStore)
 
   const inputRef = useRef(null)
   // Set while a commit (Enter) is the reason the input is about to blur, so the
@@ -106,6 +110,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
     // search never fires blur, and a stale flag would swallow the next one).
     if (document.activeElement === inputRef.current) committingRef.current = true
     inputRef.current?.blur()
+    remember(q)
     const token = ++genRef.current
     pageRef.current = 1
     setSubmitted(q)
@@ -160,9 +165,11 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
   }, [loadMore])
 
   const chips = keyword.trim() ? suggests : hotWords
-  // Rows must stay contiguous for the focus grid: with no chips the results
-  // slide up to row 1.
-  const resultRow = chips.length > 0 ? 2 : 1
+  // Rows must stay contiguous for the focus grid: a hidden strip shifts the
+  // rows below it up.
+  const historyRow = !keyword.trim() && history.length > 0 ? 1 : null
+  const chipsRow = historyRow === null ? 1 : 2
+  const resultRow = chips.length > 0 ? chipsRow + 1 : chipsRow
 
   const pickWord = useCallback(
     (word, col) => {
@@ -193,6 +200,18 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggests])
+
+  // A recent term searches immediately. The strip disappears with the box no
+  // longer empty, so the cursor goes back to the box rather than being stranded.
+  const pickHistory = useCallback(
+    (word) => {
+      restoreRef.current = null
+      setKeyword(word)
+      runSearch(word)
+      focusTo(`home/${group}-0-0`)
+    },
+    [group, runSearch],
+  )
 
   // OK on the box hands DOM focus to the input, which opens the VKB.
   const box = useFocusable({
@@ -246,12 +265,33 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
         </div>
       </div>
 
+      {historyRow !== null && (
+        <div className="mb-6 flex flex-col gap-3">
+          <div className="text-caption text-fg-3">最近搜索</div>
+          <div className="flex gap-3 overflow-x-auto scrollbar-none">
+            {history.map((word, i) => (
+              <Chip key={word} group={group} row={historyRow} col={i} label={word} onSelect={() => pickHistory(word)} />
+            ))}
+            <Chip
+              group={group}
+              row={historyRow}
+              col={history.length}
+              label="清除搜索记录"
+              onSelect={() => {
+                clearSearchHistory()
+                focusTo(`home/${group}-0-0`)
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {chips.length > 0 && (
         <div className="mb-6 flex flex-col gap-3">
           {!keyword.trim() && <div className="text-caption text-fg-3">热门搜索</div>}
           <div className="flex gap-3 overflow-x-auto scrollbar-none">
             {chips.map((word, i) => (
-              <Chip key={word} group={group} row={1} col={i} label={word} onSelect={() => pickWord(word, i)} />
+              <Chip key={word} group={group} row={chipsRow} col={i} label={word} onSelect={() => pickWord(word, i)} />
             ))}
           </div>
         </div>

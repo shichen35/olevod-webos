@@ -72,19 +72,20 @@ export async function categoryList({
   area = '0',
   year = '0',
   member = '3',
+  letter = '0',
   sort = 'update',
   page = 1,
   size = 24,
 }) {
   const flag = 'true'
   const vip = member || '3' // membership range: 3 all, 1 members only, 2 free
-  const letter = 0
+  const letterSeg = letter && letter !== '0' ? letter : '0' // pinyin initial, 0 = any
   const areaSeg = area && area !== '0' ? encodeURIComponent(area) : '0'
   const genreSeg = genre && genre !== '0' ? genre : '0'
   const yearSeg = year && year !== '0' ? year : '0'
   const order = sort || 'update' // must be non-empty or the list comes back null
 
-  const path = `/v1/pub/vod/list/${flag}/${vip}/${letter}/${areaSeg}/${category}/${genreSeg}/${yearSeg}/${order}/${page}/${size}`
+  const path = `/v1/pub/vod/list/${flag}/${vip}/${letterSeg}/${areaSeg}/${category}/${genreSeg}/${yearSeg}/${order}/${page}/${size}`
   const data = await apiGet(path)
 
   return {

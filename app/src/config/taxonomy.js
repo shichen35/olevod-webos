@@ -48,6 +48,17 @@ export const MEMBERS = [
 ]
 export const DEFAULT_MEMBER = '3'
 
+// Initial letter — the list path's `initial` segment, matched against the
+// title's pinyin initial (A returns 阿凡达 as well as Avatar).
+export const LETTERS = [
+  { value: '0', label: '全部' },
+  ...Array.from({ length: 26 }, (_, i) => {
+    const letter = String.fromCharCode(65 + i)
+    return { value: letter, label: letter }
+  }),
+]
+export const DEFAULT_LETTER = '0'
+
 export const SORTS = [
   { value: 'update', label: '最新' },
   { value: 'hot', label: '最热' },

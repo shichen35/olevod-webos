@@ -8,7 +8,7 @@
  * Selecting a chip applies immediately (server-side filtering in CategoryPage).
  */
 import { useFocusable } from '../hooks/useFocus.js'
-import { getCategory, SORTS, MEMBERS, DEFAULT_MEMBER } from '../config/taxonomy.js'
+import { getCategory, SORTS, MEMBERS, DEFAULT_MEMBER, DEFAULT_LETTER } from '../config/taxonomy.js'
 
 function Chip({ group, row = 0, col, label, selected, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row, col, onSelect })
@@ -31,6 +31,7 @@ function summaryText(cfg, filter) {
     const member = MEMBERS.find((m) => m.value === filter.member)
     if (member) parts.push(member.label)
   }
+  if (filter.letter && filter.letter !== DEFAULT_LETTER) parts.push(`首字母 ${filter.letter}`)
   const sort = SORTS.find((s) => s.value === filter.sort)
   if (sort) parts.push(sort.label)
   return parts.join(' · ')

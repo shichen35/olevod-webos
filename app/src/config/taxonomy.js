@@ -46,7 +46,9 @@ export const SORTS = [
 ]
 export const DEFAULT_SORT = 'update'
 
-// Display order: Movies, TV Series, Variety, Anime (typeIds 1, 2, 3, 4).
+// Display order: Movies, TV Series, Variety, Anime, VIP Blu-ray (typeIds 1, 2,
+// 3, 4, 6). VIP titles only play for a signed-in VIP session; the detail page
+// gates playback (DetailPage.jsx), the tab itself is always shown.
 export const CATEGORIES = [
   {
     id: 1,
@@ -83,6 +85,19 @@ export const CATEGORIES = [
     name: '动漫',
     genres: genreOptions([
       [401, '日本'], [402, '国产'], [403, '欧美'],
+    ]),
+    areas: stringOptions(AREAS_COMMON),
+    years: stringOptions(YEARS),
+  },
+  {
+    // Upstream name 「VIP蓝光影院」, shortened for the tab bar.
+    id: 6,
+    name: 'VIP蓝光',
+    genres: genreOptions([
+      [601, '动作片'], [602, '喜剧片'], [603, '爱情片'], [604, '科幻片'],
+      [605, '恐怖片'], [606, '剧情片'], [607, '战争片'], [608, '动画片'],
+      [609, '悬疑片'], [610, '惊悚片'], [611, '纪录片'], [612, '奇幻片'],
+      [613, '犯罪片'],
     ]),
     areas: stringOptions(AREAS_COMMON),
     years: stringOptions(YEARS),

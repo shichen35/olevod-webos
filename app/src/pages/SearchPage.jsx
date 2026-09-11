@@ -1,6 +1,7 @@
 /*
- * Search page: a search bar driven by the system keyboard + a suggestion strip
- * + a 6-column result grid with infinite scroll.
+ * Search page: a search bar driven by the system keyboard (or the on-screen
+ * keyboard panel next to it) + a suggestion strip + a 6-column result grid with
+ * infinite scroll.
  *
  * The input is a REAL <input>: OK on the search box gives it DOM focus, which
  * is what pops the LG webOS system keyboard (there is no imperative "show
@@ -20,6 +21,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
+import KeyboardPanel from '../components/KeyboardPanel.jsx'
 import { searchList, searchSuggest, searchHotKeywords } from '../api/olevod.js'
 import { useFocusable, focusTo } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
@@ -48,6 +50,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
   const [total, setTotal] = useState(0)
   const [status, setStatus] = useState('idle') // idle | loading | ok | error
   const history = useStoreValue(searchHistoryStore)
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
 
   const inputRef = useRef(null)
   // Set while a commit (Enter) is the reason the input is about to blur, so the
@@ -221,6 +224,13 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
     col: 0,
     onSelect: () => inputRef.current?.focus(),
   })
+  const keyboardButton = useFocusable({
+    layer: 'home',
+    group,
+    row: 0,
+    col: 1,
+    onSelect: () => setKeyboardOpen(true),
+  })
 
   const fullyLoaded = status === 'ok' && items.length > 0 && items.length >= total
 
@@ -263,6 +273,9 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
             className="w-full bg-transparent text-label text-fg outline-none placeholder:text-fg-3 focused:text-inverse"
           />
         </div>
+        <span className="focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label text-fg" {...keyboardButton.props}>
+          屏幕键盘
+        </span>
       </div>
 
       {historyRow !== null && (
@@ -321,6 +334,25 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
             />
           ))}
         </div>
+      )}
+
+      {keyboardOpen && (
+        <KeyboardPanel
+          value={keyword}
+          onChange={(next) => {
+            restoreRef.current = null
+            setKeyword(next)
+          }}
+          onSubmit={(next) => {
+            setKeyboardOpen(false)
+            runSearch(next)
+          }}
+          onSystemKeyboard={() => {
+            setKeyboardOpen(false)
+            inputRef.current?.focus()
+          }}
+          onClose={() => setKeyboardOpen(false)}
+        />
       )}
 
       <div ref={sentinelRef} className="h-px w-full" />

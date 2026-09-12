@@ -10,7 +10,7 @@ there is no animation and no translucency anywhere in the interface.
 | --- | --- |
 | **Target device** | LG webOS 24 — Chromium 108 on the frontend, Node.js 16 on the service side — at 1080p with a D-pad remote. The reference set is the LG C4. |
 | **Stack** | Vite with React 19.2 for the frontend, a Node.js 16 Luna background service carrying both the API and media channels, and hls.js for playback. |
-| **Feature scope** | Home shelves, the Movies / TV Series / Variety / Anime / VIP Blu-ray sections, search, the detail page, HLS playback, OleVod account sign-in with a captcha (which unlocks VIP playback), and 收藏 / 历史 / 设置 tabs for favorites, history, and settings. |
+| **Feature scope** | Home shelves, the Movies / TV Series / Variety / Anime / VIP Blu-ray sections, search, the detail page, HLS playback, OleVod account sign-in with a captcha (which unlocks VIP playback), and 收藏 / 历史 / 设置 / 账号 tabs for favorites, history, settings, and the account. |
 
 Several things are deliberately absent: there is no live streaming, no screen
 casting, no danmaku (scrolling comment overlay), and no cloud sync — favorites
@@ -117,8 +117,8 @@ generated locally from a timestamp in `app/src/api/sign.js`. POSTs (captcha,
 login, user info) go without it. When signed in, every request also carries the
 session token, split into the `_he` / `_pl` / `_si` query parameters.
 
-**Account session.** Signing in happens on a full-screen account page reached
-from 设置 → 欧乐账号: a captcha image, an on-screen digit keypad, and the
+**Account session.** Signing in happens on the 账号 tab (or on the same page
+as an overlay when a VIP episode asks for it): a captcha image, an on-screen digit keypad, and the
 remembered username and password filled in. Both the remembered login and the
 session token are encrypted at rest (`app/src/store/vault.js`): an AES-GCM key
 generated as non-extractable lives in IndexedDB, and localStorage only ever

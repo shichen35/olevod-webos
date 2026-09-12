@@ -1,6 +1,8 @@
 /*
- * Account page (the "account" focus layer). Opened from 设置 → 欧乐账号,
- * or from the detail page when a VIP episode needs a session (`from`).
+ * Account page. Two hosts: the 账号 tab (`host="tab"` — content of the shell's
+ * "home" focus layer in the tab's own group, like every other page), and a
+ * full-screen overlay on its own "account" focus layer, pushed by the detail
+ * page or the player when a VIP episode needs a session (`from`).
  *
  * Signed out: the left column holds the account — two real <input>s (system
  * keyboard, same pattern as SearchPage), or the remembered login already filled
@@ -11,18 +13,18 @@
  * never submits on its own.
  * Signed in: nickname, membership (pub/user/info) and 退出登录 / 清除已保存信息.
  *
- * Login success: from settings the page stays and flips to the signed-in view;
+ * Login success: on the tab the page stays and flips to the signed-in view;
  * opened from detail or from the player it closes (onDone), so the page
  * underneath reloads with the session — the player remounts and resumes.
  *
- * Focus grid (group "content"): col 0 is the left column (rows 0-1); cols 1-3
+ * Focus grid: col 0 is the left column (rows 0-1); cols 1-3
  * are the panel — row 0 换一张, rows 1-4 the keypad, row 5 登录. The engine only
  * steps col±1 sideways and probes columns vertically, so two moves are resolved
  * here: Left from the keypad's first column lands on the nearest left-column
  * item at or above that row, and Down off the left column's last item stays put
  * instead of sliding into the keypad.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import {
   useFocusable,
@@ -44,14 +46,17 @@ import {
   clearPersistError,
 } from '../store/session.js'
 
-const LAYER = 'account'
-const GROUP = 'content'
+const OVERLAY_LAYER = 'account'
 const CODE_LENGTH = 4
 const KEYPAD_ROW0 = 1
 const LOGIN_ROW = 5
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '退格', '0', '清空']
 
-const focusId = (row, col) => `${LAYER}/${GROUP}-${row}-${col}`
+// Where one instance's focusables live: { layer, group, id(row, col) }. Built
+// per host by the page and handed to every cell as `ids`.
+function makeIds(layer, group) {
+  return { layer, group, id: (row, col) => `${layer}/${group}-${row}-${col}` }
+}
 
 // Same full-screen opaque container as DetailPage (the `overlay` marker lets
 // the focus engine snap row-0 focus back to the top).
@@ -60,8 +65,8 @@ const OVERLAY_ROOT = 'overlay fixed inset-0 overflow-y-auto bg-bg px-safe pt-con
 const BTN = 'focusable rounded-lg bg-elev-2 px-8 py-3.5 text-label text-fg'
 const WIDE_BTN = 'flex h-[72px] w-full items-center justify-center rounded-[14px] text-label'
 
-function ActionButton({ row, col, label, onSelect }) {
-  const { props } = useFocusable({ layer: LAYER, group: GROUP, row, col, onSelect })
+function ActionButton({ ids, row, col, label, onSelect }) {
+  const { props } = useFocusable({ layer: ids.layer, group: ids.group, row, col, onSelect })
   return (
     <span className={BTN} {...props}>
       {label}
@@ -69,9 +74,9 @@ function ActionButton({ row, col, label, onSelect }) {
   )
 }
 
-function InputBox({ row, inputRef, value, onChange, placeholder, type = 'text', onEnter }) {
+function InputBox({ ids, row, inputRef, value, onChange, placeholder, type = 'text', onEnter }) {
   // OK on the box hands DOM focus to the input, which opens the system keyboard.
-  const { props } = useFocusable({ layer: LAYER, group: GROUP, row, col: 0, onSelect: () => inputRef.current?.focus() })
+  const { props } = useFocusable({ layer: ids.layer, group: ids.group, row, col: 0, onSelect: () => inputRef.current?.focus() })
   return (
     <div className="focusable flex w-[720px] items-center rounded-[14px] bg-elev-2 px-7 py-4" {...props}>
       <input
@@ -100,8 +105,8 @@ function InputBox({ row, inputRef, value, onChange, placeholder, type = 'text', 
   )
 }
 
-function KeyButton({ row, col, label, onPress }) {
-  const { props } = useFocusable({ layer: LAYER, group: GROUP, row, col, onSelect: onPress })
+function KeyButton({ ids, row, col, label, onPress }) {
+  const { props } = useFocusable({ layer: ids.layer, group: ids.group, row, col, onSelect: onPress })
   const isDigit = /^\d$/.test(label)
   return (
     <div
@@ -115,8 +120,8 @@ function KeyButton({ row, col, label, onPress }) {
 
 // Focusable only while it can act (or is acting): an unavailable 登录 is plain
 // text the cursor skips.
-function LoginButton({ label, onSelect }) {
-  const { props } = useFocusable({ layer: LAYER, group: GROUP, row: LOGIN_ROW, col: 1, onSelect })
+function LoginButton({ ids, label, onSelect }) {
+  const { props } = useFocusable({ layer: ids.layer, group: ids.group, row: LOGIN_ROW, col: 1, onSelect })
   return (
     <div className={`focusable ${WIDE_BTN} bg-accent text-inverse`} {...props}>
       {label}
@@ -125,9 +130,9 @@ function LoginButton({ label, onSelect }) {
 }
 
 // "row-col" of the current focus when it is on this page, else null.
-function currentCell() {
+function currentCell(ids) {
   const cur = getCurrentFocus() || ''
-  if (!cur.startsWith(`${LAYER}/${GROUP}-`)) return null
+  if (!cur.startsWith(`${ids.layer}/${ids.group}-`)) return null
   const m = cur.match(/-(\d+)-(\d+)$/)
   return m ? { row: Number(m[1]), col: Number(m[2]) } : null
 }
@@ -138,7 +143,10 @@ function keyDigit(e) {
   return null
 }
 
-export default function AccountPage({ from = 'settings', onDone, style }) {
+export default function AccountPage({ host = 'overlay', group = 'content', from = 'settings', onDone, style }) {
+  const isTab = host === 'tab'
+  const ids = useMemo(() => (isTab ? makeIds('home', group) : makeIds(OVERLAY_LAYER, 'content')), [isTab, group])
+  const focusId = ids.id
   const session = useStoreValue(sessionStore)
   const { remembered, persistError } = useStoreValue(credentialsStore)
   const signedIn = !!session
@@ -202,10 +210,16 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
   const modeRef = useRef(mode)
   modeRef.current = mode
 
+  // The overlay owns its focus layer; the tab is part of the shell's. The key
+  // handler is installed either way, but only acts while the cursor is on this
+  // page — the tab stays mounted (and its handler with it) after the user has
+  // moved on to another tab.
   useEffect(() => {
-    pushFocusLayer(LAYER)
+    if (!isTab) pushFocusLayer(OVERLAY_LAYER)
     const popKeys = pushCustomKeyHandler((e) => {
       if (modeRef.current === 'signedIn') return false
+      const cell = currentCell(ids)
+      if (!cell) return false
       const digit = keyDigit(e)
       if (digit !== null) {
         e.preventDefault()
@@ -218,8 +232,6 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
         pressKey('退格')
         return true
       }
-      const cell = currentCell()
-      if (!cell) return false
       if (e.key === 'ArrowLeft' && cell.col === 1) {
         e.preventDefault()
         for (let r = Math.min(cell.row, 1); r >= 0; r--) {
@@ -238,7 +250,7 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
       aliveRef.current = false
       captchaGenRef.current++
       popKeys()
-      popFocusLayer()
+      if (!isTab) popFocusLayer()
       clearPersistError()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -250,9 +262,13 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
   }, [signedIn, loadCaptcha])
 
   // Default focus per view: the first action when signed in, digit 1 when the
-  // login is remembered, the username box otherwise.
+  // login is remembered, the username box otherwise. On the tab this only
+  // re-places a cursor that is already on the page — the tab mounts while the
+  // cursor is still on the tab bar, and must not pull it down.
   useEffect(() => {
+    if (isTab && !currentCell(ids)) return
     focusTo(mode === 'remembered' ? focusId(KEYPAD_ROW0, 1) : focusId(0, 0))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
 
   // Fourth digit typed: hand the cursor to 登录 (only if it can submit).
@@ -337,7 +353,7 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
   }
 
   return (
-    <div className={OVERLAY_ROOT} style={style}>
+    <div className={isTab ? undefined : OVERLAY_ROOT} style={style}>
       <div className="flex gap-16">
         {/* Left column: account */}
         <div className="min-w-0 flex-1 pt-6">
@@ -350,9 +366,9 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
                 {member === 'vip' ? 'VIP 会员' : member === 'normal' ? '普通用户' : ''}
               </div>
               <div className="flex flex-col items-start gap-4">
-                <ActionButton row={0} col={0} label="退出登录" onSelect={() => setConfirm('logout')} />
+                <ActionButton ids={ids} row={0} col={0} label="退出登录" onSelect={() => setConfirm('logout')} />
                 {remembered && (
-                  <ActionButton row={1} col={0} label="清除已保存信息" onSelect={() => setConfirm('forget')} />
+                  <ActionButton ids={ids} row={1} col={0} label="清除已保存信息" onSelect={() => setConfirm('forget')} />
                 )}
               </div>
             </>
@@ -364,7 +380,7 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
               </div>
               {editing ? (
                 <div className="flex flex-col gap-5">
-                  <InputBox
+                  <InputBox ids={ids}
                     row={0}
                     inputRef={userRef}
                     value={username}
@@ -375,7 +391,7 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
                       passRef.current?.focus()
                     }}
                   />
-                  <InputBox
+                  <InputBox ids={ids}
                     row={1}
                     inputRef={passRef}
                     type="password"
@@ -394,7 +410,7 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
                   <div className="mb-3 text-body text-fg-2">••••••••</div>
                   <div className="mb-10 text-caption text-accent">已自动填写账号与密码</div>
                   <div className="flex flex-col items-start gap-4">
-                    <ActionButton
+                    <ActionButton ids={ids}
                       row={0}
                       col={0}
                       label="更换账号"
@@ -405,7 +421,7 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
                         setPassword('')
                       }}
                     />
-                    <ActionButton row={1} col={0} label="清除已保存信息" onSelect={() => !busy && setConfirm('forget')} />
+                    <ActionButton ids={ids} row={1} col={0} label="清除已保存信息" onSelect={() => !busy && setConfirm('forget')} />
                   </div>
                 </>
               )}
@@ -431,7 +447,7 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
                     </span>
                   )}
                 </div>
-                <ActionButton row={0} col={1} label="换一张" onSelect={refreshCaptcha} />
+                <ActionButton ids={ids} row={0} col={1} label="换一张" onSelect={refreshCaptcha} />
               </div>
 
               <div className="mb-6 flex gap-3.5">
@@ -447,7 +463,7 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
 
               <div className="mb-6 grid grid-cols-3 gap-3.5">
                 {KEYS.map((label, i) => (
-                  <KeyButton
+                  <KeyButton ids={ids}
                     key={label}
                     row={KEYPAD_ROW0 + Math.floor(i / 3)}
                     col={1 + (i % 3)}
@@ -458,7 +474,7 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
               </div>
 
               {canSubmit || busy ? (
-                <LoginButton label={busy ? '登录中…' : '登录'} onSelect={submit} />
+                <LoginButton ids={ids} label={busy ? '登录中…' : '登录'} onSelect={submit} />
               ) : (
                 <div className={`${WIDE_BTN} border-[3px] border-transparent bg-elev-2 text-fg-3`}>登录</div>
               )}

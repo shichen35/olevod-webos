@@ -4,13 +4,14 @@
  * taxonomy.js grows this list with no edits here.
  *
  * Pinned tabs keep their place and can't be hidden: the personal tabs at the
- * end (收藏 / 历史 / 设置) — 设置 holds the entry that brings hidden tabs back.
+ * end (收藏 / 历史 / 设置 / 账号) — 设置 holds the entry that brings hidden tabs
+ * back.
  * 首页 stays first whenever it is shown; everything else in between is the
  * user-orderable middle.
  */
 import { CATEGORIES } from './taxonomy.js'
 
-// kind: 'home' | 'search' | 'category' | 'favorites' | 'history' | 'settings'
+// kind: 'home' | 'search' | 'category' | 'favorites' | 'history' | 'settings' | 'account'
 export const TABS = [
   { key: 'home', label: '首页', kind: 'home' },
   { key: 'search', label: '搜索', kind: 'search' },
@@ -23,6 +24,7 @@ export const TABS = [
   { key: 'favorites', label: '收藏', kind: 'favorites', pinned: true },
   { key: 'history', label: '历史', kind: 'history', pinned: true },
   { key: 'settings', label: '设置', kind: 'settings', pinned: true },
+  { key: 'account', label: '账号', kind: 'account', pinned: true },
 ]
 
 export const HOME_TAB_KEY = 'home'

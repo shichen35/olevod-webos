@@ -5,7 +5,7 @@
  * tab bar; showing puts it back in the slot it had, because settings.tabOrder
  * keeps every middle tab (hidden ones included) and only the tab bar filters.
  * 首页 stays pinned first, so its arrows are inert. The pinned personal tabs
- * (收藏 / 历史 / 设置) are never listed: 设置 carries the entry back here, and
+ * (收藏 / 历史 / 设置 / 账号) are never listed: 设置 carries the entry back here, and
  * they keep their place at the end of the bar.
  *
  * Writes land immediately, so the tab bar behind the dialog updates live.
@@ -141,7 +141,7 @@ export default function TabOrderDialog({ onClose }) {
       <div className="glass-strong flex max-h-[900px] w-[720px] flex-col rounded-3xl border border-glass-edge px-10 pt-11 pb-8">
         <div className="mb-4 shrink-0 text-title text-fg">标签栏</div>
         <div className="mb-6 shrink-0 text-body leading-normal text-fg-2">
-          首页固定在最前，可上下调整其余标签，也可以隐藏任意标签。收藏、历史、设置始终显示在最后。
+          首页固定在最前，可上下调整其余标签，也可以隐藏任意标签。收藏、历史、设置、账号始终显示在最后。
         </div>
 
         <div className="mb-6 flex flex-col gap-2.5 overflow-y-auto scroll-py-focus-safe">

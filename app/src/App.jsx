@@ -6,9 +6,10 @@
  * is beneath it with display:none (never unmount — state and scroll survive).
  *
  * Focus layers mirror the view stack: shell = "home", detail = "detail",
- * account = "account", player = "player". Each overlay pushes its focus layer on
- * mount and pops it on unmount, so the back chain and focus memory stay in
- * lockstep with the stack.
+ * account overlay = "account", player = "player". Each overlay pushes its focus
+ * layer on mount and pops it on unmount, so the back chain and focus memory
+ * stay in lockstep with the stack. The account page is also a shell tab; the
+ * overlay is the sign-in gate reached from detail and the player.
  *
  * The player is the one lazy() page: its chunk (and hls.js) must stay out of
  * the startup bundle, and it genuinely unmounts on back so playback stops.
@@ -97,8 +98,8 @@ export default function App() {
   const vis = (type) => ({ display: top.type === type ? 'block' : 'none' })
 
   const openDetail = useCallback((id) => setStack((s) => [...s, { type: 'detail', id }]), [])
-  // Account page: from settings (stays open after login) or from detail (closes
-  // after login so the detail page reloads under the new session).
+  // Account overlay, from detail or the player: closes after login so the page
+  // underneath reloads under the new session.
   const openAccount = useCallback(
     (from) => setStack((s) => (s[s.length - 1].type === 'account' ? s : [...s, { type: 'account', from }])),
     [],
@@ -226,8 +227,10 @@ export default function App() {
                 <FavoritesPage group={contentGroup(tab.key)} onOpenDetail={openDetail} />
               ) : tab.kind === 'history' ? (
                 <HistoryPage group={contentGroup(tab.key)} active={tab.key === activeTab} onOpenDetail={openDetail} />
+              ) : tab.kind === 'settings' ? (
+                <SettingsPage group={contentGroup(tab.key)} />
               ) : (
-                <SettingsPage group={contentGroup(tab.key)} onOpenAccount={() => openAccount('settings')} />
+                <AccountPage host="tab" group={contentGroup(tab.key)} />
               ))}
           </div>
         ))}

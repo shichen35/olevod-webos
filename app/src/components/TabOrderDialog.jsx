@@ -2,11 +2,13 @@
  * Tab-order dialog (settings). Lists the reorderable middle tabs — 首页 and
  * 我的 are pinned to the ends and not shown — each row with 上移/下移 buttons.
  * Moves write settings.tabOrder immediately, so the tab bar behind the dialog
- * reorders live. Own "tabsort" focus layer; Back or 完成 closes.
+ * reorders live. Own "tabsort" focus layer; Back or 完成 closes. 重置 drops the
+ * saved order (settings.tabOrder = null), putting the tabs back in taxonomy
+ * order — including any category added since the order was saved.
  *
- * Focus grid: row i = list item (col 0 = up, col 1 = down), last row = 完成.
- * After a move, focus follows the item to its new row (ids are positional and
- * the row count never changes, so the target id is always registered).
+ * Focus grid: row i = list item (col 0 = up, col 1 = down), then 完成, then
+ * 重置. After a move, focus follows the item to its new row (ids are positional
+ * and the row count never changes, so the target id is always registered).
  */
 import { useEffect, useMemo } from 'react'
 import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler } from '../hooks/useFocus.js'
@@ -32,11 +34,11 @@ function SortButton({ row, col, glyph, disabled, onSelect }) {
   )
 }
 
-function DoneButton({ row, onSelect }) {
+function DialogButton({ row, label, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col: 0, onSelect })
   return (
     <button className="focusable w-full rounded-[14px] bg-glass-active py-[18px] text-label text-fg" {...props}>
-      完成
+      {label}
     </button>
   )
 }
@@ -89,7 +91,10 @@ export default function TabOrderDialog({ onClose }) {
             </div>
           ))}
         </div>
-        <DoneButton row={items.length} onSelect={onClose} />
+        <div className="flex flex-col gap-3.5">
+          <DialogButton row={items.length} label="完成" onSelect={onClose} />
+          <DialogButton row={items.length + 1} label="重置为默认顺序" onSelect={() => setSetting('tabOrder', null)} />
+        </div>
       </div>
     </div>
   )

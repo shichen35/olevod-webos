@@ -4,7 +4,7 @@
 
 ## Goal
 
-The panel invoked by the category page's "筛选" button, fixed to the right edge: three chip groups for region / year / sort +
+The panel invoked by the category page's "额外筛选" button, fixed to the right edge (sort is picked on the filter bar itself): chip groups for region / year +
 reset / done, on its own focus layer, applying selections immediately.
 
 ## Implementation requirements
@@ -15,7 +15,7 @@ reset / done, on its own focus layer, applying selections immediately.
    no slide-in animation (it's in place as soon as it opens), no scrim over the content underneath (it shows through as-is; since
    focus isn't on it, there's no risk of accidental input).
 2. **Focus layer**: opening calls `pushFocusLayer('filter')` and lands focus on `filter/panel-0-0`; closing (on unmount) calls `popFocusLayer()`, which automatically
-   restores focus to the "筛选" button. Inside the panel, everything lives in the `panel` group. The chips flow in a
+   restores focus to the "额外筛选" button. Inside the panel, everything lives in the `panel` group. The chips flow in a
    `flex-wrap` container, so how many sit on a visual row depends on their pixel widths rather than a fixed column count;
    directional movement is therefore **spatial**, not arithmetic — the layer's `setCustomKeyHandler` reads the chips' live
    layout on each key press and moves to the nearest chip in the pressed direction (up/down step to the adjacent row and
@@ -36,7 +36,7 @@ reset / done, on its own focus layer, applying selections immediately.
 
 ## Acceptance criteria
 
-- [ ] Focus enters/exits the panel without loss: opening lands focus on the panel's first cell, closing returns focus to the "筛选" button;
+- [ ] Focus enters/exits the panel without loss: opening lands focus on the panel's first cell, closing returns focus to the "额外筛选" button;
 - [ ] While the panel is open, directional keys don't affect the grid underneath; the back key closes the panel rather than leaving the page;
-- [ ] Selecting a region/year/sort option refreshes the list immediately and the summary text (next to the "筛选" button in FilterBar) updates in sync;
+- [ ] Selecting a region/year option refreshes the list immediately and the summary text (next to the "额外筛选" button in FilterBar) updates in sync;
 - [ ] "重置" restores the list and summary to defaults; restarting the app comes back up on the default filter, not the last selection.

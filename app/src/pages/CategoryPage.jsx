@@ -21,7 +21,7 @@ import * as pageCache from '../store/pageCache.js'
 
 const COLS = 6
 const PAGE_SIZE = 24
-const FILTER_ROWS = 2 // genre chips (row 0) + filter button line (row 1)
+const FILTER_ROWS = 2 // genre chips (row 0) + sort chips and filter button line (row 1)
 
 export default function CategoryPage({ category, group = 'content', onOpenDetail, onOpenFilter, refreshNonce, filterOverride }) {
   // Always opens at the category's default filter — selections are not persisted
@@ -125,21 +125,24 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
     return () => io.disconnect()
   }, [loadMore])
 
-  const selectGenre = useCallback(
-    (genre) => {
-      const f = { ...filter, genre }
+  // Genre and sort chips on the filter bar apply immediately.
+  const patchFilter = useCallback(
+    (patch) => {
+      const f = { ...filter, ...patch }
       setFilterState(f)
       setFilter(category, f)
       load(f)
     },
     [filter, category, load],
   )
+  const selectGenre = useCallback((genre) => patchFilter({ genre }), [patchFilter])
+  const selectSort = useCallback((sort) => patchFilter({ sort }), [patchFilter])
 
   const fullyLoaded = status === 'ok' && items.length > 0 && items.length >= total
 
   return (
     <div className="pt-4" ref={rootRef}>
-      <FilterBar category={category} group={group} filter={filter} onSelectGenre={selectGenre} onOpenFilter={onOpenFilter} />
+      <FilterBar category={category} group={group} filter={filter} onSelectGenre={selectGenre} onSelectSort={selectSort} onOpenFilter={onOpenFilter} />
 
       {status === 'error' && items.length === 0 ? (
         <RetryRow group={group} onRetry={() => load(filter)} />

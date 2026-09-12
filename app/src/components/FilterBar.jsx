@@ -1,9 +1,9 @@
 /*
  * Category page header (focus rows 0-1 of the content group): row 0 is a
  * horizontally scrollable strip of subtype chips (All + taxonomy genres);
- * row 1 is its own line with the "Filter" button that opens the
- * region/year/sort panel (T12) plus a non-focusable summary of the current
- * filter next to it.
+ * row 1 is its own line with the three sort chips (最新 / 最热 / 评分), the
+ * 额外筛选 button that opens the region/year/membership/letter panel, and a
+ * non-focusable summary of what that panel currently has set.
  *
  * Selecting a chip applies immediately (server-side filtering in CategoryPage).
  */
@@ -32,12 +32,10 @@ function summaryText(cfg, filter) {
     if (member) parts.push(member.label)
   }
   if (filter.letter && filter.letter !== DEFAULT_LETTER) parts.push(`首字母 ${filter.letter}`)
-  const sort = SORTS.find((s) => s.value === filter.sort)
-  if (sort) parts.push(sort.label)
   return parts.join(' · ')
 }
 
-export default function FilterBar({ category, group = 'content', filter, onSelectGenre, onOpenFilter }) {
+export default function FilterBar({ category, group = 'content', filter, onSelectGenre, onSelectSort, onOpenFilter }) {
   const cfg = getCategory(category)
   const genres = cfg.genres
 
@@ -55,9 +53,20 @@ export default function FilterBar({ category, group = 'content', filter, onSelec
           />
         ))}
       </div>
-      <div className="flex items-center gap-6">
-        <Chip group={group} row={1} col={0} label="筛选" onSelect={onOpenFilter} />
-        <div className="shrink-0 whitespace-nowrap text-caption text-fg-3">{summaryText(cfg, filter)}</div>
+      <div className="flex items-center gap-3">
+        {SORTS.map((s, i) => (
+          <Chip
+            key={s.value}
+            group={group}
+            row={1}
+            col={i}
+            label={s.label}
+            selected={filter.sort === s.value}
+            onSelect={() => onSelectSort(s.value)}
+          />
+        ))}
+        <Chip group={group} row={1} col={SORTS.length} label="额外筛选" onSelect={onOpenFilter} />
+        <div className="ml-3 shrink-0 whitespace-nowrap text-caption text-fg-3">{summaryText(cfg, filter)}</div>
       </div>
     </div>
   )

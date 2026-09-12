@@ -18,7 +18,9 @@
  * The strip lists episodes in the order the user picked for this title on the
  * detail page, so Left/Right walks them the same way in both places.
  *
- * The title chip (top-left) shows/hides together with the control bar.
+ * The title chip (top-left) shows/hides together with the control bar. A
+ * smaller quality chip sits under it with the playing resolution and the
+ * level's declared bitrate; it is dropped when nothing is known yet.
  * Quality is fully automatic (ABR capped below the UHD tier); playback speed
  * is always 1x — there is no bottom panel.
  *
@@ -86,6 +88,17 @@ const HLS_CONFIG = {
 }
 
 const UP_NEXT_S = 30 // remaining time that surfaces the Up Next card
+
+// "1920 × 1080 · 5.2 Mbps" — the level's declared bitrate, not a bandwidth
+// estimate. The native-HLS fallback has no level data, so it contributes the
+// resolution alone; with nothing known at all the caller drops the line.
+function fmtTrack(info) {
+  if (!info || !info.height) return ''
+  const size = `${info.width || '?'} × ${info.height}`
+  if (!info.bitrate) return size
+  const mbps = info.bitrate / 1000000
+  return `${size} · ${mbps >= 1 ? `${mbps.toFixed(1)} Mbps` : `${Math.round(info.bitrate / 1000)} kbps`}`
+}
 
 function fmtTime(s) {
   if (!Number.isFinite(s) || s < 0) s = 0
@@ -172,6 +185,7 @@ export default function PlayerPage({ id, episodeIndex }) {
   const [switching, setSwitching] = useState(false) // episode-change reload
   const [hint, setHint] = useState(false) // settings-gated key hint
   const [paused, setPaused] = useState(false) // drives the bar's play/pause icon
+  const [trackInfo, setTrackInfo] = useState(null) // { width, height, bitrate } of the playing level
 
   const statusRef = useRef(status)
   statusRef.current = status
@@ -537,6 +551,7 @@ export default function PlayerPage({ id, episodeIndex }) {
     let resumeCorrected = false
     let currentSrc = null // captured for the watchdog's soft reload
     setStatus('loading')
+    setTrackInfo(null) // quality belongs to the episode that is loading now
 
     // Resume decision (T18): same episode, meaningfully into it. A `finished`
     // watch point holds position at the episode's end purely so a title that
@@ -710,6 +725,12 @@ export default function PlayerPage({ id, episodeIndex }) {
       if (resumePos > 0 && video.currentTime < resumePos - 3) video.currentTime = resumePos
     }
     const onVideoError = () => setStatus('error')
+    // Native-HLS fallback only: no level data, so the element's own frame size
+    // is all there is. On the hls.js path LEVEL_SWITCHED is the better source.
+    const onResize = () => {
+      if (hls) return
+      if (video.videoHeight > 0) setTrackInfo({ width: video.videoWidth, height: video.videoHeight, bitrate: 0 })
+    }
     const onPlay = () => setPaused(false)
     const onPause = () => {
       setPaused(true)
@@ -765,6 +786,7 @@ export default function PlayerPage({ id, episodeIndex }) {
     }
     video.addEventListener('playing', onPlaying)
     video.addEventListener('loadedmetadata', onLoadedMeta)
+    video.addEventListener('resize', onResize)
     video.addEventListener('error', onVideoError)
     video.addEventListener('play', onPlay)
     video.addEventListener('pause', onPause)
@@ -802,6 +824,11 @@ export default function PlayerPage({ id, episodeIndex }) {
             hls.startLoad(resumePos > 0 ? resumePos : -1)
             video.play().catch(() => {})
           })
+          // ABR moves between levels while playing; follow the one in use.
+          hls.on(Hls.Events.LEVEL_SWITCHED, (_evt, info) => {
+            const lvl = hls?.levels?.[info.level]
+            if (lvl) setTrackInfo({ width: lvl.width, height: lvl.height, bitrate: lvl.bitrate })
+          })
           hls.on(Hls.Events.ERROR, (_evt, info) => {
             if (info.fatal) setStatus('error')
           })
@@ -832,6 +859,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       flushProgress()
       video.removeEventListener('playing', onPlaying)
       video.removeEventListener('loadedmetadata', onLoadedMeta)
+      video.removeEventListener('resize', onResize)
       video.removeEventListener('error', onVideoError)
       video.removeEventListener('play', onPlay)
       video.removeEventListener('pause', onPause)
@@ -845,6 +873,7 @@ export default function PlayerPage({ id, episodeIndex }) {
     }
   }, [data, curEp, attempt, showBar])
 
+  const trackText = fmtTrack(trackInfo)
   const episodes = data?.episodes || []
   // Per-episode API title (as on the detail grid), ordinal as fallback.
   const epLabel =
@@ -854,11 +883,19 @@ export default function PlayerPage({ id, episodeIndex }) {
     <div className="fixed inset-0 bg-black">
       <video ref={videoRef} className="h-full w-full bg-black object-contain" />
 
-      {/* Title chip — top-left, shows/hides together with the control bar. */}
+      {/* Title chip — top-left, shows/hides together with the control bar.
+          The quality chip under it is dropped entirely when nothing is known
+          yet, rather than showing a placeholder that reads as noise from the
+          couch. */}
       {barVisible && (
-        <div className="glass-strong border border-glass-edge absolute top-12 left-safe flex items-baseline gap-5 rounded-full px-8 py-3.5">
-          <span className="text-heading text-fg">{data?.title || ''}</span>
-          {epLabel && <span className="text-label text-fg-2">{epLabel}</span>}
+        <div className="absolute top-12 left-safe flex flex-col items-start gap-3">
+          <div className="glass-strong border border-glass-edge flex items-baseline gap-5 rounded-full px-8 py-3.5">
+            <span className="text-heading text-fg">{data?.title || ''}</span>
+            {epLabel && <span className="text-label text-fg-2">{epLabel}</span>}
+          </div>
+          {trackText && (
+            <div className="glass-strong border border-glass-edge rounded-full px-6 py-2.5 text-label text-fg-2">{trackText}</div>
+          )}
         </div>
       )}
 

@@ -18,6 +18,10 @@
  * The strip lists episodes in the order the user picked for this title on the
  * detail page, so Left/Right walks them the same way in both places.
  *
+ * A stream the pipeline can't seek (no seekable range, or no finite duration)
+ * turns every seek into a no-op; resume then starts from the beginning, with a
+ * toast saying so, rather than silently losing the saved position.
+ *
  * The title chip (top-left) shows/hides together with the control bar. A
  * smaller quality chip sits under it with the playing resolution and the
  * level's declared bitrate; it is dropped when nothing is known yet.
@@ -186,9 +190,12 @@ export default function PlayerPage({ id, episodeIndex }) {
   const [hint, setHint] = useState(false) // settings-gated key hint
   const [paused, setPaused] = useState(false) // drives the bar's play/pause icon
   const [trackInfo, setTrackInfo] = useState(null) // { width, height, bitrate } of the playing level
+  const [seekable, setSeekable] = useState(true) // false once the stream proves unseekable
 
   const statusRef = useRef(status)
   statusRef.current = status
+  const seekableRef = useRef(seekable)
+  seekableRef.current = seekable
   const barRef = useRef(barVisible)
   barRef.current = barVisible
   const stripRef = useRef(stripVisible)
@@ -297,6 +304,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       const v = videoRef.current
       const dur = v?.duration
       if (!v || !Number.isFinite(dur) || dur <= 0) return
+      if (!seekableRef.current) return // unseekable source: every step is a no-op
       const now = Date.now()
       if (!isRepeat) holdStartAtRef.current = now // a fresh press resets the ramp
       if (isRepeat && now - lastStepAtRef.current < SEEK_REPEAT_MS) return
@@ -552,6 +560,7 @@ export default function PlayerPage({ id, episodeIndex }) {
     let currentSrc = null // captured for the watchdog's soft reload
     setStatus('loading')
     setTrackInfo(null) // quality belongs to the episode that is loading now
+    setSeekable(true) // assume seekable until the stream says otherwise
 
     // Resume decision (T18): same episode, meaningfully into it. A `finished`
     // watch point holds position at the episode's end purely so a title that
@@ -567,6 +576,12 @@ export default function PlayerPage({ id, episodeIndex }) {
     // already read 0 during suspend/teardown, which must not clobber real
     // progress. Near the end counts as finished -> the resume point moves to
     // the next episode (from its start), or is cleared after the last one.
+    // Live truth, not the rendered state: resume decisions run before React
+    // has re-rendered with the flag.
+    const canSeek = () =>
+      Number.isFinite(video.duration) && video.duration > 0 && video.seekable && video.seekable.length > 0
+    const updateSeekable = () => setSeekable(canSeek())
+
     const lastKnown = { pos: NaN, dur: NaN }
     const flushProgress = () => {
       const { pos, dur } = lastKnown
@@ -698,9 +713,10 @@ export default function PlayerPage({ id, episodeIndex }) {
       setSwitching(false)
       setPaused(false)
       // hls.js can snap the first frame back to 0 — correct once.
+      updateSeekable()
       if (resumePos > 0 && !resumeCorrected) {
         resumeCorrected = true
-        if (video.currentTime < resumePos - 3) video.currentTime = resumePos
+        if (canSeek() && video.currentTime < resumePos - 3) video.currentTime = resumePos
       }
       if (!started) {
         started = true
@@ -714,7 +730,7 @@ export default function PlayerPage({ id, episodeIndex }) {
           area: data.region,
         })
         if (resumePos > 0) {
-          setToast(`已从 ${fmtTime(resumePos)} 继续播放`)
+          setToast(canSeek() ? `已从 ${fmtTime(resumePos)} 继续播放` : '此片源不支持跳转，已从头播放')
           clearTimeout(toastTimerRef.current)
           toastTimerRef.current = setTimeout(() => setToast(null), TOAST_MS)
         }
@@ -722,8 +738,9 @@ export default function PlayerPage({ id, episodeIndex }) {
     }
     const onLoadedMeta = () => {
       // Native-HLS resume: seek as soon as the duration is known.
-      if (resumePos > 0 && video.currentTime < resumePos - 3) video.currentTime = resumePos
+      if (resumePos > 0 && canSeek() && video.currentTime < resumePos - 3) video.currentTime = resumePos
     }
+    const onDurationChange = () => updateSeekable()
     const onVideoError = () => setStatus('error')
     // Native-HLS fallback only: no level data, so the element's own frame size
     // is all there is. On the hls.js path LEVEL_SWITCHED is the better source.
@@ -786,6 +803,7 @@ export default function PlayerPage({ id, episodeIndex }) {
     }
     video.addEventListener('playing', onPlaying)
     video.addEventListener('loadedmetadata', onLoadedMeta)
+    video.addEventListener('durationchange', onDurationChange)
     video.addEventListener('resize', onResize)
     video.addEventListener('error', onVideoError)
     video.addEventListener('play', onPlay)
@@ -859,6 +877,7 @@ export default function PlayerPage({ id, episodeIndex }) {
       flushProgress()
       video.removeEventListener('playing', onPlaying)
       video.removeEventListener('loadedmetadata', onLoadedMeta)
+      video.removeEventListener('durationchange', onDurationChange)
       video.removeEventListener('resize', onResize)
       video.removeEventListener('error', onVideoError)
       video.removeEventListener('play', onPlay)

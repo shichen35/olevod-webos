@@ -49,6 +49,8 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
   const [status, setStatus] = useState('idle') // idle | loading | ok | error
+  const [suggestStatus, setSuggestStatus] = useState('idle') // idle | ok | error
+  const [suggestRetry, setSuggestRetry] = useState(0)
   const history = useStoreValue(searchHistoryStore)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
 
@@ -84,12 +86,15 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
   }, [])
 
   // Autocomplete: debounce keystrokes, drop out-of-order responses. An empty
-  // box falls back to the hot keywords instead of firing a request.
+  // box falls back to the hot keywords instead of firing a request. A failure
+  // is shown rather than swallowed — the full title still searches fine, so the
+  // strip offers a retry instead of blocking.
   useEffect(() => {
     const kw = keyword.trim()
     const token = ++suggestGenRef.current
     if (!kw) {
       setSuggests([])
+      setSuggestStatus('idle')
       return undefined
     }
     const timer = setTimeout(() => {
@@ -98,11 +103,14 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
           if (token !== suggestGenRef.current) return
           suggestForRef.current = kw
           setSuggests(words)
+          setSuggestStatus('ok')
         })
-        .catch(() => {})
+        .catch(() => {
+          if (token === suggestGenRef.current) setSuggestStatus('error')
+        })
     }, SUGGEST_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [keyword])
+  }, [keyword, suggestRetry])
 
   const runSearch = useCallback((kw) => {
     const q = (kw || '').trim()
@@ -172,7 +180,8 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
   // rows below it up.
   const historyRow = !keyword.trim() && history.length > 0 ? 1 : null
   const chipsRow = historyRow === null ? 1 : 2
-  const resultRow = chips.length > 0 ? chipsRow + 1 : chipsRow
+  const suggestFailed = !!keyword.trim() && suggestStatus === 'error' && chips.length === 0
+  const resultRow = chips.length > 0 || suggestFailed ? chipsRow + 1 : chipsRow
 
   const pickWord = useCallback(
     (word, col) => {
@@ -307,6 +316,19 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
               <Chip key={word} group={group} row={chipsRow} col={i} label={word} onSelect={() => pickWord(word, i)} />
             ))}
           </div>
+        </div>
+      )}
+
+      {suggestFailed && (
+        <div className="mb-6 flex items-center gap-4">
+          <span className="text-caption text-fg-3">联想暂时不可用，输入完整片名仍可搜索</span>
+          <Chip
+            group={group}
+            row={chipsRow}
+            col={0}
+            label="重试联想"
+            onSelect={() => setSuggestRetry((n) => n + 1)}
+          />
         </div>
       )}
 

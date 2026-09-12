@@ -3,28 +3,28 @@
  * and per-tab content areas all read TABS from here — so adding a category in
  * taxonomy.js grows this list with no edits here.
  *
- * Pinned tabs keep their place and can't be hidden: the personal tabs at the
- * end (收藏 / 历史 / 设置 / 账号) — 设置 holds the entry that brings hidden tabs
- * back.
- * 首页 stays first whenever it is shown; everything else in between is the
- * user-orderable middle.
+ * Pinned tabs keep their place and can't be hidden: 搜索 at the front and the
+ * personal tabs at the end (收藏 / 历史 / 设置 / 账号) — 设置 holds the entry
+ * that brings hidden tabs back. Tabs with an `icon` render as round icon
+ * buttons outside the tab bar's text capsule. 首页 stays first in the capsule
+ * whenever it is shown; the categories after it are the user-orderable middle.
  */
 import { CATEGORIES } from './taxonomy.js'
 
 // kind: 'home' | 'search' | 'category' | 'favorites' | 'history' | 'settings' | 'account'
 export const TABS = [
+  { key: 'search', label: '搜索', kind: 'search', icon: 'search', pinned: true },
   { key: 'home', label: '首页', kind: 'home' },
-  { key: 'search', label: '搜索', kind: 'search' },
   ...CATEGORIES.map((c) => ({
     key: `cat-${c.id}`,
     label: c.name,
     kind: 'category',
     categoryId: c.id,
   })),
-  { key: 'favorites', label: '收藏', kind: 'favorites', pinned: true },
-  { key: 'history', label: '历史', kind: 'history', pinned: true },
-  { key: 'settings', label: '设置', kind: 'settings', pinned: true },
-  { key: 'account', label: '账号', kind: 'account', pinned: true },
+  { key: 'favorites', label: '收藏', kind: 'favorites', icon: 'bookmark', pinned: true },
+  { key: 'history', label: '历史', kind: 'history', icon: 'clock', pinned: true },
+  { key: 'settings', label: '设置', kind: 'settings', icon: 'gear', pinned: true },
+  { key: 'account', label: '账号', kind: 'account', icon: 'user', pinned: true },
 ]
 
 export const HOME_TAB_KEY = 'home'

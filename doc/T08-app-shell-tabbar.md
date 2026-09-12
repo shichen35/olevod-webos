@@ -22,7 +22,9 @@ layer-by-layer back-navigation chain. Pages stay mounted and are hidden with
    beat to mount).
 2. **TabBar**: renders `nav.js`'s TABS as the top row (focus group `tabbar`, row
    0, col = index, in the shell's `home` focus layer). The bar itself is fully
-   transparent; the tabs sit in a centered frosted-glass capsule
+   transparent; the text tabs sit in a centered frosted-glass capsule, with
+   搜索 as a round icon button at the left safe margin and the 收藏 / 历史 /
+   设置 / 账号 icon buttons at the right (same focus row, col = index)
    (`.tabbar-glass`: `--glass-bg` fill + backdrop blur + `--glass-edge`
    hairline rim, the sanctioned glass exception from T02). Selected tab =
    `--text` colored text on a `--glass-active` pill, others `--text-2`;

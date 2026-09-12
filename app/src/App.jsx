@@ -25,7 +25,7 @@ import {
 // Each tab's content lives in its own focus group so all tabs can stay mounted
 // without their focus ids colliding.
 const contentGroup = (tabKey) => `content:${tabKey}`
-import { orderedTabs } from './config/nav.js'
+import { orderedTabs, HOME_TAB_KEY } from './config/nav.js'
 import TabBar from './components/TabBar.jsx'
 import HomePage from './pages/HomePage.jsx'
 import CategoryPage from './pages/CategoryPage.jsx'
@@ -126,7 +126,9 @@ export default function App() {
   useEffect(() => {
     initFocusEngine()
     setActiveContentGroup(contentGroup('home'))
-    focusTo('home/tabbar-0-0') // land on Home in the tab bar
+    // Land on 首页 in the tab bar (搜索's icon button sits before it).
+    const homeIndex = Math.max(0, tabsRef.current.findIndex((t) => t.key === HOME_TAB_KEY))
+    focusTo(`home/tabbar-0-${homeIndex}`)
   }, [])
 
   // Background prefetch: warm every tab's cache sequentially so switching tabs

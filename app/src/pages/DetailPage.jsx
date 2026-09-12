@@ -18,6 +18,9 @@
  * canonical list is never reordered — this page reverses a copy for rendering
  * and remembers the choice per title (`store/episodeOrder.js`).
  *
+ * The blurb stays clamped to three lines; 简介 opens the full text in a
+ * scrollable dialog.
+ *
  * VIP gate: a VIP episode the current session can't play comes back with an
  * empty url. Playing one never opens the player — signed out, a dialog offers
  * 去登录 (onRequireLogin); signed in, pub/user/info tells "needs VIP" apart from
@@ -28,6 +31,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detail as fetchDetail, userInfo } from '../api/olevod.js'
 import Thumb from '../components/Thumb.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import SynopsisDialog from '../components/SynopsisDialog.jsx'
 import { sessionStore } from '../store/session.js'
 import { useFocusable, pushFocusLayer, popFocusLayer, focusTo } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
@@ -183,6 +187,7 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
     load()
   }, [sessionToken, id, load])
 
+  const [synopsisOpen, setSynopsisOpen] = useState(false)
   // VIP gate dialog: null | 'login' | 'novip' | 'unavailable' | 'unknown'.
   const [gate, setGate] = useState(null)
   const checkingRef = useRef(false)
@@ -316,6 +321,8 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
                 label={isFav ? '★ 已收藏' : '☆ 收藏'}
                 onSelect={() => toggleFavorite(favItem)}
               />
+              {/* The blurb above is clamped to three lines; this opens the rest. */}
+              {data.synopsis && <ActionButton col={2} label="简介" onSelect={() => setSynopsisOpen(true)} />}
             </div>
           </div>
         </div>
@@ -369,6 +376,10 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
           </div>
         </div>
       </div>
+
+      {synopsisOpen && (
+        <SynopsisDialog title={data.title} text={data.synopsis} onClose={() => setSynopsisOpen(false)} />
+      )}
 
       {gate === 'login' && (
         <ConfirmDialog

@@ -68,9 +68,13 @@ export default function App() {
   const [filterPanel, setFilterPanel] = useState({ open: false, category: null })
   const [filterOverrides, setFilterOverrides] = useState({})
 
-  // Tab bar order follows the user's saved preference (settings 里可调整).
+  // Tab bar order and visibility follow the user's saved preference (settings
+  // 里可调整).
   const settings = useStoreValue(settingsStore)
-  const tabs = useMemo(() => orderedTabs(getSetting(settings, 'tabOrder')), [settings])
+  const tabs = useMemo(
+    () => orderedTabs(getSetting(settings, 'tabOrder'), getSetting(settings, 'hiddenTabs')),
+    [settings],
+  )
 
   const activeTabRef = useRef(activeTab)
   activeTabRef.current = activeTab
@@ -78,6 +82,12 @@ export default function App() {
   stackRef.current = stack
   const tabsRef = useRef(tabs)
   tabsRef.current = tabs
+
+  // Hiding the active tab leaves the shell pointing at a tab that no longer
+  // exists; fall back to the first one still shown.
+  useEffect(() => {
+    if (!tabs.some((t) => t.key === activeTab)) setActiveTab(tabs[0].key)
+  }, [tabs, activeTab])
 
   const top = stack[stack.length - 1]
   const hasDetail = stack.some((f) => f.type === 'detail')

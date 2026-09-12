@@ -8,6 +8,7 @@ const DEFAULTS = {
   homeShowFavorites: true, // "我的收藏" shelf on Home
   homeShowRecent: true, // "继续观看" shelf on Home
   tabOrder: null, // reorderable middle-tab keys (see nav.js orderedTabs); null = natural order
+  hiddenTabs: [], // tab keys kept out of the tab bar (我的 can never be hidden)
   smoothScroll: true, // animate scroll on focus move (useFocus); off = instant 'auto'
 }
 

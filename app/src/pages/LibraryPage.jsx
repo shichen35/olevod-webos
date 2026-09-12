@@ -195,7 +195,7 @@ export default function LibraryPage({ group = 'content', onOpenDetail, onOpenAcc
               on={getSetting(settings, 'smoothScroll')}
               onToggle={() => toggleSetting('smoothScroll')}
             />
-            <SettingsRow group={group} row={5} label="调整标签栏顺序" onSelect={() => setTabOrderOpen(true)} />
+            <SettingsRow group={group} row={5} label="标签栏顺序与显示" onSelect={() => setTabOrderOpen(true)} />
             <SettingsRow group={group} row={6} label="清除观看历史" onSelect={() => setConfirmClear(true)} />
           </div>
           <div className="fixed bottom-8 left-1/2 -translate-x-1/2 text-center text-caption text-fg-3">版本 {__APP_VERSION__}</div>

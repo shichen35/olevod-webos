@@ -18,19 +18,26 @@ export const TABS = [
   { key: 'mine', label: '我的', kind: 'mine' },
 ]
 
+// 我的 is never hidden: it holds the settings entry that brings hidden tabs
+// back. 首页 keeps its place at the front whenever it is shown.
+export const PINNED_TAB_KEY = 'mine'
+export const HOME_TAB_KEY = 'home'
+
 export function tabByKey(key) {
   return TABS.find((t) => t.key === key) || null
 }
 
 /*
  * TABS rearranged by the user's saved order (settings.tabOrder — an array of
- * middle-tab keys). Home stays first and 我的 stays last; middle tabs follow
- * the saved order, and categories added after the order was saved keep their
- * natural position at the end of the middle section.
+ * middle-tab keys) and filtered by the hidden set (settings.hiddenTabs). Home
+ * stays first and 我的 stays last; middle tabs follow the saved order, and
+ * categories added after the order was saved keep their natural position at the
+ * end of the middle section.
  */
-export function orderedTabs(order) {
-  if (!order || !order.length) return TABS
-  const middle = TABS.slice(1, -1)
+export function orderedTabs(order, hidden = []) {
+  const visible = (t) => t.key === PINNED_TAB_KEY || !hidden.includes(t.key)
+  if (!order || !order.length) return TABS.filter(visible)
+  const middle = TABS.slice(1, -1).filter(visible)
   const byKey = new Map(middle.map((t) => [t.key, t]))
   const sorted = []
   for (const key of order) {
@@ -43,5 +50,6 @@ export function orderedTabs(order) {
   for (const t of middle) {
     if (byKey.has(t.key)) sorted.push(t)
   }
-  return [TABS[0], ...sorted, TABS[TABS.length - 1]]
+  const head = visible(TABS[0]) ? [TABS[0]] : []
+  return [...head, ...sorted, TABS[TABS.length - 1]]
 }

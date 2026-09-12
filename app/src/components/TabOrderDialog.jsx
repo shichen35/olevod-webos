@@ -1,20 +1,25 @@
 /*
- * Tab-order dialog (settings). Lists the reorderable middle tabs — 首页 and
- * 我的 are pinned to the ends and not shown — each row with 上移/下移 buttons.
- * Moves write settings.tabOrder immediately, so the tab bar behind the dialog
- * reorders live. Own "tabsort" focus layer; Back or 完成 closes. 重置 drops the
- * saved order (settings.tabOrder = null), putting the tabs back in taxonomy
- * order — including any category added since the order was saved.
+ * Tab bar dialog (settings): reorder the middle tabs, and hide or show any tab.
  *
- * Focus grid: row i = list item (col 0 = up, col 1 = down), then 完成, then
- * 重置. After a move, focus follows the item to its new row (ids are positional
- * and the row count never changes, so the target id is always registered).
+ * Two sections — 显示中 and 已隐藏. Hiding moves a tab into 已隐藏 and out of the
+ * tab bar; showing puts it back in the slot it had, because settings.tabOrder
+ * keeps every middle tab (hidden ones included) and only the tab bar filters.
+ * 首页 stays pinned first, so its arrows are inert. 我的 is never listed: it
+ * carries the settings entry, and hiding it would leave no way back here.
+ *
+ * Writes land immediately, so the tab bar behind the dialog updates live.
+ * Back or 完成 closes; 重置为默认 drops both the saved order and the hidden set.
+ *
+ * Focus grid (own "tabsort" layer): 显示中 rows first (col 0 = 上移, col 1 =
+ * 下移, col 2 = 隐藏), then 已隐藏 rows (col 0 = 显示), then 完成, then 重置.
+ * Hiding or showing changes the row count, so the follow-up focus is queued in
+ * a ref and applied after the re-render, once the new ids are registered.
  */
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { settingsStore, getSetting, setSetting } from '../store/settings.js'
-import { orderedTabs } from '../config/nav.js'
+import { TABS, orderedTabs, PINNED_TAB_KEY, HOME_TAB_KEY } from '../config/nav.js'
 
 const LAYER = 'tabsort'
 
@@ -22,14 +27,14 @@ function isBackKey(e) {
   return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
 }
 
-function SortButton({ row, col, glyph, disabled, onSelect }) {
+function RowButton({ row, col, label, disabled, wide = false, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col, onSelect })
   return (
     <div
-      className={`focusable w-21 rounded-xl bg-elev-2 py-3 text-center text-label text-fg-2 ${disabled ? 'opacity-35' : ''}`}
+      className={`focusable rounded-xl bg-elev-2 py-3 text-center text-label text-fg-2 ${wide ? 'px-6' : 'w-21'} ${disabled ? 'opacity-35' : ''}`}
       {...props}
     >
-      {glyph}
+      {label}
     </div>
   )
 }
@@ -45,12 +50,40 @@ function DialogButton({ row, label, onSelect }) {
 
 export default function TabOrderDialog({ onClose }) {
   const settings = useStoreValue(settingsStore)
-  const tabs = useMemo(() => orderedTabs(getSetting(settings, 'tabOrder')), [settings])
-  const items = useMemo(() => tabs.slice(1, -1), [tabs])
+  const order = getSetting(settings, 'tabOrder')
+  const hidden = getSetting(settings, 'hiddenTabs') || []
+
+  // Rows: everything except 我的, shown first and hidden after.
+  const shown = useMemo(
+    () => orderedTabs(order, hidden).filter((t) => t.key !== PINNED_TAB_KEY),
+    [order, hidden],
+  )
+  const hiddenTabs = useMemo(
+    () => TABS.filter((t) => t.key !== PINNED_TAB_KEY && hidden.includes(t.key)),
+    [hidden],
+  )
+  // The saved order covers every middle tab, hidden ones included, so a tab
+  // that comes back lands where it was.
+  const fullOrder = useMemo(() => orderedTabs(order, []).slice(1, -1).map((t) => t.key), [order])
+
+  const doneRow = shown.length + hiddenTabs.length
+  const resetRow = doneRow + 1
+
+  // Focus to apply once the changed row set has rendered.
+  const pendingFocusRef = useRef(null)
+  useEffect(() => {
+    if (!pendingFocusRef.current) return
+    focusTo(pendingFocusRef.current)
+    pendingFocusRef.current = null
+  })
 
   useEffect(() => {
     pushFocusLayer(LAYER)
-    focusTo(`${LAYER}/content-0-1`) // first row's 下移 (its 上移 is a no-op)
+    // Land on the first row that can actually move; with nothing movable
+    // (everything hidden, or only 首页 left) land on 完成 instead of an inert
+    // arrow or, worse, a 隐藏 button one OK press away.
+    const firstMovable = shown.findIndex((t, i) => t.key !== HOME_TAB_KEY && i < shown.length - 1)
+    focusTo(firstMovable >= 0 ? `${LAYER}/content-${firstMovable}-1` : `${LAYER}/content-${doneRow}-0`)
     const popKeys = pushCustomKeyHandler((e) => {
       if (isBackKey(e)) {
         onClose()
@@ -65,35 +98,89 @@ export default function TabOrderDialog({ onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const move = (i, dir) => {
-    const j = i + dir
-    if (j < 0 || j >= items.length) return
-    const keys = items.map((t) => t.key)
+  const queueFocus = (row, col) => {
+    pendingFocusRef.current = `${LAYER}/content-${row}-${col}`
+  }
+
+  const move = (rowIndex, dir) => {
+    const tab = shown[rowIndex]
+    const neighbor = shown[rowIndex + dir]
+    // 首页 is pinned first and never swaps; neither does a row at either end.
+    if (!tab || !neighbor || tab.key === HOME_TAB_KEY || neighbor.key === HOME_TAB_KEY) return
+    const keys = [...fullOrder]
+    const i = keys.indexOf(tab.key)
+    const j = keys.indexOf(neighbor.key)
+    if (i < 0 || j < 0) return
     ;[keys[i], keys[j]] = [keys[j], keys[i]]
     setSetting('tabOrder', keys)
-    focusTo(`${LAYER}/content-${j}-${dir < 0 ? 0 : 1}`) // follow the moved item
+    queueFocus(rowIndex + dir, dir < 0 ? 0 : 1)
+  }
+
+  const hide = (rowIndex) => {
+    const tab = shown[rowIndex]
+    if (!tab) return
+    const nextHidden = [...hidden, tab.key]
+    // Keep the order list complete so the tab remembers its slot.
+    setSetting('tabOrder', fullOrder)
+    setSetting('hiddenTabs', nextHidden)
+    const nextShown = orderedTabs(fullOrder, nextHidden).filter((t) => t.key !== PINNED_TAB_KEY)
+    const nextHiddenTabs = TABS.filter((t) => t.key !== PINNED_TAB_KEY && nextHidden.includes(t.key))
+    queueFocus(nextShown.length + nextHiddenTabs.findIndex((t) => t.key === tab.key), 0)
+  }
+
+  const show = (tabKey) => {
+    const nextHidden = hidden.filter((k) => k !== tabKey)
+    setSetting('hiddenTabs', nextHidden)
+    const nextShown = orderedTabs(order, nextHidden).filter((t) => t.key !== PINNED_TAB_KEY)
+    queueFocus(Math.max(0, nextShown.findIndex((t) => t.key === tabKey)), 0)
+  }
+
+  const reset = () => {
+    setSetting('tabOrder', null)
+    setSetting('hiddenTabs', [])
+    queueFocus(TABS.length - 1, 0) // every tab but 我的 is shown again -> 完成
   }
 
   return (
     <div className="fixed inset-0 flex items-center justify-center">
-      <div className="glass-strong w-[640px] rounded-3xl border border-glass-edge px-10 pt-11 pb-8">
-        <div className="mb-4 text-title text-fg">调整标签栏顺序</div>
-        <div className="mb-8 text-body leading-normal text-fg-2">首页与「我的」固定在两端，其余标签可上下移动。</div>
-        <div className="mb-6 flex flex-col gap-2.5">
+      <div className="glass-strong flex max-h-[900px] w-[720px] flex-col rounded-3xl border border-glass-edge px-10 pt-11 pb-8">
+        <div className="mb-4 shrink-0 text-title text-fg">标签栏</div>
+        <div className="mb-6 shrink-0 text-body leading-normal text-fg-2">
+          首页固定在最前，可上下调整其余标签，也可以隐藏任意标签。「我的」始终显示。
+        </div>
+
+        <div className="mb-6 flex flex-col gap-2.5 overflow-y-auto scrollbar-none scroll-py-focus-safe">
+          <div className="text-caption text-fg-3">显示中</div>
           {/* Keyed by position, not tab.key: focus ids are positional, and a
               keyed DOM move would carry the imperative .focused class along
               with the node while its id changes underneath it. */}
-          {items.map((tab, i) => (
-            <div className="flex items-center gap-3 rounded-[14px] bg-glass-active py-2.5 pr-2.5 pl-6" key={i}>
-              <span className="flex-1 text-body text-fg">{tab.label}</span>
-              <SortButton row={i} col={0} glyph="▲" disabled={i === 0} onSelect={() => move(i, -1)} />
-              <SortButton row={i} col={1} glyph="▼" disabled={i === items.length - 1} onSelect={() => move(i, 1)} />
+          {shown.map((tab, i) => {
+            const pinned = tab.key === HOME_TAB_KEY
+            // 首页 never moves, and neither does a tab that only has 首页 above it.
+            const canUp = !pinned && i > 0 && shown[i - 1].key !== HOME_TAB_KEY
+            const canDown = !pinned && i < shown.length - 1
+            return (
+              <div className="flex items-center gap-3 rounded-[14px] bg-glass-active py-2.5 pr-2.5 pl-6" key={i}>
+                <span className="flex-1 truncate text-body text-fg">{tab.label}</span>
+                <RowButton row={i} col={0} label="▲" disabled={!canUp} onSelect={() => move(i, -1)} />
+                <RowButton row={i} col={1} label="▼" disabled={!canDown} onSelect={() => move(i, 1)} />
+                <RowButton row={i} col={2} label="隐藏" wide onSelect={() => hide(i)} />
+              </div>
+            )
+          })}
+
+          {hiddenTabs.length > 0 && <div className="mt-4 text-caption text-fg-3">已隐藏</div>}
+          {hiddenTabs.map((tab, j) => (
+            <div className="flex items-center gap-3 rounded-[14px] bg-elev py-2.5 pr-2.5 pl-6" key={`hidden-${j}`}>
+              <span className="flex-1 truncate text-body text-fg-2">{tab.label}</span>
+              <RowButton row={shown.length + j} col={0} label="显示" wide onSelect={() => show(tab.key)} />
             </div>
           ))}
         </div>
-        <div className="flex flex-col gap-3.5">
-          <DialogButton row={items.length} label="完成" onSelect={onClose} />
-          <DialogButton row={items.length + 1} label="重置为默认顺序" onSelect={() => setSetting('tabOrder', null)} />
+
+        <div className="flex shrink-0 flex-col gap-3.5">
+          <DialogButton row={doneRow} label="完成" onSelect={onClose} />
+          <DialogButton row={resetRow} label="重置为默认" onSelect={reset} />
         </div>
       </div>
     </div>

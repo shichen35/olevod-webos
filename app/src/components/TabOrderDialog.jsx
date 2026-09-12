@@ -149,7 +149,7 @@ export default function TabOrderDialog({ onClose }) {
           首页固定在最前，可上下调整其余标签，也可以隐藏任意标签。「我的」始终显示。
         </div>
 
-        <div className="mb-6 flex flex-col gap-2.5 overflow-y-auto scrollbar-none scroll-py-focus-safe">
+        <div className="mb-6 flex flex-col gap-2.5 overflow-y-auto scroll-py-focus-safe">
           <div className="text-caption text-fg-3">显示中</div>
           {/* Keyed by position, not tab.key: focus ids are positional, and a
               keyed DOM move would carry the imperative .focused class along

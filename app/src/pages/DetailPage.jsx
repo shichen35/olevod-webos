@@ -329,7 +329,7 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
 
         <div>
           {showControls && (
-            <div className="mb-6 flex items-center gap-3 overflow-x-auto scrollbar-none">
+            <div className="mb-6 flex items-center gap-3 overflow-x-auto">
               <span className="shrink-0 pr-2 text-label text-fg-3">播放列表</span>
               {/* One toggle showing the order it is IN, not the one it would
                   switch to — the arrow carries the direction so it reads at a

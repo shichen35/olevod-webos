@@ -290,7 +290,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
       {historyRow !== null && (
         <div className="mb-6 flex flex-col gap-3">
           <div className="text-caption text-fg-3">最近搜索</div>
-          <div className="flex gap-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-3 overflow-x-auto">
             {history.map((word, i) => (
               <Chip key={word} group={group} row={historyRow} col={i} label={word} onSelect={() => pickHistory(word)} />
             ))}
@@ -311,7 +311,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
       {chips.length > 0 && (
         <div className="mb-6 flex flex-col gap-3">
           {!keyword.trim() && <div className="text-caption text-fg-3">热门搜索</div>}
-          <div className="flex gap-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-3 overflow-x-auto">
             {chips.map((word, i) => (
               <Chip key={word} group={group} row={chipsRow} col={i} label={word} onSelect={() => pickWord(word, i)} />
             ))}

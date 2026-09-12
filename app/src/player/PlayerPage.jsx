@@ -1032,7 +1032,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
       {stripVisible && episodes.length > 1 && (
         <div className="glass-strong border border-glass-edge absolute bottom-8 left-safe right-safe rounded-[20px] px-7 py-5">
           <div className="mb-3 text-caption text-fg-2">选集</div>
-          <div className="flex gap-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-3 overflow-x-auto">
             {stripList.map((ep, i) => {
               const ordinal = `第${ep.index}集`
               const title = ep.title || ordinal

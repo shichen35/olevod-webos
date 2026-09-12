@@ -43,7 +43,7 @@ export default function FilterBar({ category, group = 'content', filter, onSelec
 
   return (
     <div className="mb-6 flex flex-col gap-4">
-      <div className="flex gap-3 overflow-x-auto scrollbar-none">
+      <div className="flex gap-3 overflow-x-auto">
         {genres.map((g, i) => (
           <Chip
             key={g.value}

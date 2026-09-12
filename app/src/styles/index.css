@@ -145,14 +145,6 @@
  * pre-animation solid white fill — only the cursor now glides.
  */
 
-/* Hidden scrollbar for rows the focus engine scrolls. */
-@utility scrollbar-none {
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
 /* Cards: skip layout/paint work for off-screen entries. */
 @utility cv-auto {
   content-visibility: auto;
@@ -160,6 +152,18 @@
 }
 
 @layer base {
+  /* No scrollbars anywhere. Every scroller in this app is driven by the focus
+     engine, never by a pointer, so a track is dead pixels — and on the TV it
+     showed up as a bright strip down the right edge of the home screen. Both
+     spellings are needed: Chromium 108 (the TV) only understands the WebKit
+     pseudo-element; `scrollbar-width` covers newer engines in the browser. */
+  * {
+    scrollbar-width: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Global ban guard: no motion of any kind, anywhere. */
   *,
   *::before,

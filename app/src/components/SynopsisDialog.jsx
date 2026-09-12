@@ -56,7 +56,7 @@ export default function SynopsisDialog({ title, text, onClose }) {
         <div className="mb-6 shrink-0 text-title text-fg">{title}</div>
         <div
           ref={bodyRef}
-          className="mb-8 overflow-y-auto whitespace-pre-line text-body leading-relaxed text-fg-2 scrollbar-none"
+          className="mb-8 overflow-y-auto whitespace-pre-line text-body leading-relaxed text-fg-2"
         >
           {text}
         </div>

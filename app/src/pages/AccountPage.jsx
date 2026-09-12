@@ -4,25 +4,28 @@
  * full-screen overlay on its own "account" focus layer, pushed by the detail
  * page or the player when a VIP episode needs a session (`from`).
  *
- * Signed out: the left column holds the account — two real <input>s (system
- * keyboard, same pattern as SearchPage), or the remembered login already filled
- * in. The right glass panel holds the captcha: the image (160x80 source shown
- * at 2x on a light token, since the PNG is transparent with dark strokes), four
- * digit slots, an on-screen 3x4 keypad and 登录. Remote/keyboard digit keys type
- * straight into the slots. Filling the fourth digit moves focus to 登录; it
- * never submits on its own.
- * Signed in: nickname, membership (pub/user/info) and 退出登录 / 清除已保存信息.
+ * Two columns side by side, the pair centered on the screen — everything fits
+ * one 1080p screen with no scrolling, which a single stacked column could not.
+ * The left column is the account: signed out, two real <input>s (system
+ * keyboard, same pattern as SearchPage) or the remembered login already filled
+ * in; signed in, an avatar, the nickname, the membership line (pub/user/info)
+ * and 退出登录 / 清除已保存信息.
+ * The right glass panel is the captcha: the image (160x80 source shown at 2x
+ * on a light token, since the PNG is transparent with dark strokes), four
+ * digit slots, an on-screen 3x4 keypad and 登录. Remote/keyboard digit keys
+ * type straight into the slots. Filling the fourth digit moves focus to 登录;
+ * it never submits on its own.
  *
  * Login success: on the tab the page stays and flips to the signed-in view;
  * opened from detail or from the player it closes (onDone), so the page
  * underneath reloads with the session — the player remounts and resumes.
  *
- * Focus grid: col 0 is the left column (rows 0-1); cols 1-3
- * are the panel — row 0 换一张, rows 1-4 the keypad, row 5 登录. The engine only
- * steps col±1 sideways and probes columns vertically, so two moves are resolved
- * here: Left from the keypad's first column lands on the nearest left-column
- * item at or above that row, and Down off the left column's last item stays put
- * instead of sliding into the keypad.
+ * Focus grid: col 0 is the left column (rows 0-1); cols 1-3 are the panel —
+ * row 0 换一张, rows 1-4 the keypad, row 5 登录. The engine only steps col±1
+ * sideways and probes columns vertically, so two moves are resolved here: Left
+ * from the keypad's first column lands on the nearest left-column item at or
+ * above that row, and Down off the left column's last item stays put instead
+ * of sliding into the keypad.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
@@ -48,6 +51,7 @@ import {
 
 const OVERLAY_LAYER = 'account'
 const CODE_LENGTH = 4
+const CAPTCHA_ROW = 0
 const KEYPAD_ROW0 = 1
 const LOGIN_ROW = 5
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '退格', '0', '清空']
@@ -78,7 +82,7 @@ function InputBox({ ids, row, inputRef, value, onChange, placeholder, type = 'te
   // OK on the box hands DOM focus to the input, which opens the system keyboard.
   const { props } = useFocusable({ layer: ids.layer, group: ids.group, row, col: 0, onSelect: () => inputRef.current?.focus() })
   return (
-    <div className="focusable flex w-[720px] items-center rounded-[14px] bg-elev-2 px-7 py-4" {...props}>
+    <div className="focusable flex w-full items-center rounded-[14px] bg-elev-2 px-7 py-4" {...props}>
       <input
         ref={inputRef}
         type={type}
@@ -354,14 +358,29 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
 
   return (
     <div className={isTab ? undefined : OVERLAY_ROOT} style={style}>
-      <div className="flex gap-16">
-        {/* Left column: account */}
-        <div className="min-w-0 flex-1 pt-6">
+      {/* 720 + 64 + 680: the pair is a fixed block centered in the content
+          width, rather than two columns stretched to whatever is left. */}
+      <div className="mx-auto flex w-[1464px] gap-16 pt-2">
+        {/* Left: the account */}
+        <div className="flex w-[720px] shrink-0 flex-col">
           {signedIn ? (
             <>
-              <div className="mb-3 text-title font-bold text-fg">欧乐账号</div>
-              <div className="mb-12 text-body text-fg-2">已登录</div>
-              <div className="mb-2 text-heading text-fg">{session.name}</div>
+              <div className="glass mb-7 flex size-36 items-center justify-center rounded-full border border-glass-edge text-fg">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="80"
+                  height="80"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+                </svg>
+              </div>
+              <div className="mb-2 text-title font-bold text-fg">{session.name}</div>
               <div className={`mb-10 min-h-[35px] text-body ${member === 'vip' ? 'text-accent' : 'text-fg-2'}`}>
                 {member === 'vip' ? 'VIP 会员' : member === 'normal' ? '普通用户' : ''}
               </div>
@@ -380,7 +399,8 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
               </div>
               {editing ? (
                 <div className="flex flex-col gap-5">
-                  <InputBox ids={ids}
+                  <InputBox
+                    ids={ids}
                     row={0}
                     inputRef={userRef}
                     value={username}
@@ -391,7 +411,8 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
                       passRef.current?.focus()
                     }}
                   />
-                  <InputBox ids={ids}
+                  <InputBox
+                    ids={ids}
                     row={1}
                     inputRef={passRef}
                     type="password"
@@ -410,7 +431,8 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
                   <div className="mb-3 text-body text-fg-2">••••••••</div>
                   <div className="mb-10 text-caption text-accent">已自动填写账号与密码</div>
                   <div className="flex flex-col items-start gap-4">
-                    <ActionButton ids={ids}
+                    <ActionButton
+                      ids={ids}
                       row={0}
                       col={0}
                       label="更换账号"
@@ -421,7 +443,13 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
                         setPassword('')
                       }}
                     />
-                    <ActionButton ids={ids} row={1} col={0} label="清除已保存信息" onSelect={() => !busy && setConfirm('forget')} />
+                    <ActionButton
+                      ids={ids}
+                      row={1}
+                      col={0}
+                      label="清除已保存信息"
+                      onSelect={() => !busy && setConfirm('forget')}
+                    />
                   </div>
                 </>
               )}
@@ -431,8 +459,8 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
           {persistError && <div className="mt-3 text-caption text-uhd">{persistError}</div>}
         </div>
 
-        {/* Right panel: captcha + keypad, or a note when signed in */}
-        <div className="glass w-[680px] shrink-0 rounded-[20px] border border-glass-edge p-8">
+        {/* Right: captcha + keypad, or a note when signed in */}
+        <div className="glass h-fit w-[680px] shrink-0 rounded-[20px] border border-glass-edge p-8">
           {signedIn ? (
             <div className="text-body leading-normal text-fg-2">已登录，可以播放账号有权限的会员内容。</div>
           ) : (
@@ -447,7 +475,7 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
                     </span>
                   )}
                 </div>
-                <ActionButton ids={ids} row={0} col={1} label="换一张" onSelect={refreshCaptcha} />
+                <ActionButton ids={ids} row={CAPTCHA_ROW} col={1} label="换一张" onSelect={refreshCaptcha} />
               </div>
 
               <div className="mb-6 flex gap-3.5">
@@ -463,7 +491,8 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
 
               <div className="mb-6 grid grid-cols-3 gap-3.5">
                 {KEYS.map((label, i) => (
-                  <KeyButton ids={ids}
+                  <KeyButton
+                    ids={ids}
                     key={label}
                     row={KEYPAD_ROW0 + Math.floor(i / 3)}
                     col={1 + (i % 3)}

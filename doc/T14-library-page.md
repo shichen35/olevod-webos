@@ -16,7 +16,8 @@ The "我的" (Library) tab: three segments for favorites / history / settings, p
 3. **Settings segment**: a single-column grouped list (T02's third focus-state category, rows 1-3 of the content group):
    - "首页显示收藏" and "首页显示最近观看" → Apple-style switches (settings store) that show/hide the home page's
      "My Favorites" and "Continue Watching" shelves;
-   - "清除观看历史" → a danger row confirmed via ConfirmDialog.
+   - "清除观看历史" → a danger row confirmed via ConfirmDialog. (It later moved onto the History surface itself,
+     as 全部删除 inside 管理 mode, so the confirm sits beside the records it deletes.)
    The app version renders as a plain non-focusable caption pinned near the bottom of the screen (the build-time
    `__APP_VERSION__` constant) — no separate "About" row.
 4. **ConfirmDialog**: a centered frosted-glass rounded card (`--glass-strong` + backdrop blur) with a title + description +

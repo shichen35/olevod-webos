@@ -110,8 +110,8 @@ Down-Down, not something that appears on every seek.
 The search page opens on hot keywords and forgets everything between sessions. Typing
 on a TV remote is expensive enough that repeat searches should be one click. Store the
 last ~10 committed keywords (same `createStore` pattern as favorites), show them above
-the hot-keyword strip, and add a clear action to the Library settings list next to
-清除观看历史.
+the hot-keyword strip, and give them a clear action of their own — the watch history's
+lives on the 历史 tab, next to the records it deletes.
 
 **9. 简 / 繁 toggle · M**
 The web keeps a 繁 switch pinned to the side rail — for an overseas-Chinese audience

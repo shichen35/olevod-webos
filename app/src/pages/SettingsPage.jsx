@@ -1,16 +1,14 @@
 /*
- * 设置 tab: a page title, then a grouped list (rows 0-4, col 0 of the tab's
- * content group) with
- * the app version as a plain label below. Clearing history goes through
- * ConfirmDialog; the tab bar's order and visibility through TabOrderDialog.
+ * 设置 tab: a page title, then a grouped list (rows 0-3, col 0 of the tab's
+ * content group) with the app version as a plain label below. The tab bar's
+ * order and visibility are edited in TabOrderDialog; clearing the watch
+ * history lives on the 历史 tab, next to the records it deletes.
  */
 import { useState } from 'react'
-import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import PageTitle from '../components/PageTitle.jsx'
 import TabOrderDialog from '../components/TabOrderDialog.jsx'
 import { useFocusable } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
-import { clear as clearHistory } from '../store/history.js'
 import { settingsStore, getSetting, toggleSetting } from '../store/settings.js'
 
 // tvOS-style list row: transparent at rest, solid white fill + dark text when
@@ -43,7 +41,6 @@ function SettingsToggle({ group, row, label, on, onToggle }) {
 }
 
 export default function SettingsPage({ group = 'content' }) {
-  const [confirmClear, setConfirmClear] = useState(false)
   const [tabOrderOpen, setTabOrderOpen] = useState(false)
   const settings = useStoreValue(settingsStore)
 
@@ -74,25 +71,10 @@ export default function SettingsPage({ group = 'content' }) {
           onToggle={() => toggleSetting('smoothScroll')}
         />
         <SettingsRow group={group} row={3} label="标签栏顺序与显示" onSelect={() => setTabOrderOpen(true)} />
-        <SettingsRow group={group} row={4} label="清除观看历史" onSelect={() => setConfirmClear(true)} />
       </div>
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 text-center text-caption text-fg-3">版本 {__APP_VERSION__}</div>
 
       {tabOrderOpen && <TabOrderDialog onClose={() => setTabOrderOpen(false)} />}
-
-      {confirmClear && (
-        <ConfirmDialog
-          title="清除观看历史"
-          description="将删除全部观看记录与继续观看进度，此操作无法撤销。"
-          confirmLabel="清除"
-          cancelLabel="取消"
-          onConfirm={() => {
-            clearHistory()
-            setConfirmClear(false)
-          }}
-          onCancel={() => setConfirmClear(false)}
-        />
-      )}
     </div>
   )
 }

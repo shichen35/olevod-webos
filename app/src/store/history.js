@@ -56,6 +56,11 @@ export function getWatchState(id) {
   return historyStore.get().find((x) => x.id === id)?.watch || null
 }
 
+/** Drop one title (the library's per-card delete in 管理 mode). */
+export function remove(id) {
+  historyStore.set((prev) => prev.filter((x) => x.id !== id))
+}
+
 export function clear() {
   historyStore.set([])
 }

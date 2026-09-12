@@ -5,21 +5,29 @@
  * (clear history via ConfirmDialog) with the app version as a plain label below.
  * Its first row is the OleVod account: nickname or 未登录, opening the account
  * page (App.jsx view stack).
+ *
+ * History has a 管理 mode: a D-pad grid has no room for a second focusable per
+ * card (col IS the card index), so instead the whole grid switches meaning —
+ * cards carry a 删除 marker and OK removes that entry, with the cursor landing
+ * on whichever card slides into the slot.
  */
 import { useCallback, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import TabOrderDialog from '../components/TabOrderDialog.jsx'
-import { useFocusable } from '../hooks/useFocus.js'
+import { useFocusable, focusTo } from '../hooks/useFocus.js'
 import { useSlidingCursor } from '../hooks/useSlidingCursor.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore } from '../store/favorites.js'
-import { historyStore, clear as clearHistory, formatWatchedAt } from '../store/history.js'
+import { historyStore, clear as clearHistory, remove as removeHistory, formatWatchedAt } from '../store/history.js'
 import { settingsStore, getSetting, toggleSetting } from '../store/settings.js'
 import { sessionStore } from '../store/session.js'
 
 const COLS = 6
 const CONTENT_ROW0 = 1 // segment control is row 0; content starts at row 1
+// History adds an action row between the two, so its grid starts one lower.
+const HISTORY_ACTION_ROW = 1
+const HISTORY_ROW0 = 2
 
 const SEGMENTS = [
   { key: 'fav', label: '收藏' },
@@ -51,7 +59,16 @@ function SegChip({ group, col, label, active, showSelection, onHover, onSelect }
   )
 }
 
-function CardGrid({ items, group, onOpenDetail, withEp }) {
+function ActionChip({ group, row, col, label, onSelect }) {
+  const { props } = useFocusable({ layer: 'home', group, row, col, onSelect })
+  return (
+    <span className="focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label text-fg" {...props}>
+      {label}
+    </span>
+  )
+}
+
+function CardGrid({ items, group, onOpenDetail, withEp, rowStart = CONTENT_ROW0, manage = false, onDelete }) {
   if (!items.length) return <div className="py-20 text-center text-body text-fg-3">这里还没有内容</div>
   return (
     <div className="grid grid-cols-6 gap-x-gutter gap-y-6">
@@ -61,9 +78,10 @@ function CardGrid({ items, group, onOpenDetail, withEp }) {
           item={item}
           layer="home"
           group={group}
-          row={CONTENT_ROW0 + Math.floor(i / COLS)}
+          row={rowStart + Math.floor(i / COLS)}
           col={i % COLS}
-          onSelect={() => onOpenDetail(item.id)}
+          marker={manage ? '删除' : undefined}
+          onSelect={() => (manage ? onDelete(i) : onOpenDetail(item.id))}
           watchedEp={withEp ? item.watch?.lastEpisodeIndex : undefined}
           progress={withEp ? item.watch : undefined}
           timeLabel={withEp ? formatWatchedAt(item.updatedAt) : undefined}
@@ -115,6 +133,7 @@ function SettingsToggle({ group, row, label, on, onToggle }) {
 
 export default function LibraryPage({ group = 'content', onOpenDetail, onOpenAccount }) {
   const [seg, setSeg] = useState('fav')
+  const [manageHistory, setManageHistory] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const [tabOrderOpen, setTabOrderOpen] = useState(false)
   const debounceRef = useRef(null)
@@ -129,14 +148,40 @@ export default function LibraryPage({ group = 'content', onOpenDetail, onOpenAcc
   const settings = useStoreValue(settingsStore)
   const session = useStoreValue(sessionStore)
 
+  // Leaving the history segment always leaves 管理 mode: coming back to a grid
+  // where OK deletes, with no memory of having armed it, is a trap.
   const hoverSeg = useCallback((key) => {
     clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => setSeg(key), 150)
+    debounceRef.current = setTimeout(() => {
+      setSeg(key)
+      if (key !== 'history') setManageHistory(false)
+    }, 150)
   }, [])
   const commitSeg = useCallback((key) => {
     clearTimeout(debounceRef.current)
     setSeg(key)
+    if (key !== 'history') setManageHistory(false)
   }, [])
+
+  // Delete the entry at `index` and keep the cursor in the grid. Ids are
+  // positional, so the slot that just opened up is the same id — it belongs to
+  // the next card now. The last card's slot disappears, so fall back one.
+  const deleteAt = useCallback(
+    (index) => {
+      const item = history[index]
+      if (!item) return
+      removeHistory(item.id)
+      const left = history.length - 1
+      if (left === 0) {
+        setManageHistory(false)
+        focusTo(`home/${group}-${HISTORY_ACTION_ROW}-0`)
+        return
+      }
+      const target = Math.min(index, left - 1)
+      focusTo(`home/${group}-${HISTORY_ROW0 + Math.floor(target / COLS)}-${target % COLS}`)
+    },
+    [history, group],
+  )
 
   return (
     <div className="pt-4">
@@ -163,7 +208,31 @@ export default function LibraryPage({ group = 'content', onOpenDetail, onOpenAcc
       </div>
 
       {seg === 'fav' && <CardGrid items={favorites} group={group} onOpenDetail={onOpenDetail} />}
-      {seg === 'history' && <CardGrid items={history} group={group} onOpenDetail={onOpenDetail} withEp />}
+      {seg === 'history' && (
+        <>
+          <div className="mb-6 flex items-center gap-5">
+            <ActionChip
+              group={group}
+              row={HISTORY_ACTION_ROW}
+              col={0}
+              label={manageHistory ? '完成' : '管理'}
+              onSelect={() => setManageHistory((on) => !on)}
+            />
+            <span className="text-caption text-fg-3">
+              {manageHistory ? '按 OK 删除该条记录，删完按「完成」退出' : '进入管理可逐条删除记录'}
+            </span>
+          </div>
+          <CardGrid
+            items={history}
+            group={group}
+            onOpenDetail={onOpenDetail}
+            withEp
+            rowStart={HISTORY_ROW0}
+            manage={manageHistory}
+            onDelete={deleteAt}
+          />
+        </>
+      )}
       {seg === 'settings' && (
         <>
           {/* iOS-style inset grouped list + version caption below. */}

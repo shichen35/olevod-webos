@@ -16,7 +16,7 @@ const BADGE = 'absolute rounded-sm px-2 py-[5px] text-caption leading-none'
 
 // `className` sets the sizing context: shelves pass "w-card shrink-0" (fixed
 // row of 6); grids pass nothing and the grid track sizes the card.
-function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, progress, timeLabel, className = '' }) {
+function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, progress, timeLabel, marker, className = '' }) {
   const { props } = useFocusable({ layer, group, row, col, onSelect })
 
   const uhd = /4k|uhd|蓝光/i.test(item.remarks || '')
@@ -33,7 +33,13 @@ function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, prog
       <div className="relative aspect-2/3 w-full overflow-hidden rounded-[15px] border-3 border-transparent bg-elev focused:border-focus">
         <Thumb pic={item.pic} alt={item.name} />
         {item.score > 0 && <span className={`${BADGE} top-2 left-2 bg-elev font-semibold text-accent`}>{item.score}</span>}
-        {uhd && <span className={`${BADGE} top-2 right-2 bg-uhd font-semibold text-inverse`}>UHD</span>}
+        {/* A marker (history's 管理 mode) takes the UHD corner: what OK does
+            right now matters more than the source's tier. */}
+        {marker ? (
+          <span className={`${BADGE} top-2 right-2 bg-uhd font-semibold text-inverse`}>{marker}</span>
+        ) : (
+          uhd && <span className={`${BADGE} top-2 right-2 bg-uhd font-semibold text-inverse`}>UHD</span>
+        )}
         {watchedEp != null && <span className={`${BADGE} bottom-3.5 left-2 bg-elev-2 text-fg`}>看到第{watchedEp}集</span>}
         {pct > 0 && (
           <div className="absolute inset-x-0 bottom-0 h-1.5 bg-elev-2">
@@ -65,6 +71,7 @@ function areEqual(a, b) {
     a.col === b.col &&
     a.watchedEp === b.watchedEp &&
     a.timeLabel === b.timeLabel &&
+    a.marker === b.marker &&
     a.progress?.position === b.progress?.position &&
     a.progress?.duration === b.progress?.duration
   )

@@ -1,6 +1,6 @@
 /*
- * 历史 tab: a 管理 chip on row 0, then a 6-column card grid from row 1, fed
- * live from the history store.
+ * 历史 tab: the page title, then the 管理 chip on its own line (row 0), then a
+ * 6-column card grid from row 1, fed live from the history store.
  *
  * 管理 mode turns the cards into 删除 targets (see CardGrid); OK removes that
  * entry and the cursor lands on whichever card slides into the slot. Leaving
@@ -9,6 +9,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import CardGrid, { GRID_COLS } from '../components/CardGrid.jsx'
+import PageTitle from '../components/PageTitle.jsx'
 import { useFocusable, focusTo } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { historyStore, remove as removeHistory } from '../store/history.js'
@@ -54,7 +55,8 @@ export default function HistoryPage({ group = 'content', active = true, onOpenDe
   )
 
   return (
-    <>
+    <div className="pt-4">
+      <PageTitle>观看历史</PageTitle>
       <div className="mb-6 flex items-center gap-5">
         <ActionChip
           group={group}
@@ -76,6 +78,6 @@ export default function HistoryPage({ group = 'content', active = true, onOpenDe
         manage={manage}
         onDelete={deleteAt}
       />
-    </>
+    </div>
   )
 }

@@ -1,10 +1,12 @@
 /*
- * 设置 tab: a grouped list (rows 0-4, col 0 of the tab's content group) with
+ * 设置 tab: a page title, then a grouped list (rows 0-4, col 0 of the tab's
+ * content group) with
  * the app version as a plain label below. Clearing history goes through
  * ConfirmDialog; the tab bar's order and visibility through TabOrderDialog.
  */
 import { useState } from 'react'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import PageTitle from '../components/PageTitle.jsx'
 import TabOrderDialog from '../components/TabOrderDialog.jsx'
 import { useFocusable } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
@@ -46,7 +48,8 @@ export default function SettingsPage({ group = 'content' }) {
   const settings = useStoreValue(settingsStore)
 
   return (
-    <>
+    <div className="pt-4">
+      <PageTitle>设置</PageTitle>
       {/* iOS-style inset grouped list + version caption below. */}
       <div className="glass max-w-[900px] rounded-[20px] border border-glass-edge p-1.5">
         <SettingsToggle
@@ -90,6 +93,6 @@ export default function SettingsPage({ group = 'content' }) {
           onCancel={() => setConfirmClear(false)}
         />
       )}
-    </>
+    </div>
   )
 }

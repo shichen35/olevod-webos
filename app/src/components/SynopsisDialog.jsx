@@ -51,7 +51,7 @@ export default function SynopsisDialog({ title, text, onClose }) {
   }, [])
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center">
+    <div className="fixed inset-0 z-10 flex items-center justify-center">
       <div className="glass-strong flex max-h-[820px] w-[1200px] flex-col rounded-3xl border border-glass-edge px-12 pt-11 pb-8">
         <div className="mb-6 shrink-0 text-title text-fg">{title}</div>
         <div

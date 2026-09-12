@@ -142,7 +142,7 @@ export default function TabOrderDialog({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center">
+    <div className="fixed inset-0 z-10 flex items-center justify-center">
       <div className="glass-strong flex max-h-[900px] w-[720px] flex-col rounded-3xl border border-glass-edge px-10 pt-11 pb-8">
         <div className="mb-4 shrink-0 text-title text-fg">标签栏</div>
         <div className="mb-6 shrink-0 text-body leading-normal text-fg-2">

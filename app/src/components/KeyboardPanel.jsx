@@ -57,7 +57,7 @@ export default function KeyboardPanel({ value, onChange, onSubmit, onSystemKeybo
   }, [])
 
   return (
-    <div className="glass-strong fixed inset-y-0 right-0 w-[600px] overflow-y-auto border-l border-glass-edge px-10 py-12 scroll-py-focus-safe">
+    <div className="glass-strong fixed inset-y-0 right-0 z-10 w-[600px] overflow-y-auto border-l border-glass-edge px-10 py-12 scroll-py-focus-safe">
       <div className="mb-4 text-caption text-fg-3">屏幕键盘</div>
       {/* The query as typed so far; the search box is behind the panel. */}
       <div className="mb-8 min-h-[64px] rounded-[14px] bg-elev px-6 py-3 text-heading text-fg">

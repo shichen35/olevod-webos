@@ -12,6 +12,9 @@
  *               row) · OK = jump to it, strip stays up so you can keep hopping
  *               (the stream reloads behind the strip, no loading takeover) ·
  *               Up/Back = back to the plain bar
+ *   any state: the remote's media keys — play / pause (or the combined
+ *               play-pause), fast-forward and rewind by 30s, stop = leave the
+ *               player. They never move focus, so no state can want them.
  *   Seeks accumulate into a pending target and only commit after the key has
  *   settled for ~500ms — no burst of segment requests while stepping.
  *
@@ -62,6 +65,7 @@ import {
 const LAYER = 'player'
 
 const STEP_S = 15 // seek step per tap, bar shown or hidden (long-press ramps it)
+const MEDIA_STEP_S = 30 // the remote's FF/REW keys jump further than the D-pad
 const SEEK_SETTLE_MS = 500 // commit the pending seek once input settles
 const SEEK_REPEAT_MS = 200 // long-press step cadence (native key repeat, throttled)
 const BADGE_LINGER_MS = 800 // keep the target badge up briefly after committing
@@ -120,6 +124,21 @@ function fmtTime(s) {
   const mm = String(m).padStart(2, '0')
   const ss = String(sec).padStart(2, '0')
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
+}
+
+// webOS remote media keys. The key names cover browsers that report them
+// instead of the webOS key codes.
+const MEDIA_KEYCODES = { 415: 'play', 19: 'pause', 413: 'stop', 417: 'forward', 412: 'rewind' }
+const MEDIA_KEYNAMES = {
+  MediaPlay: 'play',
+  MediaPause: 'pause',
+  MediaPlayPause: 'toggle',
+  MediaStop: 'stop',
+  MediaFastForward: 'forward',
+  MediaRewind: 'rewind',
+}
+function mediaKey(e) {
+  return MEDIA_KEYCODES[e.keyCode] || MEDIA_KEYNAMES[e.key] || null
 }
 
 function isBackKey(e) {
@@ -421,6 +440,24 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
   useEffect(() => {
     pushFocusLayer(LAYER)
     const popKeys = pushCustomKeyHandler((e) => {
+      // Media keys first: they apply in every state (bar hidden, bar shown,
+      // strip open) and never move focus. Seeking shows the usual target badge
+      // but deliberately leaves the bar alone — reaching for these keys is how
+      // you skip ahead WITHOUT lighting up the screen.
+      const media = mediaKey(e)
+      if (media) {
+        e.preventDefault()
+        if (statusRef.current !== 'ok') return true // nothing to drive yet
+        const v = videoRef.current
+        if (media === 'stop') window.dispatchEvent(new CustomEvent('tv-back'))
+        else if (media === 'forward') stepSeek(MEDIA_STEP_S, e.repeat)
+        else if (media === 'rewind') stepSeek(-MEDIA_STEP_S, e.repeat)
+        else if (media === 'toggle') togglePlay()
+        else if (media === 'play' && v?.paused) togglePlay()
+        else if (media === 'pause' && v && !v.paused) togglePlay()
+        return true
+      }
+
       // Episode strip owns keys the moment it's open — evaluated before the
       // status gate so it stays fully navigable while the next pick is still
       // loading (the player never blanks to the loading screen mid-hop).
@@ -1034,6 +1071,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
           <div>OK 播放 / 暂停 · 左右键快退快进（长按加速）</div>
           <div className="mt-1.5">下键调出控制条 · 控制条上再按下键选集</div>
           <div className="mt-1.5">上键查看本提示 · 返回键退出</div>
+          <div className="mt-1.5">遥控媒体键：播放 / 暂停 · 快进快退 30 秒 · 停止键退出</div>
         </div>
       )}
 

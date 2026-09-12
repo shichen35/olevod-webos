@@ -1,5 +1,5 @@
 /*
- * Account page (the "account" focus layer). Opened from 我的 → 设置 → 欧乐账号,
+ * Account page (the "account" focus layer). Opened from 设置 → 欧乐账号,
  * or from the detail page when a VIP episode needs a session (`from`).
  *
  * Signed out: the left column holds the account — two real <input>s (system

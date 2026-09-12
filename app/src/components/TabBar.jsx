@@ -7,9 +7,9 @@
  * commits — it switches immediately and bumps the tab's refresh nonce so the
  * page refetches (wired in T15). Down leaves the bar for the content area.
  *
- * The white focus fill slides between tabs via useSlidingCursor (shared with the
- * 我的 segment control); see that hook for the animation and the cursor-vs-
- * selection rules. The tab bar just supplies its capsule, tabs, and active tab.
+ * The white focus fill slides between tabs via useSlidingCursor; see that hook
+ * for the animation and the cursor-vs-selection rules. The tab bar just
+ * supplies its capsule, tabs, and active tab.
  */
 import { useRef } from 'react'
 import { useFocusable } from '../hooks/useFocus.js'

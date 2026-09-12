@@ -29,10 +29,10 @@ up automatically.
    id. Option data should be captured from live API responses
    (`/v1/pub/vod/list/type`) and hardcoded as static configuration so the
    first paint never waits on a network round trip.
-2. `nav.js`: `TABS = ["首页" (Home), ...taxonomy categories, "我的" (Mine)]`,
+2. `nav.js`: `TABS = ["首页" (Home), "搜索", ...taxonomy categories, "收藏", "历史", "设置"]`,
    derived from taxonomy — each tab is
-   `{ key, label, kind: 'home'|'category'|'mine', categoryId? }`, with
-   `tabByKey(key)` as the lookup.
+   `{ key, label, kind, categoryId?, pinned? }`, with `tabByKey(key)` as the
+   lookup. The trailing personal tabs are pinned: always shown, never reordered.
 
 ### olevod.js business endpoints
 

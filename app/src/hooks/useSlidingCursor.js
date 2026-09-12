@@ -1,8 +1,8 @@
 /*
- * useSlidingCursor — the sliding white focus "pill" shared by the top tab bar
- * (TabBar) and the 我的 segment control (LibraryPage). Both are horizontal
- * capsules of focusable pills on row 0 of some focus group; this hook gives
- * them the app's one sanctioned animation without either owning the tricky part.
+ * useSlidingCursor — the sliding white focus "pill" of the top tab bar
+ * (TabBar): a horizontal capsule of focusable pills on row 0 of some focus
+ * group. This hook gives it the app's one sanctioned animation without the
+ * caller owning the tricky part.
  *
  * The pill is a SINGLE white node that slides between cells as the D-pad cursor
  * moves (100ms). It's the focus fill itself: the focused cell clears its own

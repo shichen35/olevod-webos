@@ -30,7 +30,9 @@ import HomePage from './pages/HomePage.jsx'
 import CategoryPage from './pages/CategoryPage.jsx'
 import FilterPanel from './components/FilterPanel.jsx'
 import DetailPage from './pages/DetailPage.jsx'
-import LibraryPage from './pages/LibraryPage.jsx'
+import FavoritesPage from './pages/FavoritesPage.jsx'
+import HistoryPage from './pages/HistoryPage.jsx'
+import SettingsPage from './pages/SettingsPage.jsx'
 import SearchPage from './pages/SearchPage.jsx'
 import AccountPage from './pages/AccountPage.jsx'
 import { getFilter, setFilter } from './store/filters.js'
@@ -220,12 +222,12 @@ export default function App() {
                   filterOverride={filterOverrides[tab.categoryId]}
                   refreshNonce={refreshNonce[tab.key]}
                 />
+              ) : tab.kind === 'favorites' ? (
+                <FavoritesPage group={contentGroup(tab.key)} onOpenDetail={openDetail} />
+              ) : tab.kind === 'history' ? (
+                <HistoryPage group={contentGroup(tab.key)} active={tab.key === activeTab} onOpenDetail={openDetail} />
               ) : (
-                <LibraryPage
-                  group={contentGroup(tab.key)}
-                  onOpenDetail={openDetail}
-                  onOpenAccount={() => openAccount('settings')}
-                />
+                <SettingsPage group={contentGroup(tab.key)} onOpenAccount={() => openAccount('settings')} />
               ))}
           </div>
         ))}

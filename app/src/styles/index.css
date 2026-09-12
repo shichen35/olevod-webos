@@ -20,8 +20,8 @@
  *     base layer with !important. Focus border/color swaps are instant. Two
  *     sanctioned exceptions, both in JS (this CSS ban governs only CSS-declared
  *     motion, not WAAPI or scroll behavior): (1) the white focus fill on the tab
- *     bar and the 我的 segment control slides between cells as the D-pad cursor
- *     moves (hooks/useSlidingCursor.js, via the Web Animations API) — a single
+ *     bar slides between cells as the D-pad cursor moves
+ *     (hooks/useSlidingCursor.js, via the Web Animations API) — a single
  *     compositor-cheap node, no cell repaint; (2) focus moves scroll the target
  *     into view with smooth scrollIntoView (useFocus.js). Both leave the focus
  *     engine untouched.
@@ -92,7 +92,7 @@
   --spacing-focus-safe: 120px;
   --spacing-content-bottom: 60px;
   /* Poster lists fill the full content width symmetrically: 6 cards per row
-     (must match COLS in CategoryPage/LibraryPage), fixed gutter, card width
+     (must match COLS in CategoryPage/CardGrid), fixed gutter, card width
      derived so 6 cards + 5 gaps = 1920 - 2*safe exactly. */
   --spacing-gutter: 20px;
   --spacing-card: calc((1920px - 2 * var(--spacing-safe) - 5 * var(--spacing-gutter)) / 6);
@@ -134,9 +134,9 @@
 
 /*
  * Sanctioned motion exceptions live in JS, not here (the two below; the other
- * is smooth scrollIntoView in useFocus.js). A white focus fill is one pill that
- * slides between cells as the D-pad cursor moves, shared by the tab bar and the
- * 我的 segment control (hooks/useSlidingCursor.js, via the Web Animations API).
+ * is smooth scrollIntoView in useFocus.js). The tab bar's white focus fill is
+ * one pill that slides between cells as the D-pad cursor moves
+ * (hooks/useSlidingCursor.js, via the Web Animations API).
  * WAAPI is used deliberately — it runs independently of the `transition/
  * animation: none !important` ban above (which only governs CSS-declared
  * motion), so no cascade-layer fight is needed. The motion is one `transform` +

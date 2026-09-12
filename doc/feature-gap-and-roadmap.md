@@ -23,7 +23,7 @@ as gaps in our own player, judged against what a TV player is normally expected 
 | Categories | 短剧(14) · 电影(1) · 连续剧(2) · 综艺(3) · 动漫(4) · VIP蓝光(6) · 直播 | 电影 · 连续剧 · 综艺 · 动漫 | app is missing 短剧 and VIP蓝光 |
 | Home layout | Per-category block with 最近更新 / 最新添加 / 热播 sub-tabs, plus a hero carousel and a live strip | One 热门 shelf per category, plus local 继续观看 / 我的收藏 | app shows roughly a third of the content the web home does |
 | Rankings | 榜单 page: 日/周/月/总 × per-category top 20 | — | whole surface missing |
-| Category page | Hero carousel + 类型/地区/年代 filters + 热门推荐 (换一批) + 最近添加 | 类型/地区/年代/排序 filters + infinite-scroll grid | app is ahead on filtering, behind on curated rows |
+| Category page | Hero carousel + 类型/地区/年代 filters + 热门推荐 (换一批) + 最近添加 | 类型/地区/年代/排序 filters + infinite-scroll grid | app is ahead on filtering, behind on curated rows — and stays that way by choice, see item 10 |
 | Detail page | Synopsis with 展开, 播放列表 with 升序/降序, 猜你喜欢, per-genre hot list, 点赞/评分/收藏 | Synopsis clamped to 3 lines, episode grid (fixed newest-first), 收藏 | app dead-ends after the episode grid |
 | Search | Box + suggestions | Box + system keyboard + hot keywords + autocomplete + infinite-scroll grid | app is at parity or ahead; no local search history |
 | Player | (not inspected — sign-in required) | HLS, auto ABR, seek with long-press ramp, resume, autoplay-next, episode strip, stall recovery | solid; no speed / manual quality / skip-intro |
@@ -88,7 +88,9 @@ per title alongside the watch state.
 top-20 per category. This is one of the better fits for a 10-foot UI: a numbered list
 is easy to read from the couch and needs almost no interaction. Structure it like the
 Library tab — a segment control for 日/周/月/总, then a row per category. Add it to
-`nav.js` as a new tab kind rather than folding it into home.
+`nav.js` as a new tab kind rather than folding it into home or into the category
+tabs: a ranking landing page in front of each category's grid was tried on
+2026-09-11 and withdrawn (see item 10), so rankings get their own surface.
 
 **6. Synopsis 展开 on the detail page · S**
 The synopsis is clamped with `line-clamp-3` and there is no way to read the rest. Give
@@ -126,6 +128,14 @@ this is M and not S despite sounding trivial.
 Both would enrich the category pages — but a carousel is animation, and the project's
 performance red lines rule that out. If this gets built it should be a static featured
 card, not a rotating one.
+
+A related experiment was already made and rolled back: on 2026-09-11 each category tab
+briefly opened on two horizontal rankings (人气最高 / 评分最高, 12 titles each, from the
+listing endpoint with `sort=hot` / `sort=score`) with a 浏览全部 button leading to the
+filter grid. It pushed the filters one screen away, and the filter grid is the thing
+the category tabs are actually for, so the tabs went back to opening on the filter bar
+and grid directly. Any curated row added under this item has to sit *above* the grid
+on the same screen, not in front of it.
 
 **11. Per-genre hot list on the detail page · S**
 `/v1/pub/vod/rank/week/{typeId}/{genreId}/true/{limit}` — the web's detail sidebar.

@@ -15,11 +15,15 @@
  *
  * The white focus fill slides between the capsule's tabs via useSlidingCursor;
  * see that hook for the animation and the cursor-vs-selection rules. Icon
- * buttons sit outside the capsule, so their focus fill is the plain instant
- * one (the pill hides while the cursor is on them).
+ * buttons sit outside the capsule, so the sliding pill does not serve them:
+ * each is its own pill instead, a circle at rest that grows sideways on focus
+ * to show its label beside the icon and shrinks back when the cursor leaves.
+ * Both directions animate through the Web Animations API, the same sanctioned
+ * mechanism as the sliding pill (the CSS transition/animation ban does not
+ * cover WAAPI, see styles/index.css).
  */
-import { useRef } from 'react'
-import { useFocusable } from '../hooks/useFocus.js'
+import { useLayoutEffect, useRef } from 'react'
+import { getCurrentFocus, useFocusable } from '../hooks/useFocus.js'
 import { useSlidingCursor } from '../hooks/useSlidingCursor.js'
 
 // 24-grid line icons, keyed by tab.icon.
@@ -51,7 +55,7 @@ const ICONS = {
   ),
 }
 
-function useTabFocus({ col, onHover, onSelect }) {
+function useTabFocus({ col, onHover, onSelect, onFocusChange }) {
   return useFocusable({
     layer: 'home',
     group: 'tabbar',
@@ -60,6 +64,7 @@ function useTabFocus({ col, onHover, onSelect }) {
     onSelect,
     onFocusChange: (focused) => {
       if (focused) onHover()
+      onFocusChange?.(focused)
     },
   })
 }
@@ -81,18 +86,80 @@ function TabItem({ tab, col, active, showSelection, onHover, onSelect }) {
   )
 }
 
-// Round glass button: the same material and lift as the capsule, the instant
-// white fill on focus, and the glass selection mark when it is the active tab
-// and the cursor is elsewhere.
+// Geometry of an icon pill, mirroring its classes below: the collapsed circle
+// is 1px border + 14px padding + 26px icon + 14px padding + 1px border, and
+// expanding adds the gap, the label at its natural width, and the extra right
+// padding that keeps the label off the pill's round end (the icon keeps the
+// circle's symmetric 14px; only the text side is widened).
+const PILL_SIZE = 56 // size-14
+const PILL_GAP = 10 // gap-2.5
+const PILL_LABEL_PAD = 5 // pr-[19px] over the circle's own 14px
+const EXPAND_MS = 140
+
+// Size the pill around `label` for `expanded`, sliding there from wherever it
+// is now. The pill is reached through the label because the focus engine owns
+// the button's own ref (it re-asserts `.focused` through it) and its props are
+// spread last, so a second ref on that element would be dropped.
+//
+// The label never shrinks (shrink-0) and is clipped by overflow-hidden while
+// collapsed, so its box is always its natural width and measuring it needs no
+// reflow of the button. The target is written to the element's own style
+// first, then animated from the previous width, so the resting state is real
+// CSS and nothing accumulates — the same approach as the sliding cursor.
+// Opacity rides along, so a half-open pill never shows a sliced word.
+function sizePill(label, expanded, animate) {
+  const el = label?.parentElement
+  if (!el) return
+  const from = el.getBoundingClientRect().width
+  const to = expanded
+    ? PILL_SIZE + PILL_GAP + Math.ceil(label.getBoundingClientRect().width) + PILL_LABEL_PAD
+    : PILL_SIZE
+  const opacity = expanded ? 1 : 0
+
+  el.getAnimations().forEach((a) => a.cancel())
+  label.getAnimations().forEach((a) => a.cancel())
+  el.style.width = `${to}px`
+  label.style.opacity = `${opacity}`
+  if (!animate || from === to) return
+
+  el.animate([{ width: `${from}px` }, { width: `${to}px` }], { duration: EXPAND_MS, easing: 'ease' })
+  label.animate([{ opacity: 1 - opacity }, { opacity }], { duration: EXPAND_MS, easing: 'ease' })
+}
+
+// Glass pill: the same material and lift as the capsule, the instant white
+// fill on focus, and the glass selection mark when it is the active tab and
+// the cursor is elsewhere. A circle showing just the icon until focus expands
+// it into icon + label.
 function IconTab({ tab, col, active, showSelection, onHover, onSelect }) {
-  const { props } = useTabFocus({ col, onHover, onSelect })
+  const labelRef = useRef(null)
+  const expandedRef = useRef(false)
+
+  const setExpanded = (expanded, animate) => {
+    expandedRef.current = expanded
+    sizePill(labelRef.current, expanded, animate)
+  }
+  const { id, props } = useTabFocus({ col, onHover, onSelect, onFocusChange: (f) => setExpanded(f, true) })
+
+  // onFocusChange only fires on a focus MOVE, so a button that mounts (or
+  // remounts, when the tab list reorders) already focused would sit collapsed
+  // under the cursor. Re-assert the width after every commit, without animating
+  // into it. The engine's current id is the authority, NOT the `.focused` class
+  // on the element: React rewrites className whenever this tab's active state
+  // changes, which drops that class for the rest of the commit, and reading it
+  // here would collapse the pill under the cursor and pop it back open.
+  useLayoutEffect(() => {
+    const focused = getCurrentFocus() === id
+    if (focused !== expandedRef.current) setExpanded(focused, false)
+  })
+
   return (
     <div
-      className={`glass flex size-14 items-center justify-center rounded-full border border-glass-edge shadow-[0_8px_28px_rgba(0,0,0,0.35)] focused:bg-focus focused:text-inverse ${active && showSelection ? 'bg-glass-active text-fg' : 'text-fg-2'}`}
+      className={`glass flex size-14 items-center gap-2.5 overflow-hidden rounded-full border border-glass-edge pr-[19px] pl-[14px] shadow-[0_8px_28px_rgba(0,0,0,0.35)] focused:bg-focus focused:text-inverse ${active && showSelection ? 'bg-glass-active text-fg' : 'text-fg-2'}`}
       aria-label={tab.label}
       {...props}
     >
       <svg
+        className="shrink-0"
         viewBox="0 0 24 24"
         width="26"
         height="26"
@@ -104,6 +171,9 @@ function IconTab({ tab, col, active, showSelection, onHover, onSelect }) {
       >
         {ICONS[tab.icon]}
       </svg>
+      <span ref={labelRef} className="shrink-0 whitespace-nowrap text-label opacity-0">
+        {tab.label}
+      </span>
     </div>
   )
 }

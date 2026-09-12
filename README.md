@@ -51,15 +51,27 @@ webOS keyCode 461.
 
 ## Build and Package (webOS)
 
-Packaging needs LG's official command-line tools, which provide the `ares-*`
-commands:
+LG's official command-line tools (`@webos-tools/cli`, which provide the
+`ares-*` commands) are a dev dependency of `app/`, so `npm ci` is all the
+setup packaging needs:
 
 ```bash
-npm install -g @webos-tools/cli     # ares-* commands; verify with ares -V
 bash build.sh                       # build + package .ipk into out/
 ```
 
 [doc/T23](doc/T23-packaging-deploy.md) covers the packaging details.
+
+### Releasing
+
+Pushing a `v*` tag builds the `.ipk` in GitHub Actions and publishes it as a
+release of this repo, with notes generated from the commits since the previous
+tag. The version comes from the tag; the version fields checked into the source
+tree are placeholders. A tag with a suffix such as `v1.1.0-beta.1` is marked as
+a pre-release.
+
+```bash
+git tag v1.0.2 && git push origin v1.0.2
+```
 
 ## Architecture Highlights
 
@@ -127,7 +139,7 @@ per-task docs in [doc/](doc/) (T01-T25).
 | **Luna service** | A webOS background service (here, Node.js 16 CommonJS) that the frontend calls for work the browser sandbox can't do. |
 | **HLS** | HTTP Live Streaming — the playback format, delivered as an `m3u8` playlist pointing at `.ts` segments. |
 | **`.ipk`** | The installable package format for webOS apps, produced by `build.sh` into `out/`. |
-| **`ares-*`** | LG's official webOS command-line tools, installed via `@webos-tools/cli`. |
+| **`ares-*`** | LG's official webOS command-line tools, from the `@webos-tools/cli` dev dependency in `app/`. |
 | **danmaku** | Viewer comments that scroll across the video as it plays. Out of scope here. |
 | **`_vv`** | The signature query parameter attached to every API GET. |
 | **Session token** | The three-part value returned by login, sent on every request as `_he` / `_pl` / `_si` while signed in. |

@@ -18,6 +18,12 @@
  * The strip lists episodes in the order the user picked for this title on the
  * detail page, so Left/Right walks them the same way in both places.
  *
+ * Failures are told apart rather than pooled into one "加载失败": hls.js's
+ * fatal error type and the <video> element's error code separate a network
+ * problem from a decode problem from a dead source. A VIP episode that comes
+ * back with no url while signed out is its own case — auto-advance can land on
+ * one — and offers 去登录, which returns here and resumes.
+ *
  * A stream the pipeline can't seek (no seekable range, or no finite duration)
  * turns every seek into a no-op; resume then starts from the beginning, with a
  * toast saying so, rather than silently losing the saved position.
@@ -42,6 +48,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detail as fetchDetail, streamUrl } from '../api/olevod.js'
 import * as pageCache from '../store/pageCache.js'
 import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
+import { sessionStore } from '../store/session.js'
 import { episodeOrderStore } from '../store/episodeOrder.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import {
@@ -150,11 +157,23 @@ const LOAD_POLICY = {
   },
 }
 
-function RetryButton({ onRetry }) {
-  const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col: 0, onSelect: onRetry })
+// What each failure means, in the words the couch needs. 'login' is the only
+// one a button can actually fix.
+const ERROR_TEXT = {
+  network: '网络连接不稳定，请重试',
+  decode: '解码失败，可换一集或稍后重试',
+  source: '片源暂不可用',
+  login: '此影片为会员内容，登录后可播放',
+}
+
+function ErrorButton({ col, label, primary, onSelect }) {
+  const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col, onSelect })
   return (
-    <span className="focusable rounded-lg bg-elev-2 px-8 py-3.5 text-label text-fg" {...props}>
-      加载失败，重试
+    <span
+      className={`focusable rounded-lg px-8 py-3.5 text-label ${primary ? 'bg-accent text-inverse' : 'bg-elev-2 text-fg'}`}
+      {...props}
+    >
+      {label}
     </span>
   )
 }
@@ -175,7 +194,7 @@ function StripCell({ col, label, isCurrent, onSelect }) {
   )
 }
 
-export default function PlayerPage({ id, episodeIndex }) {
+export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
   const videoRef = useRef(null)
   const [data, setData] = useState(null) // normalized detail (title + episodes)
   const [curEp, setCurEp] = useState(episodeIndex)
@@ -191,6 +210,7 @@ export default function PlayerPage({ id, episodeIndex }) {
   const [paused, setPaused] = useState(false) // drives the bar's play/pause icon
   const [trackInfo, setTrackInfo] = useState(null) // { width, height, bitrate } of the playing level
   const [seekable, setSeekable] = useState(true) // false once the stream proves unseekable
+  const [errorKind, setErrorKind] = useState(null) // network | decode | source | login
 
   const statusRef = useRef(status)
   statusRef.current = status
@@ -540,7 +560,10 @@ export default function PlayerPage({ id, episodeIndex }) {
         if (!cancelled) setData(d)
       })
       .catch(() => {
-        if (!cancelled) setStatus('error')
+        if (!cancelled) {
+          setErrorKind('network')
+          setStatus('error')
+        }
       })
     return () => {
       cancelled = true
@@ -561,6 +584,12 @@ export default function PlayerPage({ id, episodeIndex }) {
     setStatus('loading')
     setTrackInfo(null) // quality belongs to the episode that is loading now
     setSeekable(true) // assume seekable until the stream says otherwise
+    setErrorKind(null)
+
+    const fail = (kind) => {
+      setErrorKind(kind)
+      setStatus('error')
+    }
 
     // Resume decision (T18): same episode, meaningfully into it. A `finished`
     // watch point holds position at the episode's end purely so a title that
@@ -741,7 +770,11 @@ export default function PlayerPage({ id, episodeIndex }) {
       if (resumePos > 0 && canSeek() && video.currentTime < resumePos - 3) video.currentTime = resumePos
     }
     const onDurationChange = () => updateSeekable()
-    const onVideoError = () => setStatus('error')
+    const onVideoError = () => {
+      // MediaError: 2 = network, 3 = decode, 4 = source not supported.
+      const code = video.error?.code
+      fail(code === 2 ? 'network' : code === 3 ? 'decode' : 'source')
+    }
     // Native-HLS fallback only: no level data, so the element's own frame size
     // is all there is. On the hls.js path LEVEL_SWITCHED is the better source.
     const onResize = () => {
@@ -816,7 +849,12 @@ export default function PlayerPage({ id, episodeIndex }) {
       try {
         const ep =
           data.episodes.find((e) => e.index === curEp) || data.episodes[data.episodes.length - 1]
-        if (!ep?.url) throw new Error('no playable url')
+        if (!ep?.url) {
+          // The detail page gates this on the way in; auto-advance can still
+          // land on a VIP episode the current session can't play.
+          fail(ep?.vip && !sessionStore.get() ? 'login' : 'source')
+          return
+        }
         const src = streamUrl(ep.url)
         currentSrc = src // the watchdog reloads from here on a native-path stall
 
@@ -848,7 +886,14 @@ export default function PlayerPage({ id, episodeIndex }) {
             if (lvl) setTrackInfo({ width: lvl.width, height: lvl.height, bitrate: lvl.bitrate })
           })
           hls.on(Hls.Events.ERROR, (_evt, info) => {
-            if (info.fatal) setStatus('error')
+            if (!info.fatal) return
+            fail(
+              info.type === Hls.ErrorTypes.NETWORK_ERROR
+                ? 'network'
+                : info.type === Hls.ErrorTypes.MEDIA_ERROR
+                  ? 'decode'
+                  : 'source',
+            )
           })
           hls.attachMedia(video)
           hls.loadSource(src)
@@ -862,9 +907,9 @@ export default function PlayerPage({ id, episodeIndex }) {
           video.play().catch(() => {})
           return
         }
-        throw new Error('no HLS support')
+        fail('source') // no MSE and no native HLS
       } catch {
-        if (!cancelled) setStatus('error')
+        if (!cancelled) fail('source')
       }
     })()
 
@@ -1001,8 +1046,19 @@ export default function PlayerPage({ id, episodeIndex }) {
       )}
 
       {status === 'error' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black text-heading text-fg">
-          <RetryButton onRetry={() => setAttempt((n) => n + 1)} />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-9 bg-black">
+          <div className="text-heading text-fg">{ERROR_TEXT[errorKind] || ERROR_TEXT.source}</div>
+          {/* Focus lands on col 0, so signing in leads when retrying can't help. */}
+          <div className="flex gap-5">
+            {errorKind === 'login' && (
+              <ErrorButton col={0} label="去登录" primary onSelect={() => onRequireLogin?.()} />
+            )}
+            <ErrorButton
+              col={errorKind === 'login' ? 1 : 0}
+              label="重试"
+              onSelect={() => setAttempt((n) => n + 1)}
+            />
+          </div>
         </div>
       )}
     </div>

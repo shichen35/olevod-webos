@@ -260,7 +260,11 @@ export default function App() {
             </div>
           }
         >
-          <PlayerPage id={top.id} episodeIndex={top.episodeIndex} />
+          <PlayerPage
+            id={top.id}
+            episodeIndex={top.episodeIndex}
+            onRequireLogin={() => openAccount('player')}
+          />
         </Suspense>
       )}
     </>

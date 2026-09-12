@@ -12,7 +12,8 @@
  * Signed in: nickname, membership (pub/user/info) and 退出登录 / 清除已保存信息.
  *
  * Login success: from settings the page stays and flips to the signed-in view;
- * from detail it closes (onDone) so the detail page reloads with the session.
+ * opened from detail or from the player it closes (onDone), so the page
+ * underneath reloads with the session — the player remounts and resumes.
  *
  * Focus grid (group "content"): col 0 is the left column (rows 0-1); cols 1-3
  * are the panel — row 0 换一张, rows 1-4 the keypad, row 5 登录. The engine only
@@ -290,7 +291,7 @@ export default function AccountPage({ from = 'settings', onDone, style }) {
       const saving = signIn(result, credentials)
       if (!aliveRef.current) return
       setCode('')
-      if (from === 'detail') {
+      if (from !== 'settings') {
         onDone?.()
         return
       }

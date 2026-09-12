@@ -64,6 +64,9 @@ function normalizeItem(raw) {
 /**
  * Filtered, sorted, paginated category listing.
  * Path: /v1/pub/vod/list/{flag}/{member}/{letter}/{area}/{category}/{genre}/{year}/{order}/{page}/{size}
+ * `member` is pinned to "everything": splitting the catalog by membership is
+ * not a distinction a viewer can act on here, since VIP titles only play for a
+ * signed-in VIP session either way.
  * Returns { items, total, page, size }.
  */
 export async function categoryList({
@@ -71,14 +74,13 @@ export async function categoryList({
   genre = '0',
   area = '0',
   year = '0',
-  member = '3',
   letter = '0',
   sort = 'update',
   page = 1,
   size = 24,
 }) {
   const flag = 'true'
-  const vip = member || '3' // membership range: 3 all, 1 members only, 2 free
+  const vip = '3' // membership range: 3 all, 1 members only, 2 free
   const letterSeg = letter && letter !== '0' ? letter : '0' // pinyin initial, 0 = any
   const areaSeg = area && area !== '0' ? encodeURIComponent(area) : '0'
   const genreSeg = genre && genre !== '0' ? genre : '0'

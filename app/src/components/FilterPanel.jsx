@@ -1,5 +1,5 @@
 /*
- * Region / Year / membership / initial-letter filter panel, opened by the
+ * Region / Year / initial-letter filter panel, opened by the
  * category page's 额外筛选 button (sort lives on the filter bar itself). A fixed opaque panel on the right on its own "filter" focus layer —
  * no slide-in animation, no scrim over the content behind it (focus is on the
  * panel, so the grid underneath can't receive input anyway).
@@ -29,7 +29,7 @@ import {
   getCurrentFocus,
   pushCustomKeyHandler,
 } from '../hooks/useFocus.js'
-import { getCategory, MEMBERS, LETTERS } from '../config/taxonomy.js'
+import { getCategory, LETTERS } from '../config/taxonomy.js'
 
 const LAYER = 'filter'
 const GROUP = 'panel'
@@ -42,9 +42,8 @@ const ROW_TOL = 8
 // is irrelevant to navigation (that's geometric) — only ordering the ids is.
 const AREA_ROW = 0
 const YEAR_ROW = 1
-const MEMBER_ROW = 2
-const LETTER_ROW = 3
-const ACTION_ROW = 4
+const LETTER_ROW = 2
+const ACTION_ROW = 3
 
 function isBackKey(e) {
   return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
@@ -204,7 +203,6 @@ export default function FilterPanel({ category, filter, onChange, onReset, onClo
     >
       <Group title="地区" options={cfg.areas} value={filter.area} row={AREA_ROW} onPick={(v) => onChange({ ...filter, area: v })} />
       <Group title="年份" options={cfg.years} value={filter.year} row={YEAR_ROW} onPick={(v) => onChange({ ...filter, year: v })} />
-      <Group title="影片范围" options={MEMBERS} value={filter.member} row={MEMBER_ROW} onPick={(v) => onChange({ ...filter, member: v })} />
       <Group title="首字母" options={LETTERS} value={filter.letter} row={LETTER_ROW} onPick={(v) => onChange({ ...filter, letter: v })} />
       <div className="mt-2 flex gap-4">
         <span className={`${PANEL_CHIP} text-fg`} {...reset.props}>

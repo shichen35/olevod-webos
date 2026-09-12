@@ -4,7 +4,7 @@
  * own fetch dedupe into one request (first caller wins, the rest read cache).
  */
 import { categoryList, banners } from './olevod.js'
-import { CATEGORIES, DEFAULT_SORT, DEFAULT_MEMBER, DEFAULT_LETTER } from '../config/taxonomy.js'
+import { CATEGORIES, DEFAULT_SORT, DEFAULT_LETTER } from '../config/taxonomy.js'
 import * as pageCache from '../store/pageCache.js'
 
 export const HOME_POPULAR_KEY = 'home:popular'
@@ -38,11 +38,11 @@ export function loadHomePopular() {
 }
 
 export function defaultFilter() {
-  return { genre: '0', area: '0', year: '0', member: DEFAULT_MEMBER, letter: DEFAULT_LETTER, sort: DEFAULT_SORT }
+  return { genre: '0', area: '0', year: '0', letter: DEFAULT_LETTER, sort: DEFAULT_SORT }
 }
 
 export function categoryFirstPageKey(category, f) {
-  return `cat:${category}:${f.genre}:${f.area}:${f.year}:${f.member}:${f.letter}:${f.sort}:p1`
+  return `cat:${category}:${f.genre}:${f.area}:${f.year}:${f.letter}:${f.sort}:p1`
 }
 
 export function loadCategoryFirstPage(category, f, size = 24) {

@@ -2,13 +2,13 @@
  * Category page header (focus rows 0-1 of the content group): row 0 is a
  * horizontally scrollable strip of subtype chips (All + taxonomy genres);
  * row 1 is its own line with the three sort chips (最新 / 最热 / 评分), the
- * 额外筛选 button that opens the region/year/membership/letter panel, and a
+ * 额外筛选 button that opens the region/year/letter panel, and a
  * non-focusable summary of what that panel currently has set.
  *
  * Selecting a chip applies immediately (server-side filtering in CategoryPage).
  */
 import { useFocusable } from '../hooks/useFocus.js'
-import { getCategory, SORTS, MEMBERS, DEFAULT_MEMBER, DEFAULT_LETTER } from '../config/taxonomy.js'
+import { getCategory, SORTS, DEFAULT_LETTER } from '../config/taxonomy.js'
 
 function Chip({ group, row = 0, col, label, selected, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row, col, onSelect })
@@ -27,10 +27,6 @@ function summaryText(cfg, filter) {
   const parts = []
   if (filter.area && filter.area !== '0') parts.push(filter.area)
   if (filter.year && filter.year !== '0') parts.push(filter.year)
-  if (filter.member && filter.member !== DEFAULT_MEMBER) {
-    const member = MEMBERS.find((m) => m.value === filter.member)
-    if (member) parts.push(member.label)
-  }
   if (filter.letter && filter.letter !== DEFAULT_LETTER) parts.push(`首字母 ${filter.letter}`)
   return parts.join(' · ')
 }

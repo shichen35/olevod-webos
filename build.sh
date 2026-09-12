@@ -2,15 +2,14 @@
 #
 # Build + package .ipk into out/.
 #
-#   bash build.sh
+#   bash build.sh                 # local build, placeholder version 1.0.0
+#   VERSION=1.0.2 bash build.sh   # what the release workflow runs
 #
-# Single source of truth for the app version: bump the default below and re-run.
-# appinfo.json and both package.json files are synced automatically before
-# packaging, so the .ipk filename, the webOS-reported version, and the
-# in-app "版本" label (__APP_VERSION__) always match.
-#
-# Set the VERSION env var to override it without editing this file (used by CI):
-#   VERSION=1.0.0 bash build.sh
+# The real version lives in the git tag (v1.0.2) that triggers
+# .github/workflows/release.yml; the version fields checked into appinfo.json
+# and both package.json files are placeholders. VERSION is synced into all
+# three before packaging, so the .ipk filename, the webOS-reported version and
+# the in-app "版本" label (__APP_VERSION__) always match.
 VERSION="${VERSION:-1.0.0}"
 
 set -euo pipefail
@@ -38,9 +37,10 @@ EOF
 # 3. Merge webOS metadata (appinfo.json + icons) into the build output.
 cp -r app/webos-meta/. app/dist/
 
-# 4. Package app + service into a single .ipk.
+# 4. Package app + service into a single .ipk. ares-package comes from the
+#    @webos-tools/cli dev dependency in app/, so npm ci is all CI needs.
 mkdir -p out
-ares-package --no-minify app/dist service/com.olevod.app.service -o out
+app/node_modules/.bin/ares-package --no-minify app/dist service/com.olevod.app.service -o out
 
 IPK=$(ls -t out/*.ipk | head -1)
 echo "packaged: ${IPK}"

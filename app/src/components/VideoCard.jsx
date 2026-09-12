@@ -16,7 +16,7 @@ const BADGE = 'absolute rounded-sm px-2 py-[5px] text-caption leading-none'
 
 // `className` sets the sizing context: shelves pass "w-card shrink-0" (fixed
 // row of 6); grids pass nothing and the grid track sizes the card.
-function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, progress, className = '' }) {
+function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, progress, timeLabel, className = '' }) {
   const { props } = useFocusable({ layer, group, row, col, onSelect })
 
   const uhd = /4k|uhd|蓝光/i.test(item.remarks || '')
@@ -43,6 +43,8 @@ function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, prog
       </div>
       <div className="mt-2.5 truncate text-label text-fg-2 focused:text-fg">{item.name}</div>
       <div className="mt-1 flex gap-3 text-caption text-fg-3">
+        {/* History cards lead with when the title was last watched. */}
+        {timeLabel ? <span>{timeLabel}</span> : null}
         {item.year ? <span>{item.year}</span> : null}
         {item.remarks ? <span>{item.remarks}</span> : null}
       </div>
@@ -62,6 +64,7 @@ function areEqual(a, b) {
     a.row === b.row &&
     a.col === b.col &&
     a.watchedEp === b.watchedEp &&
+    a.timeLabel === b.timeLabel &&
     a.progress?.position === b.progress?.position &&
     a.progress?.duration === b.progress?.duration
   )

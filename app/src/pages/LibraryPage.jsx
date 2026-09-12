@@ -14,7 +14,7 @@ import { useFocusable } from '../hooks/useFocus.js'
 import { useSlidingCursor } from '../hooks/useSlidingCursor.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore } from '../store/favorites.js'
-import { historyStore, clear as clearHistory } from '../store/history.js'
+import { historyStore, clear as clearHistory, formatWatchedAt } from '../store/history.js'
 import { settingsStore, getSetting, toggleSetting } from '../store/settings.js'
 import { sessionStore } from '../store/session.js'
 
@@ -66,6 +66,7 @@ function CardGrid({ items, group, onOpenDetail, withEp }) {
           onSelect={() => onOpenDetail(item.id)}
           watchedEp={withEp ? item.watch?.lastEpisodeIndex : undefined}
           progress={withEp ? item.watch : undefined}
+          timeLabel={withEp ? formatWatchedAt(item.updatedAt) : undefined}
         />
       ))}
     </div>

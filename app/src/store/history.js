@@ -9,8 +9,13 @@
  * cleared) so a title that later airs a new episode can resume there instead
  * of losing all trace of how far it got.
  *
- * Consumed by: the home "Continue Watching" shelf (progress bar), the detail
- * page's "Continue Watching Episode N", and the player's resume feature.
+ * `updatedAt` is when playback last wrote to this entry — the player is the
+ * only writer, so opening a detail page never counts as watching it. Entries
+ * saved before this field existed simply have no time to show.
+ *
+ * Consumed by: the home "Continue Watching" shelf (progress bar), the library's
+ * history grid (time label), the detail page's "Continue Watching Episode N",
+ * and the player's resume feature.
  */
 import { createStore } from '../hooks/useStore.js'
 
@@ -28,7 +33,7 @@ export function recordHistory(item) {
   historyStore.set((prev) => {
     const existing = prev.find((x) => x.id === item.id)
     const rest = prev.filter((x) => x.id !== item.id)
-    const entry = { ...item, watch: existing?.watch || null }
+    const entry = { ...item, watch: existing?.watch || null, updatedAt: Date.now() }
     return [entry, ...rest].slice(0, CAP)
   })
 }
@@ -40,7 +45,10 @@ export function recordProgress(id, lastEpisodeIndex, position, duration, finishe
     const existing = prev.find((x) => x.id === id)
     const rest = prev.filter((x) => x.id !== id)
     const base = existing || { id }
-    return [{ ...base, watch: { lastEpisodeIndex, position, duration, finished } }, ...rest].slice(0, CAP)
+    return [
+      { ...base, watch: { lastEpisodeIndex, position, duration, finished }, updatedAt: Date.now() },
+      ...rest,
+    ].slice(0, CAP)
   })
 }
 
@@ -50,4 +58,27 @@ export function getWatchState(id) {
 
 export function clear() {
   historyStore.set([])
+}
+
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+/**
+ * When an entry was last watched, in the words a history list wants:
+ * 刚刚 / 今天 / 昨天 / 9月11日 / 2025年9月11日. The year only shows once it
+ * differs from this one, and a missing timestamp renders nothing.
+ */
+export function formatWatchedAt(ts) {
+  if (!ts) return ''
+  const now = Date.now()
+  if (now >= ts && now - ts < 60000) return '刚刚'
+  const when = new Date(ts)
+  const today = new Date()
+  if (sameDay(when, today)) return '今天'
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  if (sameDay(when, yesterday)) return '昨天'
+  const day = `${when.getMonth() + 1}月${when.getDate()}日`
+  return when.getFullYear() === today.getFullYear() ? day : `${when.getFullYear()}年${day}`
 }

@@ -44,12 +44,13 @@ function log(msg) {
 // ---------------------------------------------------------------------------
 var API_HOST = 'api.olelive.com'
 
-// CDN nodes are split by region (europe./asia./...olemovienews.com), so the
+// Episode m3u8s are served from several CDN domains (regional
+// *.olemovienews.com nodes, cloud.yuntongclouds.com, dubo.oulehdtv.tv), so the
 // media allowlist is a suffix match; images come from static.olelive.com.
 function isAllowedMediaHost(host) {
   return (
     host === 'static.olelive.com' ||
-    /(^|\.)olemovienews\.com$/.test(host)
+    /(^|\.)(olemovienews\.com|yuntongclouds\.com|oulehdtv\.tv)$/.test(host)
   )
 }
 

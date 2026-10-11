@@ -6,8 +6,8 @@
  * cursor; the only focusable is 关闭, which OK and Back both reach. Synopses
  * arrive with real newlines, so the text keeps them (whitespace-pre-line).
  */
-import { useEffect, useRef } from 'react'
-import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler, isBackKey } from '../hooks/useFocus.js'
+import { useRef } from 'react'
+import { useFocusable, useFocusFrame } from '../hooks/useFocus.js'
 
 const LAYER = 'synopsis'
 const SCROLL_STEP = 160
@@ -24,27 +24,19 @@ function CloseButton({ onSelect }) {
 export default function SynopsisDialog({ title, text, onClose }) {
   const bodyRef = useRef(null)
 
-  useEffect(() => {
-    pushFocusLayer(LAYER)
-    focusTo(`${LAYER}/content-0-0`)
-    const popKeys = pushCustomKeyHandler((e) => {
-      if (isBackKey(e)) {
-        onClose()
-        return true
-      }
+  useFocusFrame({
+    layer: LAYER,
+    focus: `${LAYER}/content-0-0`,
+    onBack: onClose,
+    onKey: (e) => {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault()
         bodyRef.current?.scrollBy({ top: e.key === 'ArrowDown' ? SCROLL_STEP : -SCROLL_STEP })
         return true
       }
       return false
-    })
-    return () => {
-      popKeys()
-      popFocusLayer()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    },
+  })
 
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center">

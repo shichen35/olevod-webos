@@ -20,16 +20,12 @@
  * and the layer stack; only the directional step is overridden, via the custom
  * key handler this layer already installs.
  */
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import {
   useFocusable,
-  pushFocusLayer,
-  popFocusLayer,
-  focusTo,
+  useFocusFrame,
   setFocus,
   getCurrentFocus,
-  pushCustomKeyHandler,
-  isBackKey,
 } from '../hooks/useFocus.js'
 import { getCategory, LETTERS } from '../config/taxonomy.js'
 import { useFilter, patchFilter, resetFilter } from '../store/filters.js'
@@ -168,16 +164,14 @@ export default function FilterPanel({ category, onClose }) {
   const filter = useFilter(category)
   const rootRef = useRef(null)
 
-  useEffect(() => {
-    pushFocusLayer(LAYER)
-    focusTo(`${LAYER}/${GROUP}-${AREA_ROW}-0`)
-    // Intercept keys for this layer: back closes the panel; arrows navigate the
-    // wrapped chips spatially; Enter falls through to the engine's onSelect.
-    const popKeys = pushCustomKeyHandler((e) => {
-      if (isBackKey(e)) {
-        onClose()
-        return true
-      }
+  // Back closes the panel (focus returns to the 额外筛选 button in the home
+  // layer); arrows navigate the wrapped chips spatially; Enter falls through to
+  // the engine's onSelect.
+  useFocusFrame({
+    layer: LAYER,
+    focus: `${LAYER}/${GROUP}-${AREA_ROW}-0`,
+    onBack: onClose,
+    onKey: (e) => {
       const dir = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }[e.key]
       if (dir) {
         e.preventDefault()
@@ -185,13 +179,8 @@ export default function FilterPanel({ category, onClose }) {
         return true
       }
       return false
-    })
-    return () => {
-      popKeys()
-      popFocusLayer() // restores focus to the 额外筛选 button in the home layer
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    },
+  })
 
   const reset = useFocusable({ layer: LAYER, group: GROUP, row: ACTION_ROW, col: 0, onSelect: () => resetFilter(category) })
   const done = useFocusable({ layer: LAYER, group: GROUP, row: ACTION_ROW, col: 1, onSelect: onClose })

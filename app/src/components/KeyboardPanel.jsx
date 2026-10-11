@@ -13,8 +13,7 @@
  * Focus grid (group "panel"): rows 0-5 are the 6x6 key grid, row 6 is
  * 退格 / 清空, row 7 is 系统键盘 / 搜索 — plain arithmetic, the grid is regular.
  */
-import { useEffect } from 'react'
-import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler, isBackKey } from '../hooks/useFocus.js'
+import { useFocusable, useFocusFrame } from '../hooks/useFocus.js'
 
 const LAYER = 'keyboard'
 const GROUP = 'panel'
@@ -35,22 +34,8 @@ function Key({ row, col, label, onSelect, wide = false }) {
 }
 
 export default function KeyboardPanel({ value, onChange, onSubmit, onSystemKeyboard, onClose }) {
-  useEffect(() => {
-    pushFocusLayer(LAYER)
-    focusTo(`${LAYER}/${GROUP}-0-0`)
-    const popKeys = pushCustomKeyHandler((e) => {
-      if (isBackKey(e)) {
-        onClose()
-        return true
-      }
-      return false
-    })
-    return () => {
-      popKeys()
-      popFocusLayer() // focus returns to the 屏幕键盘 button
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Closing returns focus to the 屏幕键盘 button.
+  useFocusFrame({ layer: LAYER, focus: `${LAYER}/${GROUP}-0-0`, onBack: onClose })
 
   return (
     <div className="glass-strong fixed inset-y-0 right-0 z-10 w-[600px] overflow-y-auto border-l border-glass-edge px-10 py-12 scroll-py-focus-safe">

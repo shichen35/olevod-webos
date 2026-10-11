@@ -17,7 +17,7 @@
  * a ref and applied after the re-render, once the new ids are registered.
  */
 import { useEffect, useMemo, useRef } from 'react'
-import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler, isBackKey } from '../hooks/useFocus.js'
+import { useFocusable, useFocusFrame, focusTo } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { settingsStore, getSetting, setSetting } from '../store/settings.js'
 import { TABS, orderedTabs, middleTabKeys, HOME_TAB_KEY } from '../config/nav.js'
@@ -68,26 +68,15 @@ export default function TabOrderDialog({ onClose }) {
     pendingFocusRef.current = null
   })
 
-  useEffect(() => {
-    pushFocusLayer(LAYER)
-    // Land on the first row that can actually move; with nothing movable
-    // (everything hidden, or only 首页 left) land on 完成 instead of an inert
-    // arrow or, worse, a 隐藏 button one OK press away.
-    const firstMovable = shown.findIndex((t, i) => t.key !== HOME_TAB_KEY && i < shown.length - 1)
-    focusTo(firstMovable >= 0 ? `${LAYER}/content-${firstMovable}-1` : `${LAYER}/content-${doneRow}-0`)
-    const popKeys = pushCustomKeyHandler((e) => {
-      if (isBackKey(e)) {
-        onClose()
-        return true
-      }
-      return false
-    })
-    return () => {
-      popKeys()
-      popFocusLayer()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Land on the first row that can actually move; with nothing movable
+  // (everything hidden, or only 首页 left) land on 完成 instead of an inert
+  // arrow or, worse, a 隐藏 button one OK press away.
+  const firstMovable = shown.findIndex((t, i) => t.key !== HOME_TAB_KEY && i < shown.length - 1)
+  useFocusFrame({
+    layer: LAYER,
+    focus: firstMovable >= 0 ? `${LAYER}/content-${firstMovable}-1` : `${LAYER}/content-${doneRow}-0`,
+    onBack: onClose,
+  })
 
   const queueFocus = (row, col) => {
     pendingFocusRef.current = `${LAYER}/content-${row}-${col}`

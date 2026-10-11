@@ -8,8 +8,7 @@
  * the only row, holds focus, and Back acts as it. `confirmKind` 'default' drops
  * the destructive accent for a non-destructive action (去登录, 知道了).
  */
-import { useEffect } from 'react'
-import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler, isBackKey } from '../hooks/useFocus.js'
+import { useFocusable, useFocusFrame } from '../hooks/useFocus.js'
 
 const LAYER = 'confirm'
 
@@ -36,23 +35,11 @@ export default function ConfirmDialog({
 }) {
   const single = cancelLabel == null
 
-  useEffect(() => {
-    pushFocusLayer(LAYER)
-    focusTo(`${LAYER}/content-0-0`) // default focus = Cancel (row 0), or the only button
-    const popKeys = pushCustomKeyHandler((e) => {
-      if (isBackKey(e)) {
-        if (single) onConfirm()
-        else onCancel()
-        return true
-      }
-      return false
-    })
-    return () => {
-      popKeys()
-      popFocusLayer()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  useFocusFrame({
+    layer: LAYER,
+    focus: `${LAYER}/content-0-0`, // default focus = Cancel (row 0), or the only button
+    onBack: () => (single ? onConfirm() : onCancel()),
+  })
 
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center">

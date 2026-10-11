@@ -1,146 +1,131 @@
-# OleVod webOS TV
+# 欧乐影视 · LG webOS TV
 
-A video client for LG webOS televisions, serving the OleVod service. The layout
-is a top tab bar above a full-width content area — a 10-foot UI meant to be read
-from across the room and driven entirely by the remote's directional pad
-(D-pad). Performance comes first: moving the focus never re-renders React, and
-there is no animation and no translucency anywhere in the interface.
+一个给 LG webOS 电视用的欧乐影视客户端：在客厅里只用遥控器方向键，就能找片、看剧、接着上次的进度往下看。界面按 1080p 大屏设计，焦点移动不触发重渲染，电视上操作也跟手。
+
+这是个人项目，仅供学习交流，与欧乐影视官方没有任何关系。影片、海报和播放源都来自欧乐的公开接口，相关权利归原权利人所有。
+
+**[下载最新版本](https://github.com/shichen35/olevod-webos/releases/latest)** · [安装教程](doc/install.md) · [遥控器操作](#遥控器操作)
 
 | | |
 | --- | --- |
-| **Target device** | LG webOS 24 — Chromium 108 on the frontend, Node.js 16 on the service side — at 1080p with a D-pad remote. The reference set is the LG C4. |
-| **Stack** | Vite with React 19.2 for the frontend, a Node.js 16 Luna background service carrying both the API and media channels, and hls.js for playback. |
-| **Feature scope** | Home shelves, the Movies / TV Series / Variety / Anime / VIP Blu-ray sections, search, the detail page, HLS playback, OleVod account sign-in with a captcha (which unlocks VIP playback), and 收藏 / 历史 / 设置 / 账号 tabs for favorites, history, settings, and the account. |
+| 设备 | LG webOS 24 及以上（2024 年及之后的机型），在 LG C4 上实测 |
+| 操作 | 遥控器方向键、确认键、返回键；数字键可输入验证码；支持 Magic Remote 指针 |
+| 安装 | 侧载 `.ipk`（开发者模式或已 root 的电视），不在 LG 应用商店上架 |
+| 应用 ID | `com.olevod.app` |
 
-Several things are deliberately absent: there is no live streaming, no screen
-casting, no danmaku (scrolling comment overlay), and no cloud sync — favorites
-and watch history stay on the TV even when signed in.
+![首页](doc/screenshots/home.jpg)
 
-## Directory Structure
+## 功能
 
-Four top-level entries carry the whole project:
+### 首页
 
-```
-app/        frontend (Vite + React 19.2)
-  src/{config,api,hooks,store,components,pages,player,styles}
-  webos-meta/   appinfo.json + icons, consumed at packaging time
-service/    Luna background service (Node 16, CommonJS): API fetch + local HLS proxy
-doc/        per-task development docs (T01-T25)
-build.sh    builds the app, then packages it into an .ipk
-```
+最上面是精选推荐，接着是「继续观看」和「我的收藏」，下面按电影、综艺、连续剧、动漫各放一排热门。继续观看的卡片上直接标着看到第几集和进度条，按确认就能接着看。不想在首页看到收藏或最近观看，可以在设置里关掉。
 
-## Development
+### 分类与筛选
 
-Everyday work happens inside `app/`:
+顶部标签栏有电影、连续剧、综艺、动漫、短剧和 VIP 蓝光。每个分类先按类型筛一层，再选最新、最热或评分排序；需要更细的条件时打开「额外筛选」，按地区、年份和片名首字母过滤。选项即点即生效，列表往下滚会自动加载。
+
+![分类页](doc/screenshots/category.jpg)
+
+![额外筛选](doc/screenshots/category-filter.jpg)
+
+### 搜索
+
+用遥控器打汉字很慢，所以搜索页带了一个屏幕键盘，可以输入拼音首字母。比如按 `M` `N`，联想里就会出现「魔女」「门牙」这类片名，选中即搜。要输入中文时也可以切到系统键盘。搜索框为空时会显示热门搜索和最近搜过的词。
+
+![屏幕键盘与联想](doc/screenshots/search.jpg)
+
+![搜索结果](doc/screenshots/search-results.jpg)
+
+### 详情与选集
+
+详情页有简介、导演和主演、评分和集数。主按钮会根据观看记录变成「播放第 1 集」「继续观看第 N 集」或「重新观看」；看完的剧出了新集，会直接跳到新的那一集。剧集列表可以切换升序或降序，并且每部剧单独记住；集数超过 60 集时按 50 集一组分段，打开时自动定位到上次看的那一组。
+
+![详情页](doc/screenshots/detail.jpg)
+
+### 播放
+
+- 打开就从上次的位置继续，屏幕上会提示从几分几秒开始。
+- 左右键每次快进或快退 15 秒，按住不放会越跳越快，松手后才真正跳转，不会每按一下就卡一次。
+- 剧集最后 30 秒弹出「即将播放」，按确认立即播放下一集；不管它，这一集结束后也会自动接上。
+- 按下键呼出控制栏，再按下键打开选集条，播放中就能换集。
+- 左上角显示当前片源的分辨率和码率。网络卡顿时会自动跳过缓冲空洞、重新加载，尽量不打断观看。
+
+![播放与选集](doc/screenshots/player.jpg)
+
+### 收藏、历史与设置
+
+收藏在详情页一键添加。观看历史最多保留 40 部，每部都带进度；进入「管理」可以逐条删除，也可以一次清空。设置里可以调整首页显示哪些内容、开关平滑滚动，还能自定义顶部标签栏的顺序和显隐。
+
+![观看历史](doc/screenshots/history.jpg)
+
+![设置](doc/screenshots/settings.jpg)
+
+### 账号与 VIP
+
+不登录也能看普通内容。VIP 剧集需要登录有 VIP 权限的欧乐账号：在「账号」页输入账号密码和 4 位图片验证码，验证码可以用屏幕数字键盘，也可以直接按遥控器上的数字键。登录成功后账号密码会加密保存在这台电视上，下次只需要输验证码。没登录时点开 VIP 剧集，会直接弹出登录页，登录后回到原处继续。
+
+![账号登录](doc/screenshots/account.jpg)
+
+## 遥控器操作
+
+| 位置 | 按键 | 作用 |
+| --- | --- | --- |
+| 任意页面 | 方向键 / 确认 | 移动焦点 / 打开或执行 |
+| 内容区 | 返回 | 回到顶部标签栏 |
+| 顶部标签栏 | 左右 | 切换标签，页面随之切换 |
+| 顶部标签栏 | 确认 | 立即切换；在首页和分类页上会重新加载内容 |
+| 顶部标签栏 | 返回 | 退出应用（系统会先确认） |
+| 详情页、弹窗、筛选面板 | 返回 | 关闭并回到上一处，焦点保持原位 |
+| 账号页验证码 | 数字键 0–9 | 直接输入验证码 |
+| 播放中（控制栏隐藏） | 确认 | 暂停或继续 |
+| 播放中（控制栏隐藏） | 左 / 右 | 后退或前进 15 秒，按住加速 |
+| 播放中（控制栏隐藏） | 下 / 上 | 呼出控制栏 / 显示按键提示 |
+| 播放中（控制栏显示） | 上 / 下 | 收起控制栏 / 打开选集条 |
+| 选集条 | 左右 / 确认 | 选择剧集 / 切换到该集 |
+| 选集条 | 上 / 返回 | 收起选集条 |
+| 「即将播放」卡片 | 确认 / 上 | 立即播放下一集 / 关闭卡片 |
+| 播放中 | 返回 | 收起控制栏；没有控制栏时退出播放 |
+| 播放中 | 播放、暂停、快进、快退、停止 | 媒体键可用，快进、快退每次 30 秒 |
+
+## 安装
+
+1. 从 [Releases](https://github.com/shichen35/olevod-webos/releases/latest) 下载 `.ipk`。
+2. 打开电视的开发者模式，用 `ares-install` 或 [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop) 安装。
+3. 开发者模式约 50 小时过期，过期后侧载的应用会被删除，记得定期续期。已 root 的电视没有这个限制。
+
+完整步骤、升级和卸载见 [安装教程](doc/install.md)。
+
+## 已知限制
+
+- 画质全自动，最高到 1080p 左右，没有手动切换清晰度，也没有 4K/HDR。
+- 没有倍速、字幕和多音轨。
+- 没有直播、弹幕和投屏。
+- 收藏和观看历史只保存在本机，不和欧乐网站的账号同步；卸载应用会一并清除。
+- 内容全部来自欧乐接口，接口调整、片源下架或网络问题都会影响使用。
+
+## 开发
 
 ```bash
 cd app
 npm install
-npm run dev        # dev server, browser connects directly to the API (both API and CDN allow CORS, no proxy needed)
-npm run build      # production build to app/dist (target chrome108, base './')
-npm run preview    # preview the build output locally
+npm run dev      # 浏览器里开发，方向键、Enter、Esc 代替遥控器
+cd ..
+bash build.sh    # 打包 .ipk 到 out/
 ```
 
-There are no automated tests. Verification means two things: `npm run build`
-has to pass, and someone has to walk the app manually with remote-control input
-in the browser, the preview server, or the webOS Simulator.
-
-In the browser, the keyboard stands in for the remote — arrow keys navigate,
-Enter selects, and Esc goes back. On a real device that back action arrives as
-webOS keyCode 461.
-
-## Build and Package (webOS)
-
-LG's official command-line tools (`@webos-tools/cli`, which provide the
-`ares-*` commands) are a dev dependency of `app/`, so `npm ci` is all the
-setup packaging needs:
-
-```bash
-bash build.sh                       # build + package .ipk into out/
-```
-
-[doc/T23](doc/T23-packaging-deploy.md) covers the packaging details.
-
-### Releasing
-
-Pushing a `v*` tag builds the `.ipk` in GitHub Actions and publishes it as a
-release of this repo, with notes generated from the commits since the previous
-tag. The version comes from the tag; the version fields checked into the source
-tree are placeholders. A tag with a suffix such as `v1.1.0-beta.1` is marked as
-a pre-release.
-
-```bash
-git tag v1.0.2 && git push origin v1.0.2
-```
-
-## Architecture Highlights
-
-**Dual-channel data layer.** API responses and media travel over separate
-paths on the device. JSON goes through the Luna service; media segments
-(`m3u8` and `.ts`) go through a local proxy on `127.0.0.1` that the service
-opens. In the browser dev environment neither hop exists and everything
-connects directly:
-
-```mermaid
-graph LR
-    subgraph device["On device (webOS)"]
-        UI["React app<br/>app/src"]
-        Luna["Luna service<br/>Node 16"]
-        Proxy["Local HLS proxy<br/>127.0.0.1"]
-    end
-    Remote["OleVod API + CDN"]
-
-    UI -->|"API JSON"| Luna
-    UI -->|"m3u8 / .ts"| Proxy
-    Luna --> Remote
-    Proxy --> Remote
-    UI -.->|"browser dev: direct"| Remote
-```
-
-Which channel a request takes is decided in one place, `app/src/api/luna.js`,
-so the business layer never has to know where it is running. Every fetch then
-funnels through `apiGet` or `apiPost` in `app/src/api/http.js`, which signs the
-request, sends it over the selected transport, validates what comes back, and
-decrypts the payload.
-
-**Config-driven navigation.** The section tree lives in
-`app/src/config/taxonomy.js`. Adding a section is a single-file edit — the tab
-bar, the routing, and the section pages all read from that config and pick the
-change up on their own.
-
-**Zero re-render focus.** `app/src/hooks/useFocus.js` keeps focus movement out
-of React entirely: it toggles a DOM class and calls `scrollIntoView`, nothing
-more.
-
-**Request signing.** Every GET carries a `?_vv=<signature>` query parameter,
-generated locally from a timestamp in `app/src/api/sign.js`. POSTs (captcha,
-login, user info) go without it. When signed in, every request also carries the
-session token, split into the `_he` / `_pl` / `_si` query parameters.
-
-**Account session.** Signing in happens on the 账号 tab (or on the same page
-as an overlay when a VIP episode asks for it): a captcha image, an on-screen digit keypad, and the
-remembered username and password filled in. Both the remembered login and the
-session token are encrypted at rest (`app/src/store/vault.js`): an AES-GCM key
-generated as non-extractable lives in IndexedDB, and localStorage only ever
-holds ciphertext. This keeps plaintext out of storage dumps and logs, but it is
-not hardware-backed — code running inside the app's origin can still decrypt.
-A token-bearing request answered with an auth-expired code signs the session
-out silently; the detail page then offers sign-in when a VIP episode is played.
-
-For the design rationale and acceptance criteria behind each subsystem, see the
-per-task docs in [doc/](doc/) (T01-T25).
-
-## Glossary
-
-| Term | Meaning |
+| 文档 | 内容 |
 | --- | --- |
-| **10-foot UI** | An interface sized and spaced to stay legible from couch distance rather than desk distance. |
-| **D-pad** | The remote's directional pad — up / down / left / right plus a select key. The only input this app supports. |
-| **Luna service** | A webOS background service (here, Node.js 16 CommonJS) that the frontend calls for work the browser sandbox can't do. |
-| **HLS** | HTTP Live Streaming — the playback format, delivered as an `m3u8` playlist pointing at `.ts` segments. |
-| **`.ipk`** | The installable package format for webOS apps, produced by `build.sh` into `out/`. |
-| **`ares-*`** | LG's official webOS command-line tools, from the `@webos-tools/cli` dev dependency in `app/`. |
-| **danmaku** | Viewer comments that scroll across the video as it plays. Out of scope here. |
-| **`_vv`** | The signature query parameter attached to every API GET. |
-| **Session token** | The three-part value returned by login, sent on every request as `_he` / `_pl` / `_si` while signed in. |
-| **VIP episode** | An episode flagged `vip`; without a session holding VIP rights the detail API returns it with an empty URL. |
+| [安装教程](doc/install.md) | 开发者模式、命令行安装、Dev Manager、升级与卸载 |
+| [开发与构建](doc/development.md) | 本地开发、打包、发版流程 |
+| [架构概览](doc/architecture.md) | 目录结构、双通道数据层、焦点模型、术语 |
+| [焦点引擎](doc/dev/focus-engine.md) | 方向键导航如何做到零重渲染 |
+| [数据通道](doc/dev/data-channel.md) | Luna 服务、本地 HLS 代理与传输选择 |
+| [签名与解密](doc/dev/sign-and-crypto.md) | 请求签名、载荷解密、会话 token |
+| [本地存储](doc/dev/storage.md) | 收藏、历史、设置与加密凭据 |
+| [播放器](doc/dev/player.md) | 续播、跳转、自动下一集、卡顿恢复 |
+| [打包与发布](doc/dev/packaging.md) | build.sh、appinfo.json、Release 工作流、真机调试 |
+
+## 许可证
+
+源码采用 [MIT License](LICENSE)。欧乐影视的名称以及通过接口获取的影片、海报等内容不属于本项目，也不在该许可证范围内。

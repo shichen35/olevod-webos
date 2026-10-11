@@ -390,6 +390,11 @@ export function pushCustomKeyHandler(fn) {
 
 const BACK_KEYCODE = 461 // webOS remote Back — NOT Backspace
 
+// Back: webOS keyCode 461, plus browser-dev equivalents.
+export function isBackKey(e) {
+  return e.keyCode === BACK_KEYCODE || e.key === 'GoBack' || e.key === 'Backspace' || e.key === 'Escape'
+}
+
 export function initFocusEngine() {
   if (keyHandlerAttached) return
   keyHandlerAttached = true
@@ -404,7 +409,7 @@ export function initFocusEngine() {
     // be treated as Back in this state.
     const t = e.target
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) {
-      if (e.keyCode === BACK_KEYCODE || e.key === 'GoBack' || e.key === 'Escape') {
+      if (isBackKey(e) && e.key !== 'Backspace') {
         e.preventDefault()
         e.stopPropagation()
         t.blur()
@@ -415,13 +420,7 @@ export function initFocusEngine() {
     const customKeyHandler = customKeyHandlers[customKeyHandlers.length - 1]
     if (customKeyHandler && customKeyHandler(e)) return
 
-    // Back: webOS keyCode 461, plus browser-dev equivalents.
-    if (
-      e.keyCode === BACK_KEYCODE ||
-      e.key === 'GoBack' ||
-      e.key === 'Backspace' ||
-      e.key === 'Escape'
-    ) {
+    if (isBackKey(e)) {
       e.preventDefault()
       e.stopPropagation()
       window.dispatchEvent(new CustomEvent('tv-back'))

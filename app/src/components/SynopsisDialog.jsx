@@ -7,14 +7,10 @@
  * arrive with real newlines, so the text keeps them (whitespace-pre-line).
  */
 import { useEffect, useRef } from 'react'
-import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler } from '../hooks/useFocus.js'
+import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler, isBackKey } from '../hooks/useFocus.js'
 
 const LAYER = 'synopsis'
 const SCROLL_STEP = 160
-
-function isBackKey(e) {
-  return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
-}
 
 function CloseButton({ onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col: 0, onSelect })

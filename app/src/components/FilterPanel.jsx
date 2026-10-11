@@ -29,6 +29,7 @@ import {
   setFocus,
   getCurrentFocus,
   pushCustomKeyHandler,
+  isBackKey,
 } from '../hooks/useFocus.js'
 import { getCategory, LETTERS } from '../config/taxonomy.js'
 import { useFilter, patchFilter, resetFilter } from '../store/filters.js'
@@ -46,10 +47,6 @@ const AREA_ROW = 0
 const YEAR_ROW = 1
 const LETTER_ROW = 2
 const ACTION_ROW = 3
-
-function isBackKey(e) {
-  return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
-}
 
 // The chips of the wrapped row immediately above/below `cr` (`vdir` 'up'/'down'),
 // or [] if `cr` is already on the edge row. "Nearest row" = the closest top edge

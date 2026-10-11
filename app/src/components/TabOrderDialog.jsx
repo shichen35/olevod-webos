@@ -17,16 +17,12 @@
  * a ref and applied after the re-render, once the new ids are registered.
  */
 import { useEffect, useMemo, useRef } from 'react'
-import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler } from '../hooks/useFocus.js'
+import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler, isBackKey } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { settingsStore, getSetting, setSetting } from '../store/settings.js'
 import { TABS, orderedTabs, middleTabKeys, HOME_TAB_KEY } from '../config/nav.js'
 
 const LAYER = 'tabsort'
-
-function isBackKey(e) {
-  return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
-}
 
 function RowButton({ row, col, label, disabled, wide = false, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col, onSelect })

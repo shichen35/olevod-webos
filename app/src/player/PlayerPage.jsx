@@ -60,6 +60,7 @@ import {
   popFocusLayer,
   focusTo,
   pushCustomKeyHandler,
+  isBackKey,
 } from '../hooks/useFocus.js'
 
 const LAYER = 'player'
@@ -139,10 +140,6 @@ const MEDIA_KEYNAMES = {
 }
 function mediaKey(e) {
   return MEDIA_KEYCODES[e.keyCode] || MEDIA_KEYNAMES[e.key] || null
-}
-
-function isBackKey(e) {
-  return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
 }
 
 // Highest quality below the 1440p tier — UHD is too heavy to auto-select.

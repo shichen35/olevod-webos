@@ -9,13 +9,9 @@
  * the destructive accent for a non-destructive action (去登录, 知道了).
  */
 import { useEffect } from 'react'
-import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler } from '../hooks/useFocus.js'
+import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler, isBackKey } from '../hooks/useFocus.js'
 
 const LAYER = 'confirm'
-
-function isBackKey(e) {
-  return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
-}
 
 function DialogButton({ row, label, kind, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col: 0, onSelect })

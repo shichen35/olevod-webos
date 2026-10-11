@@ -14,17 +14,13 @@
  * 退格 / 清空, row 7 is 系统键盘 / 搜索 — plain arithmetic, the grid is regular.
  */
 import { useEffect } from 'react'
-import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler } from '../hooks/useFocus.js'
+import { useFocusable, pushFocusLayer, popFocusLayer, focusTo, pushCustomKeyHandler, isBackKey } from '../hooks/useFocus.js'
 
 const LAYER = 'keyboard'
 const GROUP = 'panel'
 const COLS = 6
 const KEYS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('')
 const ACTION_ROW0 = KEYS.length / COLS // 6
-
-function isBackKey(e) {
-  return e.keyCode === 461 || e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack'
-}
 
 function Key({ row, col, label, onSelect, wide = false }) {
   const { props } = useFocusable({ layer: LAYER, group: GROUP, row, col, onSelect })

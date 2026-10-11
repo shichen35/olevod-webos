@@ -50,6 +50,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { streamUrl } from '../api/olevod.js'
 import { loadDetail } from '../api/feeds.js'
 import { createPlayback } from './playbackSession.js'
+import Icon from '../components/Icon.jsx'
 import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
 import { nextEpisode, resumePosition } from '../store/watchState.js'
 import { sessionStore } from '../store/session.js'
@@ -260,8 +261,11 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
   const showBadge = useCallback((dir, target) => {
     const el = badgeRef.current
     if (!el) return
-    el.textContent = `${dir < 0 ? '«' : '»'} ${fmtTime(target)}`
-    el.style.display = 'block'
+    // Straight to the DOM like the timecodes: no re-render per step.
+    el.children[0].style.display = dir < 0 ? 'block' : 'none'
+    el.children[1].style.display = dir < 0 ? 'none' : 'block'
+    el.children[2].textContent = fmtTime(target)
+    el.style.display = 'flex'
     clearTimeout(badgeTimerRef.current)
   }, [])
 
@@ -674,15 +678,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
         <div className="grid grid-cols-[1fr_auto_1fr] items-center">
           <span ref={curTimeRef} className="text-label text-fg-2">00:00</span>
           <span className="flex items-center text-fg">
-            {paused ? (
-              <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-label="播放">
-                <path d="M8 5.5v13a1 1 0 0 0 1.54.84l10.2-6.5a1 1 0 0 0 0-1.68L9.54 4.66A1 1 0 0 0 8 5.5z" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-label="暂停">
-                <path d="M7 5h3.4v14H7zM13.6 5H17v14h-3.4z" />
-              </svg>
-            )}
+            {paused ? <Icon name="play_arrow" size={40} aria-label="播放" /> : <Icon name="pause" size={40} aria-label="暂停" />}
           </span>
           <span ref={remainRef} className="text-right text-label text-fg-2">-00:00</span>
         </div>
@@ -713,8 +709,13 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
         </div>
       )}
 
-      {/* Seek target badge (« / » + mm:ss), shared by both seek modes. */}
-      <div ref={badgeRef} className="glass-strong border border-glass-edge absolute bottom-55 left-1/2 -translate-x-1/2 rounded-full px-8 py-2.5 text-heading text-fg" style={{ display: 'none' }} />
+      {/* Seek target badge (rewind / fast-forward icon + mm:ss), shared by both
+          seek modes; showBadge picks the icon and writes the time. */}
+      <div ref={badgeRef} className="glass-strong border border-glass-edge absolute bottom-55 left-1/2 -translate-x-1/2 items-center gap-2 rounded-full px-8 py-2.5 text-heading text-fg" style={{ display: 'none' }}>
+        <Icon name="fast_rewind" size={36} />
+        <Icon name="fast_forward" size={36} />
+        <span />
+      </div>
 
       {toast && <div className="glass-strong border border-glass-edge absolute top-12 right-safe rounded-full px-7 py-3.5 text-label text-fg">{toast}</div>}
 

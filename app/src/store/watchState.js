@@ -67,7 +67,7 @@ export function primaryAction(episodes, watch) {
   const caughtUp = !!watch?.finished && listed && resumeIndex == null
   const playIndex = resumeIndex ?? nextEpisode(episodes, -Infinity)?.index ?? 1
   const label =
-    resumeIndex != null ? `▶ 继续观看 第${resumeIndex}集` : `▶ ${caughtUp ? '重新观看' : '播放'} 第${playIndex}集`
+    resumeIndex != null ? `继续观看 第${resumeIndex}集` : `${caughtUp ? '重新观看' : '播放'} 第${playIndex}集`
   return { resumeIndex, caughtUp, playIndex, label }
 }
 

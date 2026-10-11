@@ -44,3 +44,14 @@ export default function Icon({ name, size = 24, ...props }) {
     </svg>
   )
 }
+
+// An icon leading a button's text. 30px suits the 24px text-label most
+// buttons use; pass size for other text sizes.
+export function IconLabel({ icon, size = 30, children }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <Icon name={icon} size={size} />
+      {children}
+    </span>
+  )
+}

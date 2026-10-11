@@ -39,6 +39,7 @@ import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore, toggle as toggleFavorite } from '../store/favorites.js'
 import { historyStore } from '../store/history.js'
 import { primaryAction } from '../store/watchState.js'
+import { IconLabel } from '../components/Icon.jsx'
 import { episodeOrderStore, setAscending } from '../store/episodeOrder.js'
 
 const LAYER = 'detail'
@@ -69,11 +70,11 @@ const GATE_NOTICE = {
   unknown: { title: '暂时无法播放', description: '暂时无法确认会员状态，请稍后重试。' },
 }
 
-function ActionButton({ col, label, primary, onSelect }) {
+function ActionButton({ col, icon, label, primary, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col, onSelect })
   return (
     <span className={`${DETAIL_BTN} ${primary ? 'bg-accent text-inverse' : 'bg-elev-2 text-fg'}`} {...props}>
-      {label}
+      {icon ? <IconLabel icon={icon}>{label}</IconLabel> : label}
     </span>
   )
 }
@@ -82,14 +83,14 @@ function ActionButton({ col, label, primary, onSelect }) {
 // the same vocabulary: accent text marks a SELECTED one (the range chips),
 // while a plain chip is an action (the order toggle) — both distinct from the
 // white focus fill.
-function ControlChip({ col, label, selected = false, onSelect }) {
+function ControlChip({ col, icon, label, selected = false, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: CONTROLS_ROW, col, onSelect })
   return (
     <span
       className={`focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label ${selected ? 'text-accent' : 'text-fg'}`}
       {...props}
     >
-      {label}
+      {icon ? <IconLabel icon={icon}>{label}</IconLabel> : label}
     </span>
   )
 }
@@ -221,7 +222,7 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
 
   const episodes = data.episodes || []
   const watch = history.find((x) => x.id === id)?.watch || null
-  const { resumeIndex, playIndex: primaryEp, label: primaryLabel } = primaryAction(episodes, watch)
+  const { resumeIndex, caughtUp, playIndex: primaryEp, label: primaryLabel } = primaryAction(episodes, watch)
 
   const eyebrow = [data.genreName, data.year, data.region, data.remarks].filter(Boolean).join(' · ')
   const crew = [data.director && `导演：${data.director}`, data.cast && `主演：${data.cast}`]
@@ -295,10 +296,17 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
             <p className="mb-5 line-clamp-3 text-body leading-normal text-fg-2">{data.synopsis}</p>
             <div className="mb-8 truncate text-caption text-fg-3">{crew}</div>
             <div className="flex gap-5">
-              <ActionButton col={0} label={primaryLabel} primary onSelect={() => playEpisode(primaryEp)} />
+              <ActionButton
+                col={0}
+                icon={resumeIndex == null && caughtUp ? 'replay' : 'play_arrow'}
+                label={primaryLabel}
+                primary
+                onSelect={() => playEpisode(primaryEp)}
+              />
               <ActionButton
                 col={1}
-                label={isFav ? '★ 已收藏' : '☆ 收藏'}
+                icon={isFav ? 'bookmark_added' : 'bookmark_add'}
+                label={isFav ? '已收藏' : '收藏'}
                 onSelect={() => toggleFavorite(favItem)}
               />
               {/* The blurb above is clamped to three lines; this opens the rest. */}
@@ -316,7 +324,8 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
                   glance from across the room. */}
               <ControlChip
                 col={0}
-                label={ascending ? '↑ 升序' : '↓ 降序'}
+                icon={ascending ? 'arrow_upward' : 'arrow_downward'}
+                label={ascending ? '升序' : '降序'}
                 onSelect={() => setAscending(id, !ascending)}
               />
               {chunks.length > 1 &&

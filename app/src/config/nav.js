@@ -77,7 +77,7 @@ export function orderedTabs(order, hidden = []) {
 
 // Every middle tab's key in the effective order, hidden ones included — the
 // complete list settings.tabOrder should hold so a re-shown tab keeps its slot.
-export function middleTabKeys(order) {
+function middleTabKeys(order) {
   return orderedTabs(order, []).filter((t) => !t.pinned && t.key !== HOME_TAB_KEY).map((t) => t.key)
 }
 

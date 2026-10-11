@@ -21,7 +21,3 @@ export function getSetting(snapshot, key) {
 export function toggleSetting(key) {
   settingsStore.set((prev) => ({ ...prev, [key]: !getSetting(prev, key) }))
 }
-
-export function setSetting(key, value) {
-  settingsStore.set((prev) => ({ ...prev, [key]: value }))
-}

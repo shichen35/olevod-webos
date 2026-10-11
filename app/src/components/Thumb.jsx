@@ -8,6 +8,14 @@
  * sized request is skipped unless picThumb names exactly that size — otherwise
  * it would 404 (or crop a square into the 2:3 frame). Entries saved before the
  * field existed don't carry it and still try the sized form first.
+ *
+ * The CDN normally fits the poster inside the size box, keeping its aspect
+ * ratio (a 2:3 poster comes back 373x560). For some sources (a square logo,
+ * say) it stretches the image to fill the box exactly instead. Only a
+ * stretched thumbnail — or a source that already happens to be ~0.686 — comes
+ * back at exactly the box size, so that is treated as untrustworthy and the
+ * original loads instead. The thumbnail stays invisible until it passes, so a
+ * stretched frame never flashes up.
  */
 import { useState } from 'react'
 import { imageUrl } from '../api/olevod.js'
@@ -17,6 +25,7 @@ export default function Thumb({ pic, picThumb, alt = '', size = '384x560' }) {
   const [stage, setStage] = useState(() =>
     picThumb === undefined || imageUrl(picThumb) === imageUrl(pic, size) ? 0 : 1,
   )
+  const [fitOk, setFitOk] = useState(false) // the sized thumbnail kept its aspect ratio
 
   if (!pic || stage === 2) {
     return (
@@ -27,12 +36,20 @@ export default function Thumb({ pic, picThumb, alt = '', size = '384x560' }) {
   }
 
   const src = stage === 0 ? imageUrl(pic, size) : imageUrl(pic)
+  const [boxW, boxH] = size.split('x').map(Number)
+  const checkFit = stage === 0 && boxW > 0 && boxH > 0
   return (
     <img
-      className="h-full w-full object-cover"
+      className={`h-full w-full object-cover ${checkFit && !fitOk ? 'invisible' : ''}`}
       src={src}
       alt={alt}
       loading="lazy"
+      onLoad={(e) => {
+        if (!checkFit) return
+        const { naturalWidth: w, naturalHeight: h } = e.currentTarget
+        if (w === boxW && h === boxH) setStage(1)
+        else setFitOk(true)
+      }}
       onError={() => setStage((s) => s + 1)}
     />
   )

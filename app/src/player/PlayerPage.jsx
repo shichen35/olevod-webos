@@ -48,8 +48,8 @@
  * Native canPlayType is kept only as a fallback for when MSE is unavailable.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { detail as fetchDetail, streamUrl } from '../api/olevod.js'
-import * as pageCache from '../store/pageCache.js'
+import { streamUrl } from '../api/olevod.js'
+import { loadDetail } from '../api/feeds.js'
 import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
 import { nextEpisode, resumePosition } from '../store/watchState.js'
 import { sessionStore } from '../store/session.js'
@@ -585,8 +585,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
   useEffect(() => {
     let cancelled = false
     // Detail is already cached by the page beneath us — this never refetches.
-    pageCache
-      .loadOnce(`detail:${id}`, () => fetchDetail(id))
+    loadDetail(id)
       .then((d) => {
         if (!cancelled) setData(d)
       })

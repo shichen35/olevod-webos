@@ -28,7 +28,8 @@
  * brings the urls in.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { detail as fetchDetail, userInfo } from '../api/olevod.js'
+import { userInfo } from '../api/olevod.js'
+import { loadDetail } from '../api/feeds.js'
 import Thumb from '../components/Thumb.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import SynopsisDialog from '../components/SynopsisDialog.jsx'
@@ -39,7 +40,6 @@ import { favoritesStore, toggle as toggleFavorite } from '../store/favorites.js'
 import { historyStore } from '../store/history.js'
 import { primaryAction } from '../store/watchState.js'
 import { episodeOrderStore, setAscending } from '../store/episodeOrder.js'
-import * as pageCache from '../store/pageCache.js'
 
 const LAYER = 'detail'
 const EP_COLS = 6
@@ -159,8 +159,7 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
   const load = useCallback(() => {
     const gen = ++loadGenRef.current
     setStatus('loading')
-    pageCache
-      .loadOnce(`detail:${id}`, () => fetchDetail(id))
+    loadDetail(id)
       .then((d) => {
         if (gen !== loadGenRef.current) return
         setData(d)

@@ -3,7 +3,7 @@
  * through these so they hit the SAME pageCache keys — a prefetch and a page's
  * own fetch dedupe into one request (first caller wins, the rest read cache).
  */
-import { categoryList, banners } from './olevod.js'
+import { categoryList, banners, detail } from './olevod.js'
 import { CATEGORIES } from '../config/taxonomy.js'
 import { DEFAULT_FILTER } from '../store/filters.js'
 import * as pageCache from '../store/pageCache.js'
@@ -49,6 +49,12 @@ export function loadHomePopular() {
       items: results[i].status === 'fulfilled' ? results[i].value.items : [],
     }))
   })
+}
+
+// One title's detail (metadata + episode urls). The detail page loads it and
+// the player opened from it reads the same entry, so playback never refetches.
+export function loadDetail(id) {
+  return pageCache.loadOnce(`detail:${id}`, () => detail(id))
 }
 
 export function categoryFirstPageKey(category, f) {

@@ -66,7 +66,7 @@ POST 接口没有 `v1` 前缀，也不需要 `_vv`。不重试是有意为之：
 token 的来源和去向：
 
 - `http.js` 本身不持有账号状态，只通过 `setSessionTokenProvider()` 注入的函数读取当前 token。接线在 `app/src/store/session.js` 的 `initSession()`，它在首帧之前从加密存储（`app/src/store/vault.js`）里解出上次的会话。
-- 登录、登出、过期都会改变 `sessionStore`。`App.jsx` 订阅 token 变化，清空 `pageCache` 并重新预取，保证缓存里不残留另一个身份下的响应。
+- 登录、登出、过期都会改变 `sessionStore`。`app/src/api/feeds.js` 订阅 token 变化并清空 `pageCache`，`App.jsx` 随后重新预取，保证缓存里不残留另一个身份下的响应。
 - 响应 `code` 为 12（未登录）或 13/14/16（会话过期）时，`unwrap()` 调用 `setAuthExpiredHandler()` 注入的回调，也就是 `signOut()`。前提有两个：这次请求确实带了 token，而且带的 token 仍然是当前 token。后一条防止重新登录前发出的慢请求回来后把新账号踢下线。
 
 ## 错误分类

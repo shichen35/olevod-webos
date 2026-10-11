@@ -1,16 +1,16 @@
 # 播放器
 
-播放器全部在 `app/src/player/PlayerPage.jsx` 一个文件里：全屏 `<video>`、按键状态机、续播、自动下一集、卡顿自救和错误页。它是 `player` 焦点层，叠在详情页之上，返回键一层层往回退。
+播放器分两个文件：`app/src/player/PlayerPage.jsx` 负责全屏 `<video>`、按键状态机、自动下一集和错误页，决定播哪一集、从哪里续；`app/src/player/playbackSession.js` 不依赖 React，负责把流挂到 `<video>` 上——hls.js 初始化、续播跳转、卡顿自救和进度采样，结果通过回调交回页面。它是 `player` 焦点层，叠在详情页之上，返回键一层层往回退。
 
 ## 加载方式
 
-`PlayerPage` 是整个应用里唯一用 `lazy()` 加载的页面（`app/src/App.jsx`），hls.js 在播放 effect 里再用 `import('hls.js/light')` 动态引入，`app/vite.config.js` 的 `manualChunks` 把它单独切成 `hls` chunk。这样首屏包里没有任何播放器代码。
+`PlayerPage` 是整个应用里唯一用 `lazy()` 加载的页面（`app/src/App.jsx`），hls.js 在 `playbackSession.js` 里再用 `import('hls.js/light')` 动态引入，`app/vite.config.js` 的 `manualChunks` 把它单独切成 `hls` chunk。这样首屏包里没有任何播放器代码。
 
 选 light 版是因为我们用不到字幕、多音轨和 DRM，完整版会超过打包器 500 kB 的告警线。
 
 播放地址一律经过 `streamUrl()`（`app/src/api/olevod.js`），在电视上它会改写成走 Luna 服务的本地媒体代理（`mediaUrl()`，见 `app/src/api/luna.js`），浏览器里原样返回。
 
-详情数据（标题、剧集列表、播放地址）通过 `pageCache.loadOnce('detail:<id>')` 读，下面的详情页已经缓存过，进播放器不会重新请求。
+详情数据（标题、剧集列表、播放地址）通过 `loadDetail(id)`（`app/src/api/feeds.js`）读，下面的详情页已经缓存过，进播放器不会重新请求。
 
 ## hls.js 优先，原生 HLS 只做兜底
 
@@ -34,17 +34,17 @@ hls.js 以 `autoStartLoad: false` 创建，等 `MANIFEST_PARSED` 拿到全部 le
 
 ## 续播规则
 
-相关常量都在文件顶部：
+续播策略集中在 `app/src/store/watchState.js`，播放器、详情页和首页都从它拿答案：
 
-| 常量 | 值 | 含义 |
-| --- | --- | --- |
-| `RESUME_MIN_S` | 30 | 看过超过 30 秒才续播 |
-| `FINISHED_TAIL_S` | 15 | 离结尾 15 秒以内算看完 |
-| `PROGRESS_FLUSH_MS` | 5000 | 播放中每 5 秒写一次进度 |
+| 常量 | 位置 | 值 | 含义 |
+| --- | --- | --- | --- |
+| `RESUME_MIN_S` | `watchState.js` | 30 | 看过超过 30 秒才续播 |
+| `FINISHED_TAIL_S` | `watchState.js` | 15 | 离结尾 15 秒以内算看完 |
+| `PROGRESS_FLUSH_MS` | `playbackSession.js` | 5000 | 播放中每 5 秒写一次进度 |
 
-进入时读 `getWatchState(id)`（`app/src/store/history.js`），只有同一集、`position > 30` 且没有 `finished` 标记时才续播。hls.js 路径直接 `hls.startLoad(resumePos)` 从断点开始加载，避免先从 0 加载再跳转造成双份缓冲；原生路径在 `loadedmetadata` 里跳。第一次 `playing` 时如果发现位置比断点早 3 秒以上（hls.js 偶尔会把首帧拉回 0），再纠正一次。开播后右上角弹 3 秒提示「已从 mm:ss 继续播放」。
+进入时用 `resumePosition(getWatchState(id), curEp)` 算断点，只有同一集、`position > 30` 且没有 `finished` 标记时才续播。hls.js 路径直接 `hls.startLoad(resumePos)` 从断点开始加载，避免先从 0 加载再跳转造成双份缓冲；原生路径在 `loadedmetadata` 里跳。第一次 `playing` 时如果发现位置比断点早 3 秒以上（hls.js 偶尔会把首帧拉回 0），再纠正一次。开播后右上角弹 3 秒提示「已从 mm:ss 继续播放」。
 
-写入：首次 `playing` 调 `recordHistory()`，之后定时器每 5 秒在非暂停状态下调 `recordProgress()`；effect 清理时（退出、重试、换集）也会 flush 一次。看完的处理分两种：
+写入：首次 `playing` 调 `recordHistory()`，之后播放会话每 5 秒在非暂停状态下交回一次位置，页面调 `recordProgress()`；会话销毁时（退出、重试、换集）也会 flush 一次。记成什么由 `progressEntry()` 决定，看完的处理分两种：
 
 - 还有下一集：断点直接挪到下一集的 0 秒；
 - 已是最后一集：保留当前集、位置记在结尾、`finished: true`。保留而不清空，是为了这部剧以后更新了新集还能接着续；续播判断里会跳过 `finished`，不会续到片尾。
@@ -57,7 +57,7 @@ hls.js 以 `autoStartLoad: false` 创建，等 `MANIFEST_PARSED` 拿到全部 le
 
 ## 按键状态机
 
-所有按键都在 `pushCustomKeyHandler` 里统一拦截（`app/src/hooks/useFocus.js`），不交给焦点引擎的默认导航。
+所有按键都在播放器自己的按键处理器里统一拦截（`app/src/hooks/useFocus.js`），不交给焦点引擎的默认导航。
 
 ```mermaid
 stateDiagram-v2
@@ -95,7 +95,7 @@ stateDiagram-v2
 
 在控制条上再按下键打开（只有一集时不响应），控制条随之上移。条里的每一格都是 `episodes` 分组里的真实 focusable，滚动和高亮由焦点引擎负责。打开时先用 `behavior: 'auto'` 把当前集瞬间滚进视野，再 `focusTo`，所以打开是直接到位，之后移动才有动画。
 
-顺序跟随用户在详情页选的正序/倒序（`episodeOrderStore`）。注意 `epList` 本身始终保持接口给的「新的在前」顺序，「下一集」也是按它推出来的（当前项的前一个）；选集条只渲染一份反转后的副本，光标下标也要相应镜像。
+顺序跟随用户在详情页选的正序/倒序（`episodeOrderStore`）。注意 `epList` 本身始终保持接口给的「新的在前」顺序，「下一集」由 `nextEpisode()` 按集号推出（比当前集号大的最小那一集），和显示顺序无关；选集条只渲染一份反转后的副本，光标下标也要相应镜像。
 
 在选集条里按 OK 会换集但保持控制条和选集条都显示，可以连续挑；此时全屏的加载遮罩被压住，新的流在选集条后面加载。
 

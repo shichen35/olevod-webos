@@ -34,19 +34,19 @@
 
 ## 各个 store
 
-**settings**：默认值在 `DEFAULTS` 里，目前有首页两个货架开关（`homeShowFavorites`、`homeShowRecent`）、底栏顺序 `tabOrder`、隐藏的标签 `hiddenTabs`、平滑滚动 `smoothScroll`。老版本存下的快照可能缺新加的键，所以读设置一律走 `getSetting(snapshot, key)`，缺了就用默认值。新增设置只需在 `DEFAULTS` 里加一项。
+**settings**：默认值在 `DEFAULTS` 里，目前有首页两个货架开关（`homeShowFavorites`、`homeShowRecent`）、底栏顺序 `tabOrder`、隐藏的标签 `hiddenTabs`、平滑滚动 `smoothScroll`。老版本存下的快照可能缺新加的键，所以读设置一律走 `getSetting(snapshot, key)`，缺了就用默认值。新增设置只需在 `DEFAULTS` 里加一项。`tabOrder` / `hiddenTabs` 的增删改（上移下移、隐藏、显示、重置）都走 `app/src/config/nav.js` 的 `moveTab` / `hideTab` / `showTab` / `resetTabs`，由它保证 `tabOrder` 始终列全所有中间标签、首页不参与排序。
 
 **favorites**：`toggle(item)` 不存在就插到最前，存在就移除。条目是卡片要用的那几个字段，不是完整详情。
 
 **history**：最近观看，最新在前，超过 40 条从尾部截掉。每条可带 `watch: { lastEpisodeIndex, position, duration, finished }` 和 `updatedAt`。
 
-- 只有播放器写历史（`app/src/player/PlayerPage.jsx`）：首帧开始播放时调 `recordHistory` 把剧排到最前并保留已有进度，播放过程中定时调 `recordProgress` 更新进度（位置取自 `timeupdate` 记下的值，不在收尾时现读 `currentTime`，电视上那时可能已经归零）。打开详情页不算看过。
-- 离片尾不到 `FINISHED_TAIL_S` 秒就算看完。看完且有下一集，进度记为下一集的 position 0；看完且没有下一集，记 `finished: true` 而不是清掉，这样以后更新了新集还能接着看。
+- 只有播放器写历史（`app/src/player/PlayerPage.jsx`，位置由 `app/src/player/playbackSession.js` 采样）：首帧开始播放时调 `recordHistory` 把剧排到最前并保留已有进度，播放过程中定时调 `recordProgress` 更新进度（位置取自 `timeupdate` 记下的值，不在收尾时现读 `currentTime`，电视上那时可能已经归零）。打开详情页不算看过。
+- 续播规则都在 `app/src/store/watchState.js`：离片尾不到 `FINISHED_TAIL_S` 秒就算看完。看完且有下一集，进度记为下一集的 position 0；看完且没有下一集，记 `finished: true` 而不是清掉，这样以后更新了新集还能接着看。
 - 首页「继续观看」、历史页、详情页的「继续观看第 N 集」和播放器续播都读这一份数据。
 
 **searchHistory**：`remember(word)` 去空格、去重后放到最前，保留 20 条。
 
-**episodeOrder**：选集列表默认倒序（最新一集在前，就是接口返回的顺序）。只有用户切成正序的剧才记一条，切回倒序就删掉，所以这个表只会包含用户动过的剧，不需要上限。它只影响显示顺序，播放器算「下一集」用的始终是接口的原始顺序。
+**episodeOrder**：选集列表默认倒序（最新一集在前，就是接口返回的顺序）。只有用户切成正序的剧才记一条，切回倒序就删掉，所以这个表只会包含用户动过的剧，不需要上限。它只影响显示顺序，「下一集」按集号算（`nextEpisode()`），不看显示顺序。
 
 ## 凭据保险箱
 
@@ -91,8 +91,8 @@ webOS 没有给第三方应用开放类似 AndroidKeyStore 的硬件密钥库，
 
 ## 不持久化的东西
 
-- 筛选条件（`app/src/store/filters.js`）：每个分类当前的筛选只存在模块变量里。保存下来的筛选在底栏上看不出来，下次启动一进分类就停在上周选的地区、年代，看着像列表坏了或者是空的。所以每次启动都从默认筛选开始，同一次运行里各标签页保持挂载，自然记得各自的选择。
-- 页面数据缓存（`app/src/store/pageCache.js`）：接口数据的内存缓存，让来回切标签不用转圈，刷新页面就清空。账号变化时 `App.jsx` 会 `pageCache.clear()`，旧账号下发起、晚于清空才返回的请求不会写回缓存（靠 `epoch` 计数判断）。
+- 筛选条件（`app/src/store/filters.js`）：每个分类当前的筛选只存在内存 store 里，分类页的标签和筛选面板都通过 `patchFilter` / `resetFilter` 改同一份，默认值 `DEFAULT_FILTER` 也只在这里定义一次。保存下来的筛选在底栏上看不出来，下次启动一进分类就停在上周选的地区、年代，看着像列表坏了或者是空的。所以每次启动都从默认筛选开始，同一次运行里各标签页保持挂载，自然记得各自的选择。
+- 页面数据缓存（`app/src/store/pageCache.js`）：接口数据的内存缓存，让来回切标签不用转圈，刷新页面就清空。缓存 key 只在 `app/src/api/feeds.js` 里拼，页面按 feed 加载、翻页和失效，看不到 key。账号变化时 `feeds.js` 自己 `pageCache.clear()`；一个请求只有在它仍是该 key 的在途请求时才写缓存，所以清空或刷新之后才返回的旧请求不会写回。
 
 ## 容易踩的坑
 

@@ -80,3 +80,59 @@ export function orderedTabs(order, hidden = []) {
 export function middleTabKeys(order) {
   return orderedTabs(order, []).filter((t) => !t.pinned && t.key !== HOME_TAB_KEY).map((t) => t.key)
 }
+
+/*
+ * Tab bar editing (settings › 标签栏) over the saved { tabOrder, hiddenTabs }.
+ * The transitions below are its only writers, and they keep its invariants:
+ * every write but reset lists every middle tab in tabOrder, hidden ones
+ * included, so a tab that is shown again lands back in its slot; 首页 never
+ * moves (it isn't in tabOrder) and nothing swaps past it; pinned tabs are
+ * never hidden. Each returns { state, rows } — the state to save and the rows
+ * it yields — or null when there is nothing to do.
+ */
+
+// Dialog rows. shown: 首页 (unless hidden) then the visible middle tabs in bar
+// order, each with whether its ▲ / ▼ can act. hidden: the hidden tabs in
+// natural order.
+export function tabRows({ tabOrder, hiddenTabs = [] }) {
+  const tabs = orderedTabs(tabOrder, hiddenTabs).filter((t) => !t.pinned)
+  const shown = tabs.map((tab, i) => {
+    const movable = tab.key !== HOME_TAB_KEY
+    return {
+      tab,
+      canUp: movable && i > 0 && tabs[i - 1].key !== HOME_TAB_KEY,
+      canDown: movable && i < tabs.length - 1,
+    }
+  })
+  return { shown, hidden: TABS.filter((t) => !t.pinned && hiddenTabs.includes(t.key)) }
+}
+
+const withRows = (state) => ({ state, rows: tabRows(state) })
+
+// Swap a shown middle tab with its visible neighbour (dir -1 = up, 1 = down).
+export function moveTab(state, key, dir) {
+  const { shown } = tabRows(state)
+  const i = shown.findIndex((r) => r.tab.key === key)
+  if (i < 0 || !(dir < 0 ? shown[i].canUp : shown[i].canDown)) return null
+  const keys = middleTabKeys(state.tabOrder)
+  const a = keys.indexOf(key)
+  const b = keys.indexOf(shown[i + dir].tab.key)
+  ;[keys[a], keys[b]] = [keys[b], keys[a]]
+  return withRows({ ...state, tabOrder: keys })
+}
+
+export function hideTab({ tabOrder, hiddenTabs = [] }, key) {
+  const tab = tabByKey(key)
+  if (!tab || tab.pinned || hiddenTabs.includes(key)) return null
+  return withRows({ tabOrder: middleTabKeys(tabOrder), hiddenTabs: [...hiddenTabs, key] })
+}
+
+export function showTab({ tabOrder, hiddenTabs = [] }, key) {
+  if (!hiddenTabs.includes(key)) return null
+  return withRows({ tabOrder: middleTabKeys(tabOrder), hiddenTabs: hiddenTabs.filter((k) => k !== key) })
+}
+
+// Natural order, nothing hidden.
+export function resetTabs() {
+  return withRows({ tabOrder: null, hiddenTabs: [] })
+}

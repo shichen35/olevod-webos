@@ -19,9 +19,11 @@ const SETTINGS_ROW = 'focusable rounded-[14px] px-6 py-5 text-body text-fg'
 function SettingsRow({ group, row, label, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row, col: 0, onSelect })
   return (
-    <div className={`${SETTINGS_ROW} flex items-center justify-between`} {...props}>
+    <div className={`${SETTINGS_ROW} flex min-h-[90px] items-center justify-between`} {...props}>
       <span>{label}</span>
-      {/* Opens a dialog — the chevron tells it apart from the toggles above. */}
+      {/* Opens a dialog — the chevron tells it apart from the toggles above.
+          min-h matches the toggle rows (their switch is taller than a line of
+          text), so every row in the list is the same height. */}
       <Icon name="chevron_right" size={36} />
     </div>
   )

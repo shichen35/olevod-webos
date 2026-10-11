@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
+import { IconLabel } from '../components/Icon.jsx'
 import { loadCategoryPage, invalidateCategory } from '../api/feeds.js'
 import { useFilter, patchFilter } from '../store/filters.js'
 import { useFocusable } from '../hooks/useFocus.js'
@@ -173,7 +174,9 @@ function RetryRow({ group, onRetry }) {
   return (
     <div className="py-8 text-body text-fg-2">
       <span className="focusable rounded-full bg-elev-2 text-fg" {...props}>
-        加载失败，重试
+        <IconLabel icon="refresh" size={32}>
+          加载失败，重试
+        </IconLabel>
       </span>
     </div>
   )

@@ -9,6 +9,7 @@
  */
 import { memo } from 'react'
 import Thumb from './Thumb.jsx'
+import { IconLabel } from './Icon.jsx'
 import { useFocusable } from '../hooks/useFocus.js'
 
 // Badge base: opaque pill pinned inside the poster.
@@ -16,7 +17,7 @@ const BADGE = 'absolute rounded-sm px-2 py-[5px] text-caption leading-none'
 
 // `className` sets the sizing context: shelves pass "w-card shrink-0" (fixed
 // row of 6); grids pass nothing and the grid track sizes the card.
-function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, progress, timeLabel, marker, className = '' }) {
+function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, progress, timeLabel, marker, markerIcon, className = '' }) {
   const { props } = useFocusable({ layer, group, row, col, onSelect })
 
   const uhd = /4k|uhd|蓝光/i.test(item.remarks || '')
@@ -36,7 +37,15 @@ function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, prog
         {/* A marker (history's 管理 mode) takes the UHD corner: what OK does
             right now matters more than the source's tier. */}
         {marker ? (
-          <span className={`${BADGE} top-2 right-2 bg-uhd font-semibold text-inverse`}>{marker}</span>
+          <span className={`${BADGE} top-2 right-2 bg-uhd font-semibold text-inverse`}>
+            {markerIcon ? (
+              <IconLabel icon={markerIcon} size={22}>
+                {marker}
+              </IconLabel>
+            ) : (
+              marker
+            )}
+          </span>
         ) : (
           uhd && <span className={`${BADGE} top-2 right-2 bg-uhd font-semibold text-inverse`}>UHD</span>
         )}
@@ -72,6 +81,7 @@ function areEqual(a, b) {
     a.watchedEp === b.watchedEp &&
     a.timeLabel === b.timeLabel &&
     a.marker === b.marker &&
+    a.markerIcon === b.markerIcon &&
     a.progress?.position === b.progress?.position &&
     a.progress?.duration === b.progress?.duration
   )

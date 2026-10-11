@@ -22,6 +22,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
 import KeyboardPanel from '../components/KeyboardPanel.jsx'
+import { IconLabel } from '../components/Icon.jsx'
 import { searchList, searchSuggest, searchHotKeywords } from '../api/olevod.js'
 import { useFocusable, focusTo } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
@@ -326,7 +327,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
             group={group}
             row={chipsRow}
             col={0}
-            label="重试联想"
+            label={<IconLabel icon="refresh">重试联想</IconLabel>}
             onSelect={() => setSuggestRetry((n) => n + 1)}
           />
         </div>
@@ -389,7 +390,9 @@ function RetryRow({ group, row, onRetry }) {
   return (
     <div className="py-8 text-body text-fg-2">
       <span className="focusable rounded-full bg-elev-2 text-fg" {...props}>
-        搜索失败，重试
+        <IconLabel icon="refresh" size={32}>
+          搜索失败，重试
+        </IconLabel>
       </span>
     </div>
   )

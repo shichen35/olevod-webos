@@ -6,6 +6,7 @@
  */
 import { useState } from 'react'
 import PageTitle from '../components/PageTitle.jsx'
+import Icon from '../components/Icon.jsx'
 import TabOrderDialog from '../components/TabOrderDialog.jsx'
 import { useFocusable } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
@@ -18,8 +19,10 @@ const SETTINGS_ROW = 'focusable rounded-[14px] px-6 py-5 text-body text-fg'
 function SettingsRow({ group, row, label, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row, col: 0, onSelect })
   return (
-    <div className={SETTINGS_ROW} {...props}>
-      {label}
+    <div className={`${SETTINGS_ROW} flex items-center justify-between`} {...props}>
+      <span>{label}</span>
+      {/* Opens a dialog — the chevron tells it apart from the toggles above. */}
+      <Icon name="chevron_right" size={36} />
     </div>
   )
 }

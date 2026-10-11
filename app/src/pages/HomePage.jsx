@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Shelf from '../components/Shelf.jsx'
 import Thumb from '../components/Thumb.jsx'
+import { IconLabel } from '../components/Icon.jsx'
 import { loadHomePopular, loadHomeBanners, invalidateHome, POPULAR } from '../api/feeds.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { historyStore } from '../store/history.js'
@@ -26,7 +27,9 @@ function RetryButton({ group, onRetry }) {
   const { props } = useFocusable({ layer: 'home', group, row: 0, col: 0, onSelect: onRetry })
   return (
     <span className="focusable rounded-full bg-elev-2 text-fg" {...props}>
-      重试
+      <IconLabel icon="refresh" size={32}>
+        重试
+      </IconLabel>
     </span>
   )
 }

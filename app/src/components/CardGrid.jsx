@@ -24,6 +24,7 @@ export default function CardGrid({ items, group, onOpenDetail, withEp, rowStart 
           row={rowStart + Math.floor(i / GRID_COLS)}
           col={i % GRID_COLS}
           marker={manage ? '删除' : undefined}
+          markerIcon={manage ? 'delete' : undefined}
           onSelect={() => (manage ? onDelete(i) : onOpenDetail(item.id))}
           watchedEp={withEp ? item.watch?.lastEpisodeIndex : undefined}
           progress={withEp ? item.watch : undefined}

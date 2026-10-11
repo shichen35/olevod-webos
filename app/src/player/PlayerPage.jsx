@@ -50,7 +50,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { streamUrl } from '../api/olevod.js'
 import { loadDetail } from '../api/feeds.js'
 import { createPlayback } from './playbackSession.js'
-import Icon from '../components/Icon.jsx'
+import Icon, { IconLabel } from '../components/Icon.jsx'
 import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
 import { nextEpisode, resumePosition } from '../store/watchState.js'
 import { sessionStore } from '../store/session.js'
@@ -117,14 +117,14 @@ const ERROR_TEXT = {
   login: '此影片为会员内容，登录后可播放',
 }
 
-function ErrorButton({ col, label, primary, onSelect }) {
+function ErrorButton({ col, icon, label, primary, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col, onSelect })
   return (
     <span
       className={`focusable rounded-lg px-8 py-3.5 text-label ${primary ? 'bg-accent text-inverse' : 'bg-elev-2 text-fg'}`}
       {...props}
     >
-      {label}
+      {icon ? <IconLabel icon={icon}>{label}</IconLabel> : label}
     </span>
   )
 }
@@ -756,6 +756,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
             )}
             <ErrorButton
               col={errorKind === 'login' ? 1 : 0}
+              icon="refresh"
               label="重试"
               onSelect={() => setAttempt((n) => n + 1)}
             />

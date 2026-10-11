@@ -14,6 +14,7 @@
  * 退格 / 清空, row 7 is 系统键盘 / 搜索 — plain arithmetic, the grid is regular.
  */
 import { useFocusable, useFocusFrame } from '../hooks/useFocus.js'
+import { IconLabel } from './Icon.jsx'
 
 const LAYER = 'keyboard'
 const GROUP = 'panel'
@@ -21,14 +22,14 @@ const COLS = 6
 const KEYS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('')
 const ACTION_ROW0 = KEYS.length / COLS // 6
 
-function Key({ row, col, label, onSelect, wide = false }) {
+function Key({ row, col, icon, label, onSelect, wide = false }) {
   const { props } = useFocusable({ layer: LAYER, group: GROUP, row, col, onSelect })
   return (
     <div
       className={`focusable flex items-center justify-center rounded-[14px] bg-elev-2 text-fg ${wide ? 'py-3.5 text-label' : 'h-[72px] text-heading'}`}
       {...props}
     >
-      {label}
+      {icon ? <IconLabel icon={icon}>{label}</IconLabel> : label}
     </div>
   )
 }
@@ -58,12 +59,12 @@ export default function KeyboardPanel({ value, onChange, onSubmit, onSystemKeybo
       </div>
 
       <div className="mb-2.5 grid grid-cols-2 gap-2.5">
-        <Key row={ACTION_ROW0} col={0} label="退格" wide onSelect={() => onChange(value.slice(0, -1))} />
+        <Key row={ACTION_ROW0} col={0} icon="backspace" label="退格" wide onSelect={() => onChange(value.slice(0, -1))} />
         <Key row={ACTION_ROW0} col={1} label="清空" wide onSelect={() => onChange('')} />
       </div>
       <div className="grid grid-cols-2 gap-2.5">
         <Key row={ACTION_ROW0 + 1} col={0} label="系统键盘" wide onSelect={onSystemKeyboard} />
-        <Key row={ACTION_ROW0 + 1} col={1} label="搜索" wide onSelect={() => onSubmit(value)} />
+        <Key row={ACTION_ROW0 + 1} col={1} icon="search" label="搜索" wide onSelect={() => onSubmit(value)} />
       </div>
       <div className="mt-6 text-caption text-fg-3">字母可输入拼音首字母，中文用系统键盘</div>
     </div>

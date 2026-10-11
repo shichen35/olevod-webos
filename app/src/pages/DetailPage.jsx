@@ -120,7 +120,7 @@ function RetryCell({ onRetry }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col: 0, onSelect: onRetry })
   return (
     <span className={`${DETAIL_BTN} bg-elev-2 text-fg`} {...props}>
-      加载失败，重试
+      <IconLabel icon="refresh">加载失败，重试</IconLabel>
     </span>
   )
 }

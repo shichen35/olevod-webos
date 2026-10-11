@@ -8,9 +8,10 @@
  * Selecting a chip applies immediately (server-side filtering in CategoryPage).
  */
 import { useFocusable } from '../hooks/useFocus.js'
+import { IconLabel } from './Icon.jsx'
 import { getCategory, SORTS, DEFAULT_LETTER } from '../config/taxonomy.js'
 
-function Chip({ group, row = 0, col, label, selected, onSelect }) {
+function Chip({ group, row = 0, col, icon, label, selected, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row, col, onSelect })
   // Selected is distinct from focus (white fill): accent-tinted text.
   return (
@@ -18,7 +19,7 @@ function Chip({ group, row = 0, col, label, selected, onSelect }) {
       className={`focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label ${selected ? 'text-accent' : 'text-fg'}`}
       {...props}
     >
-      {label}
+      {icon ? <IconLabel icon={icon}>{label}</IconLabel> : label}
     </span>
   )
 }
@@ -61,7 +62,7 @@ export default function FilterBar({ category, group = 'content', filter, onSelec
             onSelect={() => onSelectSort(s.value)}
           />
         ))}
-        <Chip group={group} row={1} col={SORTS.length} label="额外筛选" onSelect={onOpenFilter} />
+        <Chip group={group} row={1} col={SORTS.length} icon="tune" label="额外筛选" onSelect={onOpenFilter} />
         <div className="ml-3 shrink-0 whitespace-nowrap text-caption text-fg-3">{summaryText(cfg, filter)}</div>
       </div>
     </div>

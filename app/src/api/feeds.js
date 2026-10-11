@@ -4,7 +4,8 @@
  * own fetch dedupe into one request (first caller wins, the rest read cache).
  */
 import { categoryList, banners } from './olevod.js'
-import { CATEGORIES, DEFAULT_SORT, DEFAULT_LETTER } from '../config/taxonomy.js'
+import { CATEGORIES } from '../config/taxonomy.js'
+import { DEFAULT_FILTER } from '../store/filters.js'
 import * as pageCache from '../store/pageCache.js'
 
 export const HOME_POPULAR_KEY = 'home:popular'
@@ -35,10 +36,6 @@ export function loadHomePopular() {
       items: results[i].status === 'fulfilled' ? results[i].value.items : [],
     }))
   })
-}
-
-export function defaultFilter() {
-  return { genre: '0', area: '0', year: '0', letter: DEFAULT_LETTER, sort: DEFAULT_SORT }
 }
 
 export function categoryFirstPageKey(category, f) {
@@ -76,7 +73,7 @@ export async function prefetchAll(shouldStop = () => false) {
   for (const c of CATEGORIES) {
     if (shouldStop()) return
     try {
-      await loadCategoryFirstPage(c.id, defaultFilter())
+      await loadCategoryFirstPage(c.id, DEFAULT_FILTER)
     } catch {
       /* silent */
     }

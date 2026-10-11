@@ -14,8 +14,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
 import { categoryList } from '../api/olevod.js'
-import { defaultFilter, loadCategoryFirstPage } from '../api/feeds.js'
-import { setFilter } from '../store/filters.js'
+import { loadCategoryFirstPage } from '../api/feeds.js'
+import { DEFAULT_FILTER, setFilter } from '../store/filters.js'
 import { useFocusable } from '../hooks/useFocus.js'
 import * as pageCache from '../store/pageCache.js'
 
@@ -27,7 +27,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
   // Always opens at the category's default filter — selections are not persisted
   // across launches. `setFilter` publishes the live selection to the session
   // store so the shell's filter panel opens on what the page is actually showing.
-  const [filter, setFilterState] = useState(defaultFilter)
+  const [filter, setFilterState] = useState(DEFAULT_FILTER)
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
   const [status, setStatus] = useState('loading') // loading | ok | error

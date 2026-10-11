@@ -36,22 +36,13 @@ import HistoryPage from './pages/HistoryPage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
 import SearchPage from './pages/SearchPage.jsx'
 import AccountPage from './pages/AccountPage.jsx'
-import { getFilter, setFilter } from './store/filters.js'
+import { DEFAULT_FILTER, getFilter, setFilter } from './store/filters.js'
 import { settingsStore, getSetting } from './store/settings.js'
 import { sessionStore } from './store/session.js'
 import * as pageCache from './store/pageCache.js'
 import { useStoreValue } from './hooks/useStore.js'
 import { prefetchAll } from './api/feeds.js'
 import { exitApp } from './api/luna.js'
-import { DEFAULT_SORT, DEFAULT_LETTER } from './config/taxonomy.js'
-
-const DEFAULT_FILTER = {
-  genre: '0',
-  area: '0',
-  year: '0',
-  letter: DEFAULT_LETTER,
-  sort: DEFAULT_SORT,
-}
 
 // Lazy: the player chunk (and hls.js inside it) loads on first playback, never
 // at startup.

@@ -20,6 +20,10 @@ test('primary action and resume point per (episodes, watch)', () => {
     ['finished episode deleted, newer one listed', eps(4, 2, 1), w(3, 1200, true), [4, false, 4, '▶ 继续观看 第4集'], 0],
     ['finished episode deleted, nothing newer', eps(2, 1), w(3, 1200, true), [null, false, 1, '▶ 播放 第1集'], 0],
     ['no episodes', [], null, [null, false, 1, '▶ 播放 第1集'], 0],
+    ['watched, but the list came back empty', [], w(2, 600), [null, false, 1, '▶ 播放 第1集'], 0],
+    ['movie, mid-way', eps(1), w(1, 600), [1, false, 1, '▶ 继续观看 第1集'], 600],
+    ['movie, finished', eps(1), w(1, 1200, true), [null, true, 1, '▶ 重新观看 第1集'], 0],
+    ['list starts past episode 1', eps(12, 11, 10), null, [null, false, 10, '▶ 播放 第10集'], 0],
   ]
   for (const [name, list, watch, [resumeIndex, caughtUp, playIndex, label], pos] of rows) {
     assert.deepEqual(primaryAction(list, watch), { resumeIndex, caughtUp, playIndex, label }, name)

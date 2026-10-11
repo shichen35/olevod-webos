@@ -252,6 +252,9 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
     },
   })
   useEffect(() => {
+    // Set on mount as well as cleared on unmount: StrictMode's dev-only
+    // remount would otherwise leave it false and drop the sign-in result.
+    aliveRef.current = true
     return () => {
       aliveRef.current = false
       captchaGenRef.current++

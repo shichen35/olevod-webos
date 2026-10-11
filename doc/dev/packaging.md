@@ -15,7 +15,7 @@ VERSION=1.0.2 bash build.sh    # 发版工作流实际执行的命令
 
 1. **同步版本号。** 用一段内联 Node 脚本把 `VERSION` 写进 `app/webos-meta/appinfo.json` 和 `service/com.olevod.app.service/package.json`，再在 `app/` 里执行 `npm version "$VERSION" --no-git-tag-version --allow-same-version`，顺带让 `package-lock.json` 保持一致。
 2. **构建前端。** `app/` 里执行 `npm run build`（即 `vite build`），输出到 `app/dist/`。
-3. **合并 webOS 元数据。** `cp -r app/webos-meta/. app/dist/`，把 `appinfo.json` 和两个图标放到构建产物根目录。
+3. **合并 webOS 元数据。** `cp -r app/webos-meta/. app/dist/`，把 `appinfo.json` 和两个图标放到构建产物根目录；再把仓库根目录的 `THIRD_PARTY_NOTICES.md`（界面图标 Material Symbols 的 Apache 2.0 许可）一起拷进去，随包分发。
 4. **打包。** `ares-package --no-minify app/dist service/com.olevod.app.service -o out`，把前端和 Luna 服务装进同一个 `.ipk`，文件名形如 `out/com.olevod.app_1.0.2_all.ipk`。
 
 ```mermaid

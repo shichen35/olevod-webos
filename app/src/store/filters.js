@@ -1,16 +1,17 @@
 /*
- * Filters — the current filter selection per category, held for the session
- * only: it is what the filter panel opens with after the genre chips (or an
- * earlier apply) changed the selection.
+ * Filters — the one owner of each category's current filter selection, held
+ * for the session only. The genre/sort chips on the category page and the
+ * filter panel both patch it here, and both read it back from here, so neither
+ * can open on (or write back) a stale copy of the other's picks.
  *
  * Deliberately NOT persisted. A saved filter is invisible from the tab bar, so
  * launching the app into a category that silently sits on last week's
  * 地区/年代 choice reads as an empty or broken list. Every launch starts from
- * the category's default filter instead; within a session the tabs stay mounted
- * and keep their own selection anyway.
+ * the category's default filter instead.
  *
  * Shape: { [categoryId]: { genre, area, year, letter, sort } }
  */
+import { createMemoryStore, useStoreValue } from '../hooks/useStore.js'
 import { DEFAULT_SORT, DEFAULT_LETTER } from '../config/taxonomy.js'
 
 // Every category's starting filter, and what the startup prefetch warms.
@@ -22,12 +23,26 @@ export const DEFAULT_FILTER = Object.freeze({
   sort: DEFAULT_SORT,
 })
 
-let selections = {}
+const filtersStore = createMemoryStore({})
 
 export function getFilter(categoryId) {
-  return selections[categoryId] || null
+  return filtersStore.get()[categoryId] || DEFAULT_FILTER
+}
+
+/** The category's live filter; re-renders when it changes. */
+export function useFilter(categoryId) {
+  return useStoreValue(filtersStore, (s) => s[categoryId] || DEFAULT_FILTER)
+}
+
+/** Merge `patch` (e.g. `{ genre }`) into the category's current filter. */
+export function patchFilter(categoryId, patch) {
+  filtersStore.set((s) => ({ ...s, [categoryId]: { ...(s[categoryId] || DEFAULT_FILTER), ...patch } }))
+}
+
+export function resetFilter(categoryId) {
+  filtersStore.set((s) => ({ ...s, [categoryId]: DEFAULT_FILTER }))
 }
 
 export function setFilter(categoryId, selection) {
-  selections = { ...selections, [categoryId]: selection }
+  filtersStore.set((s) => ({ ...s, [categoryId]: selection }))
 }

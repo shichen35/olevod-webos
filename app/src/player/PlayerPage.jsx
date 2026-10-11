@@ -650,7 +650,11 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
       const { pos, dur } = lastKnown
       if (!started || !Number.isFinite(pos) || !Number.isFinite(dur) || dur <= 0) return
       if (dur - pos <= FINISHED_TAIL_S) {
-        const next = nextEpRef.current
+        // Derive "next" from this effect's own episode: by the time a switch's
+        // cleanup flushes, nextEpRef already points past the NEW episode.
+        const list = epListRef.current
+        const i = list.findIndex((e) => e.index === curEp)
+        const next = i > 0 ? list[i - 1].index : null
         if (next != null) recordProgress(id, next, 0, dur)
         else recordProgress(id, curEp, dur, dur, true)
       } else {

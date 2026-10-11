@@ -51,6 +51,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detail as fetchDetail, streamUrl } from '../api/olevod.js'
 import * as pageCache from '../store/pageCache.js'
 import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
+import { nextEpisode, resumePosition } from '../store/watchState.js'
 import { sessionStore } from '../store/session.js'
 import { episodeOrderStore } from '../store/episodeOrder.js'
 import { useStoreValue } from '../hooks/useStore.js'
@@ -73,8 +74,6 @@ const BADGE_LINGER_MS = 800 // keep the target badge up briefly after committing
 const BAR_HIDE_MS = 5000
 
 const PROGRESS_FLUSH_MS = 5000 // persist watch progress cadence
-const RESUME_MIN_S = 30 // only resume when more than this was watched
-const FINISHED_TAIL_S = 15 // this close to the end counts as finished
 const TOAST_MS = 3000
 
 // Native-path stall watchdog. The on-device webOS pipeline has no built-in
@@ -242,21 +241,19 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
   const hintRef = useRef(hint)
   hintRef.current = hint
 
-  // "Next" in a newest-first list is the entry BEFORE the current one.
   const epList = data?.episodes || []
   const epListRef = useRef(epList) // key handler reads the live list without re-binding
   epListRef.current = epList
   const curIdx = epList.findIndex((e) => e.index === curEp)
-  const nextEp = curIdx > 0 ? epList[curIdx - 1] : null
+  const nextEp = nextEpisode(epList, curEp)
   const nextEpIndex = nextEp?.index ?? null
   const nextEpRef = useRef(null)
   nextEpRef.current = nextEpIndex
 
   // The 选集 strip mirrors the order the user picked on the detail page, so
   // Left/Right walk the episodes the same way in both places. `epList` itself
-  // stays canonical — "next episode" above is derived from its newest-first
-  // order — so only a reversed COPY is rendered, and the strip's own cursor
-  // index has to be mirrored along with it.
+  // stays canonical, so only a reversed COPY is rendered, and the strip's own
+  // cursor index has to be mirrored along with it.
   const ascending = !!useStoreValue(episodeOrderStore)[id]
   const stripList = ascending ? [...epList].reverse() : epList
   const stripIdx = curIdx < 0 ? 0 : ascending ? epList.length - 1 - curIdx : curIdx
@@ -625,20 +622,12 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
       setStatus('error')
     }
 
-    // Resume decision: same episode, meaningfully into it. A `finished`
-    // watch point holds position at the episode's end purely so a title that
-    // later airs a new episode can still resume there — never resume INTO it.
-    const watch = getWatchState(id)
-    const resumePos =
-      watch && !watch.finished && watch.lastEpisodeIndex === curEp && watch.position > RESUME_MIN_S
-        ? watch.position
-        : 0
+    const resumePos = resumePosition(getWatchState(id), curEp)
 
     // Persist progress. Positions come from timeupdate ticks (lastKnown), never
     // a live read at flush time: on the TV's native pipeline currentTime can
     // already read 0 during suspend/teardown, which must not clobber real
-    // progress. Near the end counts as finished -> the resume point moves to
-    // the next episode (from its start), or is cleared after the last one.
+    // progress. What a near-the-end position means is recordProgress's call.
     // Live truth, not the rendered state: resume decisions run before React
     // has re-rendered with the flag.
     const canSeek = () =>
@@ -649,17 +638,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
     const flushProgress = () => {
       const { pos, dur } = lastKnown
       if (!started || !Number.isFinite(pos) || !Number.isFinite(dur) || dur <= 0) return
-      if (dur - pos <= FINISHED_TAIL_S) {
-        // Derive "next" from this effect's own episode: by the time a switch's
-        // cleanup flushes, nextEpRef already points past the NEW episode.
-        const list = epListRef.current
-        const i = list.findIndex((e) => e.index === curEp)
-        const next = i > 0 ? list[i - 1].index : null
-        if (next != null) recordProgress(id, next, 0, dur)
-        else recordProgress(id, curEp, dur, dur, true)
-      } else {
-        recordProgress(id, curEp, pos, dur)
-      }
+      recordProgress(id, epListRef.current, curEp, pos, dur)
     }
     const flushTimer = setInterval(() => {
       if (started && !video.paused) flushProgress()

@@ -7,8 +7,8 @@
  * ascending, and the entry is deleted when they switch back. The map therefore
  * stays bounded to titles the user actually touched and needs no cap.
  *
- * Display order only. The canonical newest-first order from `olevod.js::detail`
- * is what the player derives "next episode" from and must not be reordered.
+ * Display order only. Pages render a reversed copy; the canonical newest-first
+ * list from `olevod.js::detail` is never reordered.
  *
  * Shape: { [vodId]: true }
  */

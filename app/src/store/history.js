@@ -13,11 +13,12 @@
  * only writer, so opening a detail page never counts as watching it. Entries
  * saved before this field existed simply have no time to show.
  *
- * Consumed by: the home "Continue Watching" shelf (progress bar), the library's
- * history grid (time label), the detail page's "Continue Watching Episode N",
- * and the player's resume feature.
+ * What a watch entry means for the viewer (resume point, next episode, the
+ * detail page's primary button, the 继续观看 shelf) is watchState.js's call;
+ * this file only stores it.
  */
 import { createStore } from '../hooks/useStore.js'
+import { progressEntry } from './watchState.js'
 
 const CAP = 40
 
@@ -38,15 +39,16 @@ export function recordHistory(item) {
   })
 }
 
-// Update resume progress for a title and bump it to the front. If the title
-// isn't in history yet, it is added (so progress from a fresh play is kept).
-export function recordProgress(id, lastEpisodeIndex, position, duration, finished = false) {
+// Record that episode `index` of `episodes` played up to `position` of
+// `duration`, and bump the title to the front. If the title isn't in history
+// yet, it is added (so progress from a fresh play is kept).
+export function recordProgress(id, episodes, index, position, duration) {
   historyStore.set((prev) => {
     const existing = prev.find((x) => x.id === id)
     const rest = prev.filter((x) => x.id !== id)
     const base = existing || { id }
     return [
-      { ...base, watch: { lastEpisodeIndex, position, duration, finished }, updatedAt: Date.now() },
+      { ...base, watch: progressEntry(episodes, index, position, duration), updatedAt: Date.now() },
       ...rest,
     ].slice(0, CAP)
   })

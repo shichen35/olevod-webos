@@ -1,5 +1,5 @@
 /*
- * Top-level tab model, derived from the taxonomy. The tab bar (T08), routing,
+ * Top-level tab model, derived from the taxonomy. The tab bar, routing,
  * and per-tab content areas all read TABS from here — so adding a category in
  * taxonomy.js grows this list with no edits here.
  *

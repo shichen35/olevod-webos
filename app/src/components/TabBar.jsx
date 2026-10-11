@@ -11,7 +11,7 @@
  * Hover-switching: moving focus left/right across tabs switches the content area
  * below after a 150ms debounce (focus stays on the tab bar). Only Enter/click
  * commits — it switches immediately and bumps the tab's refresh nonce so the
- * page refetches (wired in T15). Down leaves the bar for the content area.
+ * page refetches. Down leaves the bar for the content area.
  *
  * The white focus fill slides between the capsule's tabs via useSlidingCursor;
  * see that hook for the animation and the cursor-vs-selection rules. Icon

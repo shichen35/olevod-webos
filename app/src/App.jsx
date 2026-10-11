@@ -60,12 +60,12 @@ const PlayerPage = lazy(() => import('./player/PlayerPage.jsx'))
 export default function App() {
   const [activeTab, setActiveTab] = useState('home')
   const [stack, setStack] = useState([{ type: 'shell' }])
-  // Per-tab refresh nonce — bumped on tab Enter/click; consumed by pages (T15).
+  // Per-tab refresh nonce — bumped on tab Enter/click; consumed by pages.
   const [refreshNonce, setRefreshNonce] = useState({})
   // Tabs mount on first activation and then stay mounted (state/scroll survive),
   // so switching back is instant and no tab fetches until it's first visited.
   const [activated, setActivated] = useState(() => new Set(['home']))
-  // Filter panel (T12): which category's panel is open, and the applied filter
+  // Filter panel: which category's panel is open, and the applied filter
   // override that pushes changes down into that CategoryPage.
   const [filterPanel, setFilterPanel] = useState({ open: false, category: null })
   const [filterOverrides, setFilterOverrides] = useState({})

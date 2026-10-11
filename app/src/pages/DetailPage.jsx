@@ -149,7 +149,7 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
   const favorites = useStoreValue(favoritesStore)
   const isFav = favorites.some((x) => x.id === id)
   // Subscribed (not a one-shot read): closing the player must immediately flip
-  // the primary button to "continue watching episode N" (T18).
+  // the primary button to "continue watching episode N".
   const history = useStoreValue(historyStore)
   const ascending = !!useStoreValue(episodeOrderStore)[id]
 

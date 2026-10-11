@@ -90,7 +90,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // A filter change pushed in from the panel (T12) via filterOverride.
+  // A filter change pushed in from the panel via filterOverride.
   useEffect(() => {
     if (!filterOverride) return
     setFilterState(filterOverride)
@@ -99,7 +99,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterOverride])
 
-  // refreshNonce bump (tab Enter, T15): drop this category's cache and refetch.
+  // refreshNonce bump (tab Enter): drop this category's cache and refetch.
   const firstNonce = useRef(refreshNonce)
   useEffect(() => {
     if (refreshNonce === firstNonce.current) return

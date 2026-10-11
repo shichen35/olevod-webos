@@ -26,7 +26,7 @@ let proxyPort = null
 
 /**
  * One Luna bus call as a Promise. A bus call cannot be truly aborted (same
- * caveat as transportGet's T05 semantics), so the timeout rejects and lets any
+ * caveat as transportGet), so the timeout rejects and lets any
  * late response fall on the floor.
  */
 function lunaCall(method, params, timeoutMs) {

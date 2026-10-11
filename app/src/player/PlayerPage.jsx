@@ -225,7 +225,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
   const toastTimerRef = useRef(null)
   const [upNext, setUpNext] = useState(false) // Up Next card visible
   const [switching, setSwitching] = useState(false) // episode-change reload
-  const [hint, setHint] = useState(false) // settings-gated key hint
+  const [hint, setHint] = useState(false) // key-hint card
   const [paused, setPaused] = useState(false) // drives the bar's play/pause icon
   const [trackInfo, setTrackInfo] = useState(null) // { width, height, bitrate } of the playing level
   const [seekable, setSeekable] = useState(true) // false once the stream proves unseekable
@@ -349,7 +349,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
       if (isRepeat && now - lastStepAtRef.current < SEEK_REPEAT_MS) return
       lastStepAtRef.current = now
 
-      // Long-press acceleration: 2x per held second, unbounded; a tap is always 1x.
+      // Long-press acceleration: 4x per held second, unbounded; a tap is always 1x.
       const heldS = isRepeat ? Math.floor((now - holdStartAtRef.current) / 1000) : 0
       const mult = Math.max(1, heldS * 4)
 
@@ -628,7 +628,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
       setStatus('error')
     }
 
-    // Resume decision (T18): same episode, meaningfully into it. A `finished`
+    // Resume decision: same episode, meaningfully into it. A `finished`
     // watch point holds position at the episode's end purely so a title that
     // later airs a new episode can still resume there — never resume INTO it.
     const watch = getWatchState(id)
@@ -1056,7 +1056,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
 
       {toast && <div className="glass-strong border border-glass-edge absolute top-12 right-safe rounded-full px-7 py-3.5 text-label text-fg">{toast}</div>}
 
-      {/* Up Next (T19): glass card, bottom-right; OK switches immediately. */}
+      {/* Up Next: glass card, bottom-right; OK switches immediately. */}
       {upNext && nextEpIndex != null && (
         <div className="glass-strong border border-glass-edge absolute right-safe bottom-55 rounded-[20px] px-9 py-6 text-center">
           <div className="mb-2 text-caption text-fg-2">即将播放</div>

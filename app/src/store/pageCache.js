@@ -3,7 +3,7 @@
  *
  * Lets pages render instantly when revisited (switch tab and back with no
  * spinner) while `loadOnce` dedupes concurrent fetches for the same key, and
- * `invalidate(prefix)` lets a refresh (refreshNonce, T15) force a refetch.
+ * `invalidate(prefix)` lets a refresh (refreshNonce) force a refetch.
  */
 const cache = new Map() // key -> resolved data
 const inflight = new Map() // key -> Promise (dedupe concurrent loads)

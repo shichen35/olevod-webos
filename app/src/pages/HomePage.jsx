@@ -79,7 +79,7 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
     return () => setGeometryVerticalGroup('home', group, false)
   }, [group])
 
-  // refreshNonce bump (tab Enter, T15): drop the cache and refetch WITHOUT
+  // refreshNonce bump (tab Enter): drop the cache and refetch WITHOUT
   // clearing. Skip the initial value so mount doesn't double-load.
   const firstNonce = useRef(refreshNonce)
   useEffect(() => {

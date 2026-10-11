@@ -3,7 +3,7 @@
  * (rating, UHD, "Watched through EPxx") and a bottom watch-progress bar.
  *
  * Wrapped in React.memo so a parent re-render doesn't re-render a whole grid of
- * cards. Focus state is the T02 border + title-color swap only — no scale, no
+ * cards. Focus state is the border + title-color swap only — no scale, no
  * shadow, no transition. The root reserves layout via content-visibility +
  * contain-intrinsic-size (cv-auto) so off-screen cards are cheap.
  */

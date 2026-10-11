@@ -58,9 +58,13 @@ function scrollStripIntoView(el, behavior) {
   if (delta !== 0) strip.scrollBy({ left: delta, behavior })
 }
 
-// The base layer is the root page (Home). Overlays push on top of it.
+// The base layer is the root page (Home). Overlays open frames on top of it.
 const DEFAULT_LAYER = 'home'
-const layerStack = [DEFAULT_LAYER]
+
+// Modal frames, bottom to top: { layer?, onKey?, onBack? }. One stack decides
+// both which layer the D-pad drives (the topmost frame that has a layer) and
+// who sees keys (the topmost frame), so the two can't drift apart.
+const frames = []
 
 // Focus memory. Restored on layer pop / cross-group jumps / vertical row moves.
 const lastFocusByLayer = new Map() // layer -> id
@@ -111,8 +115,15 @@ function buildId(layer, group, row, col) {
   return `${layer}/${group}-${row}-${col}`
 }
 
+function topLayerFrame() {
+  for (let i = frames.length - 1; i >= 0; i--) {
+    if (frames[i].layer) return frames[i]
+  }
+  return null
+}
+
 function activeLayer() {
-  return layerStack[layerStack.length - 1]
+  return topLayerFrame()?.layer ?? DEFAULT_LAYER
 }
 
 // ---------------------------------------------------------------------------
@@ -340,28 +351,76 @@ function navigate(dir) {
 }
 
 // ---------------------------------------------------------------------------
-// focus layer stack
+// modal frames
 // ---------------------------------------------------------------------------
-export function pushFocusLayer(layer) {
-  if (currentFocusId) lastFocusByLayer.set(activeLayer(), currentFocusId)
-  layerStack.push(layer)
-  // Try to place focus in the new layer now; a freshly-mounted overlay may not
-  // have registered its focusables yet, in which case the caller focusTo()s
-  // after mount (typically in a useLayoutEffect).
-  const remembered = lastFocusByLayer.get(layer)
-  const target = (remembered && registry.has(remembered)) ? remembered : firstInLayer(layer)
+
+// Open a modal frame and return close(), which removes exactly this frame —
+// even while frames opened after it are still up — and, if its layer was the
+// active one, puts focus back where it was in the layer underneath.
+//   layer  : focus layer the D-pad drives while open (omit to keep the one below)
+//   focus  : id to land on; defaults to the layer's remembered or first cell
+//   onKey  : (e) => true to consume a key; only the top frame's runs, first
+//   onBack : what Back does here; omit to let Back fall through to `tv-back`
+export function openFocusFrame({ layer, focus, onKey, onBack } = {}) {
+  if (layer && currentFocusId) lastFocusByLayer.set(activeLayer(), currentFocusId)
+  const frame = { layer, onKey, onBack }
+  frames.push(frame)
+  // An overlay's focusables register in its children's effects, which run
+  // before the overlay's own — so they are normally registered by now. If not
+  // (data still loading), the caller focusTo()s once they mount.
+  let target = focus && registry.has(focus) ? focus : null
+  if (!target && layer) {
+    const remembered = lastFocusByLayer.get(layer)
+    target = remembered && registry.has(remembered) ? remembered : firstInLayer(layer)
+  }
   if (target) setFocus(target)
+  return () => closeFrame(frame)
 }
 
-export function popFocusLayer() {
-  if (layerStack.length <= 1) return
-  layerStack.pop()
-  const layer = activeLayer()
+function closeFrame(frame) {
+  const i = frames.lastIndexOf(frame)
+  if (i < 0) return
+  const wasActive = frame === topLayerFrame()
+  frames.splice(i, 1)
+  if (!wasActive) return
   // Restore where focus was in the layer we returned to; if that cell was
   // unmounted, fall back to the first focusable in the layer.
+  const layer = activeLayer()
   const remembered = lastFocusByLayer.get(layer)
   const target = (remembered && registry.has(remembered)) ? remembered : firstInLayer(layer)
   if (target) applyFocus(target) // applyFocus (not setFocus) so a same-id restore still repaints
+}
+
+// openFocusFrame for a component's lifetime. Callbacks are read through a ref,
+// so they always see the latest props; layer, focus and which callbacks exist
+// are fixed at mount.
+export function useFocusFrame(opts) {
+  const optsRef = useRef(opts)
+  optsRef.current = opts
+  useEffect(() => {
+    const { layer, focus, onKey, onBack } = optsRef.current
+    return openFocusFrame({
+      layer,
+      focus,
+      onKey: onKey && ((e) => optsRef.current.onKey(e)),
+      onBack: onBack && (() => optsRef.current.onBack()),
+    })
+  }, [])
+}
+
+// The split form the player's key machine still uses: a layer-only frame with
+// a key-only frame above it. popFocusLayer closes the topmost layer frame.
+export function pushFocusLayer(layer) {
+  openFocusFrame({ layer })
+}
+
+export function popFocusLayer() {
+  const frame = topLayerFrame()
+  if (frame) closeFrame(frame)
+}
+
+export function pushCustomKeyHandler(fn) {
+  return openFocusFrame({ onKey: fn })
 }
 
 export function getActiveLayer() {
@@ -372,21 +431,6 @@ export function getActiveLayer() {
 // keyboard
 // ---------------------------------------------------------------------------
 let keyHandlerAttached = false
-// Stack of layer key handlers; only the topmost one sees keys. A stack (not a
-// single slot) so a dialog opened over a page that has its own handler (the
-// account page's digit keys) hands the keys back when it closes.
-const customKeyHandlers = []
-
-// Overlays (filter panel, player, dialogs, etc.) intercept keys in place;
-// return true to consume the event before the default navigation runs.
-// Returns the matching pop function — call it on unmount.
-export function pushCustomKeyHandler(fn) {
-  customKeyHandlers.push(fn)
-  return () => {
-    const i = customKeyHandlers.lastIndexOf(fn)
-    if (i >= 0) customKeyHandlers.splice(i, 1)
-  }
-}
 
 const BACK_KEYCODE = 461 // webOS remote Back — NOT Backspace
 
@@ -417,8 +461,14 @@ export function initFocusEngine() {
       return
     }
 
-    const customKeyHandler = customKeyHandlers[customKeyHandlers.length - 1]
-    if (customKeyHandler && customKeyHandler(e)) return
+    const frame = frames[frames.length - 1]
+    if (frame?.onKey?.(e)) return
+    if (frame?.onBack && isBackKey(e)) {
+      e.preventDefault()
+      e.stopPropagation()
+      frame.onBack()
+      return
+    }
 
     if (isBackKey(e)) {
       e.preventDefault()
@@ -477,7 +527,7 @@ export function useFocusable({ layer = DEFAULT_LAYER, group = 'content', row = 0
       // transiently unmount/remount (React re-render, StrictMode) and would
       // otherwise leave focus dangling; keeping the id means the re-register +
       // self-heal restore it. A genuinely removed cell is handled by navigate's
-      // stale-focus fallback and by popFocusLayer's memory restore.
+      // stale-focus fallback and by closeFrame's memory restore.
     }
   }, [id, layer, group, row, col]) // deliberately NOT the callbacks
 

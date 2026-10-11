@@ -29,6 +29,7 @@ import {
 } from '../hooks/useFocus.js'
 import { getCategory, LETTERS } from '../config/taxonomy.js'
 import { useFilter, patchFilter, resetFilter } from '../store/filters.js'
+import Icon from './Icon.jsx'
 
 const LAYER = 'filter'
 const GROUP = 'panel'
@@ -124,17 +125,23 @@ function moveByGeometry(dir, root) {
   if (target) setFocus(target.getAttribute('data-focus-id'))
 }
 
-// Selected is distinct from focus (white fill): an accent dot + accent text on
-// the elevated fill. Focus still overrides the text to dark instantly; the dot
-// keeps its explicit accent color either way.
+// Selected is distinct from focus (white fill): an accent check + accent text
+// on the elevated fill. Focus still overrides the text to dark instantly; the
+// check keeps its explicit accent color either way.
 const PANEL_CHIP = 'focusable rounded-full bg-elev-2 px-[18px] py-2 text-label'
-const PANEL_CHIP_SELECTED = "text-accent before:mr-2 before:text-[16px] before:text-accent before:content-['●']"
 
 function OptChip({ row, col, label, selected, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: GROUP, row, col, onSelect })
   return (
-    <span className={`${PANEL_CHIP} ${selected ? PANEL_CHIP_SELECTED : 'text-fg'}`} {...props}>
-      {label}
+    <span className={`${PANEL_CHIP} ${selected ? 'text-accent' : 'text-fg'}`} {...props}>
+      {selected ? (
+        <span className="inline-flex items-center gap-1.5">
+          <Icon name="check" size={26} className="text-accent" />
+          {label}
+        </span>
+      ) : (
+        label
+      )}
     </span>
   )
 }

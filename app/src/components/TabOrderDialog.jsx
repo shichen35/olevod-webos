@@ -21,17 +21,19 @@ import { useFocusable, useFocusFrame, focusTo } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { settingsStore, getSetting } from '../store/settings.js'
 import { tabRows, moveTab, hideTab, showTab, resetTabs } from '../config/nav.js'
+import Icon from './Icon.jsx'
 
 const LAYER = 'tabsort'
 
-function RowButton({ row, col, label, disabled, wide = false, onSelect }) {
+function RowButton({ row, col, icon, label, disabled, wide = false, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col, onSelect })
   return (
     <div
       className={`focusable rounded-xl bg-elev-2 py-3 text-center text-label text-fg-2 ${wide ? 'px-6' : 'w-21'} ${disabled ? 'opacity-35' : ''}`}
       {...props}
     >
-      {label}
+      {/* 32px tall, like a line of text-label, so icon and text rows match. */}
+      {icon ? <Icon name={icon} size={30} className="mx-auto my-px block" /> : label}
     </div>
   )
 }
@@ -111,8 +113,8 @@ export default function TabOrderDialog({ onClose }) {
           {shown.map(({ tab, canUp, canDown }, i) => (
             <div className="flex items-center gap-3 rounded-[14px] bg-glass-active py-2.5 pr-2.5 pl-6" key={i}>
               <span className="flex-1 truncate text-body text-fg">{tab.label}</span>
-              <RowButton row={i} col={0} label="▲" disabled={!canUp} onSelect={() => move(tab.key, -1)} />
-              <RowButton row={i} col={1} label="▼" disabled={!canDown} onSelect={() => move(tab.key, 1)} />
+              <RowButton row={i} col={0} icon="keyboard_arrow_up" disabled={!canUp} onSelect={() => move(tab.key, -1)} />
+              <RowButton row={i} col={1} icon="keyboard_arrow_down" disabled={!canDown} onSelect={() => move(tab.key, 1)} />
               <RowButton row={i} col={2} label="隐藏" wide onSelect={() => hide(tab.key)} />
             </div>
           ))}

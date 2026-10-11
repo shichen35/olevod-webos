@@ -21,8 +21,8 @@ sessionStore.subscribe(() => {
   pageCache.clear()
 })
 
-export const HOME_POPULAR_KEY = 'home:popular'
-export const HOME_BANNERS_KEY = 'home:banners'
+const HOME_POPULAR_KEY = 'home:popular'
+const HOME_BANNERS_KEY = 'home:banners'
 
 // The home page's featured row. Failure is not an error state: the page simply
 // opens on its shelves instead.
@@ -55,6 +55,12 @@ export function loadHomePopular() {
 // the player opened from it reads the same entry, so playback never refetches.
 export function loadDetail(id) {
   return pageCache.loadOnce(`detail:${id}`, () => detail(id))
+}
+
+// Refresh / retry: forget the home feed (popular rows and banners) so the
+// page's next load refetches.
+export function invalidateHome() {
+  pageCache.invalidate('home:')
 }
 
 export function categoryFirstPageKey(category, f) {

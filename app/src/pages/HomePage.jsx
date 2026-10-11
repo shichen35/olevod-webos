@@ -14,14 +14,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Shelf from '../components/Shelf.jsx'
 import Thumb from '../components/Thumb.jsx'
-import { loadHomePopular, loadHomeBanners, POPULAR } from '../api/feeds.js'
+import { loadHomePopular, loadHomeBanners, invalidateHome, POPULAR } from '../api/feeds.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { historyStore } from '../store/history.js'
 import { continueWatching } from '../store/watchState.js'
 import { favoritesStore } from '../store/favorites.js'
 import { settingsStore, getSetting } from '../store/settings.js'
 import { useFocusable, setGeometryVerticalGroup } from '../hooks/useFocus.js'
-import * as pageCache from '../store/pageCache.js'
 
 function RetryButton({ group, onRetry }) {
   const { props } = useFocusable({ layer: 'home', group, row: 0, col: 0, onSelect: onRetry })
@@ -86,12 +85,12 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
   useEffect(() => {
     if (refreshNonce === firstNonce.current) return
     firstNonce.current = refreshNonce
-    pageCache.invalidate('home:')
+    invalidateHome()
     load(false)
   }, [refreshNonce, load])
 
   const retry = useCallback(() => {
-    pageCache.invalidate('home:')
+    invalidateHome()
     load()
   }, [load])
 

@@ -46,10 +46,13 @@ export default function Icon({ name, size = 24, ...props }) {
 }
 
 // An icon leading a button's text. 30px suits the 24px text-label most
-// buttons use; pass size for other text sizes.
+// buttons use; pass size for other text sizes. align-top keeps the box inside
+// the text's line: baseline-aligned, an inline-flex sits on the icon's bottom
+// edge and pushes the line — and the button — a few px taller than its
+// text-only siblings.
 export function IconLabel({ icon, size = 30, children }) {
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex items-center gap-2 align-top">
       <Icon name={icon} size={size} />
       {children}
     </span>

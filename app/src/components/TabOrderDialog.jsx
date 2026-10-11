@@ -32,8 +32,8 @@ function RowButton({ row, col, icon, label, disabled, wide = false, onSelect }) 
       className={`focusable rounded-xl bg-elev-2 py-3 text-center text-label text-fg-2 ${wide ? 'px-6' : 'w-21'} ${disabled ? 'opacity-35' : ''}`}
       {...props}
     >
-      {/* 32px tall, like a line of text-label, so icon and text rows match. */}
-      {icon ? <Icon name={icon} size={30} className="mx-auto my-px block" /> : label}
+      {/* 30px + 2×1.2px = 32.4px, a line of text-label, so icon and text rows match. */}
+      {icon ? <Icon name={icon} size={30} className="mx-auto my-[1.2px] block" /> : label}
     </div>
   )
 }

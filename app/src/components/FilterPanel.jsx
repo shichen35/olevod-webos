@@ -135,7 +135,7 @@ function OptChip({ row, col, label, selected, onSelect }) {
   return (
     <span className={`${PANEL_CHIP} ${selected ? 'text-accent' : 'text-fg'}`} {...props}>
       {selected ? (
-        <span className="inline-flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1.5 align-top">
           <Icon name="check" size={26} className="text-accent" />
           {label}
         </span>

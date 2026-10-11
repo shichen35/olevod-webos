@@ -29,7 +29,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
-import Icon from '../components/Icon.jsx'
+import Icon, { IconLabel } from '../components/Icon.jsx'
 import {
   useFocusable,
   useFocusFrame,
@@ -116,7 +116,7 @@ function KeyButton({ ids, row, col, label, onPress }) {
       className={`focusable flex h-[72px] items-center justify-center rounded-[14px] bg-elev-2 text-fg ${isDigit ? 'text-heading' : 'text-label'}`}
       {...props}
     >
-      {label}
+      {label === '退格' ? <IconLabel icon="backspace">{label}</IconLabel> : label}
     </div>
   )
 }

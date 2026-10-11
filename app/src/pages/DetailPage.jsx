@@ -14,8 +14,8 @@
  *   row 2+    the episode grid (row 1+ when there are no playlist controls)
  *
  * Episode order is a DISPLAY concern only. `olevod.js::detail` returns episodes
- * newest-first and the player derives "next episode" from that order, so the
- * canonical list is never reordered — this page reverses a copy for rendering
+ * newest-first and that canonical list is never reordered ("next episode" goes
+ * by index, see store/watchState.js) — this page reverses a copy for rendering
  * and remembers the choice per title (`store/episodeOrder.js`).
  *
  * The blurb stays clamped to three lines; 简介 opens the full text in a

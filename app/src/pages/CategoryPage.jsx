@@ -88,7 +88,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
     })
   }, [category, filter, total])
 
-  // Initial load, at the default filter.
+  // Initial load, at the filter the store holds for this category.
   useEffect(() => {
     load(filter)
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -6,6 +6,7 @@ node_modules/
 app/dist/
 dist/
 *.ipk
+out/
 
 # vite cache
 **/.vite/
@@ -26,9 +27,3 @@ tv-key*
 *.swp
 .idea/
 .vscode/
-
-# local Claude Code tooling (never committed)
-.claude/
-
-# local issue tracker: specs and tickets (docs/agents/issue-tracker.md)
-.scratch/

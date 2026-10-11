@@ -33,7 +33,7 @@ import Thumb from '../components/Thumb.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import SynopsisDialog from '../components/SynopsisDialog.jsx'
 import { sessionStore } from '../store/session.js'
-import { useFocusable, pushFocusLayer, popFocusLayer, focusTo } from '../hooks/useFocus.js'
+import { useFocusable, useFocusFrame, focusTo } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore, toggle as toggleFavorite } from '../store/favorites.js'
 import { historyStore } from '../store/history.js'
@@ -195,11 +195,9 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
   // A different title starts over at its own default range.
   useEffect(() => setAnchorEp(null), [id])
 
-  // Own the detail focus layer for this overlay's lifetime.
-  useEffect(() => {
-    pushFocusLayer(LAYER)
-    return () => popFocusLayer()
-  }, [])
+  // Own the detail focus layer for this overlay's lifetime. No onBack: Back
+  // reaches App's back chain, which pops this overlay off the stack.
+  useFocusFrame({ layer: LAYER })
 
   // Once data lands, deterministically focus the play button.
   useEffect(() => {

@@ -31,11 +31,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import {
   useFocusable,
-  pushFocusLayer,
-  popFocusLayer,
+  useFocusFrame,
   focusTo,
   getCurrentFocus,
-  pushCustomKeyHandler,
 } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { captcha as fetchCaptcha, login, userInfo } from '../api/olevod.js'
@@ -214,13 +212,15 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
   const modeRef = useRef(mode)
   modeRef.current = mode
 
-  // The overlay owns its focus layer; the tab is part of the shell's. The key
-  // handler is installed either way, but only acts while the cursor is on this
-  // page — the tab stays mounted (and its handler with it) after the user has
-  // moved on to another tab.
-  useEffect(() => {
-    if (!isTab) pushFocusLayer(OVERLAY_LAYER)
-    const popKeys = pushCustomKeyHandler((e) => {
+  // The overlay owns its focus layer; the tab is part of the shell's, so its
+  // frame has no layer and only carries the key handler. The handler is there
+  // either way, but only acts while the cursor is on this page — the tab stays
+  // mounted (and its frame with it) after the user has moved on to another tab.
+  // Neither host sets onBack: the remote's Back reaches App's back chain, which
+  // closes the overlay (or leaves the tab for the tab bar).
+  useFocusFrame({
+    layer: isTab ? undefined : OVERLAY_LAYER,
+    onKey: (e) => {
       if (modeRef.current === 'signedIn') return false
       const cell = currentCell(ids)
       if (!cell) return false
@@ -249,15 +249,14 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
         return true
       }
       return false
-    })
+    },
+  })
+  useEffect(() => {
     return () => {
       aliveRef.current = false
       captchaGenRef.current++
-      popKeys()
-      if (!isTab) popFocusLayer()
       clearPersistError()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Fresh challenge whenever the sign-in form is (re)shown.

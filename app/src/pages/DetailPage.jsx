@@ -175,16 +175,14 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
     load()
   }, [load])
 
-  // Login / logout / expiry changes which episode urls come back: reload. Drop
-  // this title's entry first — App.jsx flushes the whole cache too, but its
-  // effect runs after this child's.
+  // Login / logout / expiry changes which episode urls come back: reload. The
+  // cache was already flushed when the session changed (api/feeds.js).
   const session = useStoreValue(sessionStore)
   const sessionToken = session?.token || null
   const loadedTokenRef = useRef(sessionToken)
   useEffect(() => {
     if (loadedTokenRef.current === sessionToken) return
     loadedTokenRef.current = sessionToken
-    pageCache.invalidate(`detail:${id}`)
     load()
   }, [sessionToken, id, load])
 

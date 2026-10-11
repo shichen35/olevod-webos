@@ -10,8 +10,8 @@
  * out drops the session but keeps the remembered login; forgetting the login
  * leaves the current session alone.
  *
- * Side effects of an account change (cache flush, prefetch) are handled by the
- * shell subscribing to sessionStore (App.jsx), not here.
+ * Side effects of an account change are handled by their owners subscribing to
+ * sessionStore (cache flush: api/feeds.js, prefetch: App.jsx), not here.
  */
 import { createMemoryStore } from '../hooks/useStore.js'
 import { readSlot, writeSlot, clearSlot } from './vault.js'

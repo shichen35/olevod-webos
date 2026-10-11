@@ -7,6 +7,19 @@ import { categoryList, banners } from './olevod.js'
 import { CATEGORIES } from '../config/taxonomy.js'
 import { DEFAULT_FILTER } from '../store/filters.js'
 import * as pageCache from '../store/pageCache.js'
+import { sessionStore } from '../store/session.js'
+
+// An account change (login / logout / expiry) changes what the API returns
+// (episode urls, VIP lines), so every cached response goes. This runs inside
+// sessionStore.set, before any page re-renders, so a page that reloads on the
+// new token always misses the cache.
+let sessionToken = sessionStore.get()?.token || null
+sessionStore.subscribe(() => {
+  const next = sessionStore.get()?.token || null
+  if (next === sessionToken) return
+  sessionToken = next
+  pageCache.clear()
+})
 
 export const HOME_POPULAR_KEY = 'home:popular'
 export const HOME_BANNERS_KEY = 'home:banners'

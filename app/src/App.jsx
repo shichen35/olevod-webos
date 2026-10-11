@@ -38,7 +38,6 @@ import SearchPage from './pages/SearchPage.jsx'
 import AccountPage from './pages/AccountPage.jsx'
 import { settingsStore, getSetting } from './store/settings.js'
 import { sessionStore } from './store/session.js'
-import * as pageCache from './store/pageCache.js'
 import { useStoreValue } from './hooks/useStore.js'
 import { prefetchAll } from './api/feeds.js'
 import { exitApp } from './api/luna.js'
@@ -117,16 +116,11 @@ export default function App() {
 
   // Background prefetch: warm every tab's cache sequentially so switching tabs
   // is spinner-free. Shares pageCache keys with the pages (no duplicate fetch).
-  // An account change (login / logout / expiry) flushes every cached response
-  // and warms again under the new session.
+  // An account change (login / logout / expiry) has already flushed the cache
+  // (api/feeds.js); warm it again under the new session.
   const session = useStoreValue(sessionStore)
   const sessionToken = session?.token || null
-  const prefetchTokenRef = useRef(sessionToken)
   useEffect(() => {
-    if (prefetchTokenRef.current !== sessionToken) {
-      prefetchTokenRef.current = sessionToken
-      pageCache.clear()
-    }
     let stopped = false
     prefetchAll(() => stopped)
     return () => {

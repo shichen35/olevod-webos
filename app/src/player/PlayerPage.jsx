@@ -1,8 +1,8 @@
 /*
  * Full-screen HLS player (the "player" focus layer, above "detail").
  *
- * Key machine (all keys intercepted at the player layer via
- * pushCustomKeyHandler; Back unwinds one level at a time):
+ * Key machine (all keys intercepted by the player layer's focus frame; Back
+ * unwinds one level at a time):
  *   bar hidden: Down = show bar · Up = show the key hint · Left/Right = seek
  *               step (long-press repeats, step grows each held second)
  *               OK = play/pause (pausing shows the bar) · Back = exit
@@ -55,14 +55,7 @@ import { nextEpisode, resumePosition } from '../store/watchState.js'
 import { sessionStore } from '../store/session.js'
 import { episodeOrderStore } from '../store/episodeOrder.js'
 import { useStoreValue } from '../hooks/useStore.js'
-import {
-  useFocusable,
-  pushFocusLayer,
-  popFocusLayer,
-  focusTo,
-  pushCustomKeyHandler,
-  isBackKey,
-} from '../hooks/useFocus.js'
+import { useFocusable, useFocusFrame, focusTo, isBackKey } from '../hooks/useFocus.js'
 
 const LAYER = 'player'
 
@@ -371,9 +364,11 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
   // ---------------------------------------------------------------------
   // key machine — owns every key in the player layer
   // ---------------------------------------------------------------------
-  useEffect(() => {
-    pushFocusLayer(LAYER)
-    const popKeys = pushCustomKeyHandler((e) => {
+  // One frame for the player's lifetime; onKey is read through a ref, so it
+  // always sees the latest callbacks without reopening the frame.
+  useFocusFrame({
+    layer: LAYER,
+    onKey: (e) => {
       // Media keys first: they apply in every state (bar hidden, bar shown,
       // strip open) and never move focus. Seeking shows the usual target badge
       // but deliberately leaves the bar alone — reaching for these keys is how
@@ -488,12 +483,8 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
         default:
           return false
       }
-    })
-    return () => {
-      popKeys()
-      popFocusLayer()
-    }
-  }, [armHideTimer, hideBar, showBar, showStrip, hideStrip, stepSeek, togglePlay, showHint])
+    },
+  })
 
   // The error state has this layer's only focusable; drop the bar/strip so their
   // focusables don't compete, then land on Retry deterministically.

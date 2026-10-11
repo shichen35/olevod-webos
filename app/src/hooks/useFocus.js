@@ -408,21 +408,6 @@ export function useFocusFrame(opts) {
   }, [])
 }
 
-// The split form the player's key machine still uses: a layer-only frame with
-// a key-only frame above it. popFocusLayer closes the topmost layer frame.
-export function pushFocusLayer(layer) {
-  openFocusFrame({ layer })
-}
-
-export function popFocusLayer() {
-  const frame = topLayerFrame()
-  if (frame) closeFrame(frame)
-}
-
-export function pushCustomKeyHandler(fn) {
-  return openFocusFrame({ onKey: fn })
-}
-
 export function getActiveLayer() {
   return activeLayer()
 }

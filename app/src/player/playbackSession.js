@@ -100,6 +100,7 @@ export function createPlayback(video, opts) {
   let resumeCorrected = false
   const currentSrc = src // the watchdog reloads from here on a native-path stall
   let seekable = true // assume seekable until the stream says otherwise
+  let pendingMeta = null // a native soft reload's seek-back, until metadata arrives
 
   const fail = (kind) => opts.onStatus('error', kind)
 
@@ -140,8 +141,10 @@ export function createPlayback(video, opts) {
       return
     }
     if (!currentSrc) return
+    if (pendingMeta) video.removeEventListener('loadedmetadata', pendingMeta)
     const onMeta = () => {
       video.removeEventListener('loadedmetadata', onMeta)
+      pendingMeta = null
       if (wantPos > 0) {
         try {
           video.currentTime = wantPos
@@ -151,6 +154,7 @@ export function createPlayback(video, opts) {
       }
       video.play().catch(() => {})
     }
+    pendingMeta = onMeta
     video.addEventListener('loadedmetadata', onMeta)
     video.src = currentSrc
     video.load()
@@ -377,6 +381,9 @@ export function createPlayback(video, opts) {
       video.removeEventListener('timeupdate', onTime)
       video.removeEventListener('progress', onProgress)
       video.removeEventListener('ended', onEnded)
+      // The <video> outlives this session: a seek-back still waiting for
+      // metadata would otherwise fire on the next episode's load.
+      if (pendingMeta) video.removeEventListener('loadedmetadata', pendingMeta)
       if (hls) hls.destroy()
       // Drop the native source too so no segment request outlives the page.
       video.removeAttribute('src')

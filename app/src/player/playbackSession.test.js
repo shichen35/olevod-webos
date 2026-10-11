@@ -61,7 +61,11 @@ async function start(log) {
     onProgress() {},
     onEnded() {},
   })
-  while (!video.src) await new Promise((r) => setImmediate(r)) // hls.js import settles
+  // Wait for the hls.js import to settle; fail instead of hanging when it can't.
+  for (let i = 0; !video.src; i++) {
+    if (log.includes('error') || i > 1000) throw new Error('no source attached (is hls.js installed?)')
+    await new Promise((r) => setImmediate(r))
+  }
   video.emit('playing')
   return { video, pb }
 }

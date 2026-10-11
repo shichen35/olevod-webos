@@ -56,14 +56,19 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
 
   // `clear` blanks to a loading state (initial load / retry); a refresh keeps
   // the old rows on screen until the new data lands (no blank flash).
+  // genRef drops results from a superseded load, so a slow prefetch that lands
+  // after a refresh can't put the older rows back.
+  const genRef = useRef(0)
   const load = useCallback((clear = true) => {
+    const token = ++genRef.current
+    const current = () => token === genRef.current
     if (clear) setPopular(null)
     loadHomePopular()
-      .then(setPopular)
-      .catch(() => setPopular(POPULAR.map((p) => ({ ...p, items: [] }))))
+      .then((rows) => current() && setPopular(rows))
+      .catch(() => current() && setPopular(POPULAR.map((p) => ({ ...p, items: [] }))))
     loadHomeBanners()
-      .then((list) => setFeatured(list.slice(0, 2)))
-      .catch(() => setFeatured([]))
+      .then((list) => current() && setFeatured(list.slice(0, 2)))
+      .catch(() => current() && setFeatured([]))
   }, [])
 
   useEffect(() => {

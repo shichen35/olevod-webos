@@ -128,4 +128,4 @@ bash build.sh    # 打包 .ipk 到 out/
 
 ## 许可证
 
-源码采用 [MIT License](LICENSE)。欧乐影视的名称以及通过接口获取的影片、海报等内容不属于本项目，也不在该许可证范围内。
+源码采用 [MIT License](LICENSE)。界面图标来自 Google 的 Material Symbols，按 Apache License 2.0 使用，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。欧乐影视的名称以及通过接口获取的影片、海报等内容不属于本项目，也不在该许可证范围内。

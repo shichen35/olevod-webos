@@ -34,8 +34,10 @@ EOF
 # 2. Frontend build (target chrome108, base './' — see app/vite.config.js).
 (cd app && npm run build)
 
-# 3. Merge webOS metadata (appinfo.json + icons) into the build output.
+# 3. Merge webOS metadata (appinfo.json + icons) into the build output, and
+#    ship the third-party license notices inside the package.
 cp -r app/webos-meta/. app/dist/
+cp THIRD_PARTY_NOTICES.md app/dist/
 
 # 4. Package app + service into a single .ipk. ares-package comes from the
 #    @webos-tools/cli dev dependency in app/, so npm ci is all CI needs.

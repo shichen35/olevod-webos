@@ -3,37 +3,31 @@
  *
  * Lets pages render instantly when revisited (switch tab and back with no
  * spinner) while `loadOnce` dedupes concurrent fetches for the same key, and
- * `invalidate(prefix)` lets a refresh (refreshNonce) force a refetch.
+ * `invalidate(prefix)` lets a refresh force a refetch.
  */
 const cache = new Map() // key -> resolved data
 const inflight = new Map() // key -> Promise (dedupe concurrent loads)
-// Bumped by clear(). A load that started before a clear (e.g. under the
-// previous account) must not write its result back into the fresh cache.
-let epoch = 0
-
-// Synchronous cache read; undefined on a miss.
-export function get(key) {
-  return cache.has(key) ? cache.get(key) : undefined
-}
-
-export function has(key) {
-  return cache.has(key)
-}
 
 /**
  * Return cached data if present; otherwise run `loader()` once, caching the
  * result. Concurrent calls for the same key share a single in-flight promise.
+ *
+ * A load only caches its result while it is still the key's registered
+ * in-flight load: once `invalidate`/`clear` drops it (a refresh, or an account
+ * change), its late result goes back to its own callers but never into the
+ * cache, so it can't overwrite the newer load's data.
  */
 export function loadOnce(key, loader) {
   if (cache.has(key)) return Promise.resolve(cache.get(key))
   if (inflight.has(key)) return inflight.get(key)
 
-  const started = epoch
   const p = Promise.resolve()
     .then(loader)
     .then((data) => {
-      if (started === epoch) cache.set(key, data)
-      if (inflight.get(key) === p) inflight.delete(key)
+      if (inflight.get(key) === p) {
+        cache.set(key, data)
+        inflight.delete(key)
+      }
       return data
     })
     .catch((err) => {
@@ -52,7 +46,6 @@ export function invalidate(prefix = '') {
 }
 
 export function clear() {
-  epoch++
   cache.clear()
   inflight.clear()
 }

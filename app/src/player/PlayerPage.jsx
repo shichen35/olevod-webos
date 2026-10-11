@@ -40,16 +40,16 @@
  * Performance: progress/timecode updates go straight to the DOM via refs on
  * `timeupdate` — playback must not re-render the component every second.
  *
- * hls.js arrives via dynamic import() so it never enters the startup bundle
- * (PlayerPage itself is lazy() — see App.jsx). It drives playback everywhere,
- * the TV included: only hls.js lets us set a deep, memory-bounded forward
- * buffer, and the native webOS HLS pipeline (shallow, untunable buffer)
- * stuttered on heavy 1080p streams — it would drain and stall repeatedly.
- * Native canPlayType is kept only as a fallback for when MSE is unavailable.
+ * The stream itself — hls.js, the resume seek, stall recovery, position
+ * sampling — lives in playbackSession.js; this page decides what to play and
+ * where to resume, and renders what the session reports. PlayerPage itself is
+ * lazy() (see App.jsx) and the session pulls hls.js in with import(), so
+ * neither enters the startup bundle.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { streamUrl } from '../api/olevod.js'
 import { loadDetail } from '../api/feeds.js'
+import { createPlayback } from './playbackSession.js'
 import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
 import { nextEpisode, resumePosition } from '../store/watchState.js'
 import { sessionStore } from '../store/session.js'
@@ -73,34 +73,7 @@ const SEEK_REPEAT_MS = 200 // long-press step cadence (native key repeat, thrott
 const BADGE_LINGER_MS = 800 // keep the target badge up briefly after committing
 const BAR_HIDE_MS = 5000
 
-const PROGRESS_FLUSH_MS = 5000 // persist watch progress cadence
 const TOAST_MS = 3000
-
-// Native-path stall watchdog. The on-device webOS pipeline has no built-in
-// gap/nudge recovery (hls.js runs its own gapController on the dev path), so a
-// buffer hole or a decoder stall freezes playback until a manual seek — the
-// "卡住，只能快进快退救回来" symptom. These drive the auto-recovery ladder:
-// jump a hole -> nudge the decoder -> soft-reload from the last position ->
-// finally surface the error screen.
-const STALL_CHECK_MS = 1000
-const STALL_NUDGE_AFTER_MS = 3000 // currentTime frozen this long -> jump/nudge
-const STALL_RELOAD_AFTER_MS = 8000 // frozen + buffer not filling -> soft reload
-const STALL_HARD_MS = 15000 // frozen this long -> reload even while "buffering"
-const STALL_ADVANCE_EPS_S = 0.25 // currentTime moving less than this = frozen
-const STALL_HOLE_MAX_S = 1 // a buffered-range gap up to this counts as a hole
-const MAX_SOFT_RELOADS = 3 // consecutive soft reloads before the error screen
-const RECOVERY_RESET_MS = 30000 // sustained playback clears the reload count
-
-// hls.js buffering — the actual fix for stutter on heavy 1080p/high-bitrate
-// streams. A deep forward buffer means a slow segment or a busy-CPU moment
-// can't drain playback; maxBufferSize keeps that buffer bounded so a small-RAM
-// TV never blows up. Back buffer is trimmed to return decoded memory.
-const HLS_CONFIG = {
-  maxBufferLength: 60, // target forward buffer, seconds (hls.js default 30)
-  maxMaxBufferLength: 120, // hard ceiling on buffer length, seconds
-  maxBufferSize: 60 * 1000 * 1000, // memory ceiling, ~60 MB
-  backBufferLength: 30, // reclaim decoded data this far behind the playhead
-}
 
 const UP_NEXT_S = 30 // remaining time that surfaces the Up Next card
 
@@ -139,37 +112,6 @@ const MEDIA_KEYNAMES = {
 }
 function mediaKey(e) {
   return MEDIA_KEYCODES[e.keyCode] || MEDIA_KEYNAMES[e.key] || null
-}
-
-// Highest quality below the 1440p tier — UHD is too heavy to auto-select.
-// Returns -1 when the master has no such level; then hls.js keeps its own
-// ABR choice.
-function pickStartLevel(levels) {
-  let best = -1
-  for (let i = 0; i < levels.length; i++) {
-    const h = levels[i].height || 0
-    if (h >= 1440) continue
-    if (
-      best === -1 ||
-      h > (levels[best].height || 0) ||
-      (h === (levels[best].height || 0) && levels[i].bitrate > levels[best].bitrate)
-    ) {
-      best = i
-    }
-  }
-  return best
-}
-
-// Flat short retries — exponential backoff turns one transient failure into a
-// multi-second black screen before playback even starts.
-const FLAT_RETRY = { maxNumRetry: 4, retryDelayMs: 200, maxRetryDelayMs: 200 }
-const LOAD_POLICY = {
-  default: {
-    maxTimeToFirstByteMs: 8000,
-    maxLoadTimeMs: 20000,
-    timeoutRetry: FLAT_RETRY,
-    errorRetry: FLAT_RETRY,
-  },
 }
 
 // What each failure means, in the words the couch needs. 'login' is the only
@@ -224,13 +166,11 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
   const [hint, setHint] = useState(false) // key-hint card
   const [paused, setPaused] = useState(false) // drives the bar's play/pause icon
   const [trackInfo, setTrackInfo] = useState(null) // { width, height, bitrate } of the playing level
-  const [seekable, setSeekable] = useState(true) // false once the stream proves unseekable
   const [errorKind, setErrorKind] = useState(null) // network | decode | source | login
+  const playbackRef = useRef(null) // the current episode's playback session
 
   const statusRef = useRef(status)
   statusRef.current = status
-  const seekableRef = useRef(seekable)
-  seekableRef.current = seekable
   const barRef = useRef(barVisible)
   barRef.current = barVisible
   const stripRef = useRef(stripVisible)
@@ -337,7 +277,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
       const v = videoRef.current
       const dur = v?.duration
       if (!v || !Number.isFinite(dur) || dur <= 0) return
-      if (!seekableRef.current) return // unseekable source: every step is a no-op
+      if (!playbackRef.current?.seekable) return // unseekable source: every step is a no-op
       const now = Date.now()
       if (!isRepeat) holdStartAtRef.current = now // a fresh press resets the ramp
       if (isRepeat && now - lastStepAtRef.current < SEEK_REPEAT_MS) return
@@ -606,14 +546,8 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
   useEffect(() => {
     if (!data) return
     const video = videoRef.current
-    let hls = null
-    let cancelled = false
-    let started = false // first 'playing' of THIS episode load
-    let resumeCorrected = false
-    let currentSrc = null // captured for the watchdog's soft reload
     setStatus('loading')
     setTrackInfo(null) // quality belongs to the episode that is loading now
-    setSeekable(true) // assume seekable until the stream says otherwise
     setErrorKind(null)
 
     const fail = (kind) => {
@@ -623,148 +557,35 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
 
     const resumePos = resumePosition(getWatchState(id), curEp)
 
-    // Persist progress. Positions come from timeupdate ticks (lastKnown), never
-    // a live read at flush time: on the TV's native pipeline currentTime can
-    // already read 0 during suspend/teardown, which must not clobber real
-    // progress. What a near-the-end position means is recordProgress's call.
-    // Live truth, not the rendered state: resume decisions run before React
-    // has re-rendered with the flag.
-    const canSeek = () =>
-      Number.isFinite(video.duration) && video.duration > 0 && video.seekable && video.seekable.length > 0
-    const updateSeekable = () => setSeekable(canSeek())
-
-    const lastKnown = { pos: NaN, dur: NaN }
-    const flushProgress = () => {
-      const { pos, dur } = lastKnown
-      if (!started || !Number.isFinite(pos) || !Number.isFinite(dur) || dur <= 0) return
+    // Persist progress the session sampled. What a near-the-end position means
+    // (finished, or the next episode queued) is watch state's call.
+    const flushProgress = (pos, dur) => {
       recordProgress(id, epListRef.current, curEp, pos, dur)
     }
-    const flushTimer = setInterval(() => {
-      if (started && !video.paused) flushProgress()
-    }, PROGRESS_FLUSH_MS)
 
-    // Re-attach the stream in place and seek back to `pos`, without tearing the
-    // page down or flashing the loading screen. hls.js just re-arms its loader
-    // (it can re-fetch from an exact position); the native pipeline needs the
-    // src set again, then a seek once metadata is back.
-    const softReload = (pos) => {
-      const wantPos = Number.isFinite(pos) && pos > 1 ? pos : lastKnown.pos > 1 ? lastKnown.pos : 0
-      if (hls) {
-        try {
-          hls.startLoad(wantPos > 0 ? wantPos : -1)
-        } catch {
-          /* loader already gone */
-        }
-        video.play().catch(() => {})
-        return
-      }
-      if (!currentSrc) return
-      const onMeta = () => {
-        video.removeEventListener('loadedmetadata', onMeta)
-        if (wantPos > 0) {
-          try {
-            video.currentTime = wantPos
-          } catch {
-            /* duration not ready yet; timeupdate resume covers it */
-          }
-        }
-        video.play().catch(() => {})
-      }
-      video.addEventListener('loadedmetadata', onMeta)
-      video.src = currentSrc
-      video.load()
+    const ep = data.episodes.find((e) => e.index === curEp) || data.episodes[data.episodes.length - 1]
+    if (!ep?.url) {
+      // The detail page gates this on the way in; auto-advance can still
+      // land on a VIP episode the current session can't play.
+      fail(ep?.vip && !sessionStore.get() ? 'login' : 'source')
+      return
     }
 
-    // Watchdog: once playback has started, currentTime must keep advancing.
-    // With hls.js managing a deep buffer this rarely fires — it's the safety
-    // net for a true stall. Crucially it is buffering-aware: while the buffer
-    // is still filling, playback is rebuffering normally and we leave it be
-    // (interrupting a healthy refill is what made recovery feel choppy). We
-    // only intervene when frozen AND the buffer has stopped growing — or when
-    // frozen past a hard ceiling (a decoder deadlock that never resumes).
-    const bufferedEndNearby = () => {
-      const b = video.buffered
-      let end = 0
-      for (let i = 0; i < b.length; i++) {
-        if (b.start(i) <= video.currentTime + 0.5 && b.end(i) > end) end = b.end(i)
-      }
-      return end
-    }
-    let lastAdvancePos = NaN
-    let lastAdvanceAt = Date.now()
-    let lastBufEnd = 0
-    let nudged = false
-    let softReloads = 0
-    let lastReloadAt = 0
-    const watchdog = setInterval(() => {
-      const now = Date.now()
-      if (!started || video.paused || video.ended || video.seeking || pendingSeekRef.current != null) {
-        lastAdvanceAt = now // not our kind of stall — keep the clock fresh
-        return
-      }
-      const t = video.currentTime
-      if (!Number.isFinite(lastAdvancePos) || Math.abs(t - lastAdvancePos) > STALL_ADVANCE_EPS_S) {
-        lastAdvancePos = t
-        lastAdvanceAt = now
-        nudged = false
-        if (now - lastReloadAt > RECOVERY_RESET_MS) softReloads = 0 // clean run
-        return
-      }
-      const frozenMs = now - lastAdvanceAt
-      // Buffer still growing? Healthy rebuffering — wait it out (up to the hard
-      // ceiling), don't touch it. The freeze clock keeps running so a buffer
-      // that grows forever without playback resuming still escalates.
-      const end = bufferedEndNearby()
-      const bufferGrowing = end > lastBufEnd + 0.1
-      lastBufEnd = end
-      if (bufferGrowing && frozenMs < STALL_HARD_MS) return
-
-      if (frozenMs >= STALL_RELOAD_AFTER_MS) {
-        if (softReloads >= MAX_SOFT_RELOADS) {
+    const playback = createPlayback(video, {
+      src: streamUrl(ep.url),
+      resumePos,
+      seekPending: () => pendingSeekRef.current != null,
+      onStatus: (s, kind) => {
+        if (s === 'error') {
+          if (kind) setErrorKind(kind) // the stall ladder giving up carries no kind
           setStatus('error')
           return
         }
-        softReloads += 1
-        lastReloadAt = now
-        lastAdvanceAt = now
-        nudged = false
-        softReload(t) // hls.js: re-arm its loader; native: re-attach + seek
-        return
-      }
-      // Native fallback only — hls.js runs its own gapController/nudge, so a
-      // second nudge on top would fight it.
-      if (!hls && frozenMs >= STALL_NUDGE_AFTER_MS && !nudged) {
-        nudged = true
-        const b = video.buffered
-        let jumped = false
-        for (let i = 0; i < b.length; i++) {
-          if (b.start(i) > t && b.start(i) - t <= STALL_HOLE_MAX_S) {
-            video.currentTime = b.start(i) + 0.01 // jump a buffered-range hole
-            jumped = true
-            break
-          }
-        }
-        // Data present but the decoder is wedged — micro-nudge. Nothing buffered
-        // (readyState low) means true starvation; leave it for the reload step.
-        if (!jumped && video.readyState >= 2 /* HAVE_CURRENT_DATA */) {
-          video.currentTime = t + 0.1
-        }
-        video.play().catch(() => {})
-      }
-    }, STALL_CHECK_MS)
-
-    const onPlaying = () => {
-      setStatus('ok')
-      setSwitching(false)
-      setPaused(false)
-      // hls.js can snap the first frame back to 0 — correct once.
-      updateSeekable()
-      if (resumePos > 0 && !resumeCorrected) {
-        resumeCorrected = true
-        if (canSeek() && video.currentTime < resumePos - 3) video.currentTime = resumePos
-      }
-      if (!started) {
-        started = true
+        setStatus('ok')
+        setSwitching(false)
+        setPaused(false)
+      },
+      onStart: (canSeek) => {
         recordHistory({
           id: data.id,
           name: data.title,
@@ -775,182 +596,52 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
           area: data.region,
         })
         if (resumePos > 0) {
-          setToast(canSeek() ? `已从 ${fmtTime(resumePos)} 继续播放` : '此片源不支持跳转，已从头播放')
+          setToast(canSeek ? `已从 ${fmtTime(resumePos)} 继续播放` : '此片源不支持跳转，已从头播放')
           clearTimeout(toastTimerRef.current)
           toastTimerRef.current = setTimeout(() => setToast(null), TOAST_MS)
         }
-      }
-    }
-    const onLoadedMeta = () => {
-      // Native-HLS resume: seek as soon as the duration is known.
-      if (resumePos > 0 && canSeek() && video.currentTime < resumePos - 3) video.currentTime = resumePos
-    }
-    const onDurationChange = () => updateSeekable()
-    const onVideoError = () => {
-      // MediaError: 2 = network, 3 = decode, 4 = source not supported.
-      const code = video.error?.code
-      fail(code === 2 ? 'network' : code === 3 ? 'decode' : 'source')
-    }
-    // Native-HLS fallback only: no level data, so the element's own frame size
-    // is all there is. On the hls.js path LEVEL_SWITCHED is the better source.
-    const onResize = () => {
-      if (hls) return
-      if (video.videoHeight > 0) setTrackInfo({ width: video.videoWidth, height: video.videoHeight, bitrate: 0 })
-    }
-    const onPlay = () => setPaused(false)
-    const onPause = () => {
-      setPaused(true)
-      // Any pause surfaces the bar (remote OK, or a future system event).
-      if (statusRef.current === 'ok' && !video.ended) showBar()
-    }
-    const onTime = () => {
-      const dur = video.duration
-      if (!Number.isFinite(dur) || dur <= 0) return
-      // Feed the flush position. A snap to exactly 0 from well into playback is
-      // a pipeline reset, not a user seek — never let it become the flush value.
-      if (!(video.currentTime === 0 && lastKnown.pos > 1)) {
-        lastKnown.pos = video.currentTime
-        lastKnown.dur = dur
-      }
-      // While a seek is pending, the played track is a preview cursor — leave it.
-      if (pendingSeekRef.current == null && playedRef.current) {
-        playedRef.current.style.width = `${(video.currentTime / dur) * 100}%`
-      }
-      if (curTimeRef.current) curTimeRef.current.textContent = fmtTime(video.currentTime)
-      if (remainRef.current) remainRef.current.textContent = `-${fmtTime(dur - video.currentTime)}`
-      // Up Next: surface once per episode when the tail comes into view.
-      if (
-        started &&
-        !upNextRef.current &&
-        !upNextDismissedRef.current &&
-        nextEpRef.current != null &&
-        dur - video.currentTime <= UP_NEXT_S
-      ) {
-        setUpNext(true)
-      }
-    }
-    const onEnded = () => {
-      // The finished-tail rule marks this episode `finished` on flush (or
-      // rolls the resume point to the next episode, if there is one).
-      flushProgress()
-      if (nextEpRef.current != null) {
-        switchEpisodeRef.current(nextEpRef.current)
-      } else {
-        // Last episode: leave the player; focus restores in the detail layer.
-        window.dispatchEvent(new CustomEvent('tv-back'))
-      }
-    }
-    const onProgress = () => {
-      const dur = video.duration
-      if (!Number.isFinite(dur) || dur <= 0 || !bufferedRef.current) return
-      const b = video.buffered
-      let end = 0
-      for (let i = 0; i < b.length; i++) {
-        if (b.start(i) <= video.currentTime + 0.5 && b.end(i) > end) end = b.end(i)
-      }
-      bufferedRef.current.style.width = `${(end / dur) * 100}%`
-    }
-    video.addEventListener('playing', onPlaying)
-    video.addEventListener('loadedmetadata', onLoadedMeta)
-    video.addEventListener('durationchange', onDurationChange)
-    video.addEventListener('resize', onResize)
-    video.addEventListener('error', onVideoError)
-    video.addEventListener('play', onPlay)
-    video.addEventListener('pause', onPause)
-    video.addEventListener('timeupdate', onTime)
-    video.addEventListener('progress', onProgress)
-    video.addEventListener('ended', onEnded)
-
-    ;(async () => {
-      try {
-        const ep =
-          data.episodes.find((e) => e.index === curEp) || data.episodes[data.episodes.length - 1]
-        if (!ep?.url) {
-          // The detail page gates this on the way in; auto-advance can still
-          // land on a VIP episode the current session can't play.
-          fail(ep?.vip && !sessionStore.get() ? 'login' : 'source')
-          return
+      },
+      onPaused: (p) => {
+        setPaused(p)
+        // Any pause surfaces the bar (remote OK, or a future system event).
+        if (p && statusRef.current === 'ok' && !video.ended) showBar()
+      },
+      onTrack: setTrackInfo,
+      onTime: (t, dur) => {
+        // While a seek is pending, the played track is a preview cursor — leave it.
+        if (pendingSeekRef.current == null && playedRef.current) {
+          playedRef.current.style.width = `${(t / dur) * 100}%`
         }
-        const src = streamUrl(ep.url)
-        currentSrc = src // the watchdog reloads from here on a native-path stall
-
-        // hls.js first — everywhere, TV included. The light build is enough (no
-        // subtitles/alt-audio/DRM) and stays under the bundler's 500 kB warning.
-        const { default: Hls } = await import('hls.js/light')
-        if (cancelled) return
-        if (Hls.isSupported()) {
-          hls = new Hls({
-            autoStartLoad: false, // wait for MANIFEST_PARSED to pick the start level
-            ...HLS_CONFIG,
-            manifestLoadPolicy: LOAD_POLICY,
-            playlistLoadPolicy: LOAD_POLICY,
-            fragLoadPolicy: LOAD_POLICY,
-          })
-          hls.on(Hls.Events.MANIFEST_PARSED, (_evt, parsed) => {
-            const lvl = pickStartLevel(parsed.levels || [])
-            if (lvl >= 0) {
-              hls.startLevel = lvl
-              hls.autoLevelCapping = lvl // ABR stays below the UHD tier
-            }
-            // Resume at load time — starting at 0 and seeking would double-buffer.
-            hls.startLoad(resumePos > 0 ? resumePos : -1)
-            video.play().catch(() => {})
-          })
-          // ABR moves between levels while playing; follow the one in use.
-          hls.on(Hls.Events.LEVEL_SWITCHED, (_evt, info) => {
-            const lvl = hls?.levels?.[info.level]
-            if (lvl) setTrackInfo({ width: lvl.width, height: lvl.height, bitrate: lvl.bitrate })
-          })
-          hls.on(Hls.Events.ERROR, (_evt, info) => {
-            if (!info.fatal) return
-            fail(
-              info.type === Hls.ErrorTypes.NETWORK_ERROR
-                ? 'network'
-                : info.type === Hls.ErrorTypes.MEDIA_ERROR
-                  ? 'decode'
-                  : 'source',
-            )
-          })
-          hls.attachMedia(video)
-          hls.loadSource(src)
-          return
+        if (curTimeRef.current) curTimeRef.current.textContent = fmtTime(t)
+        if (remainRef.current) remainRef.current.textContent = `-${fmtTime(dur - t)}`
+        // Up Next: surface once per episode when the tail comes into view.
+        if (
+          playback.started &&
+          !upNextRef.current &&
+          !upNextDismissedRef.current &&
+          nextEpRef.current != null &&
+          dur - t <= UP_NEXT_S
+        ) {
+          setUpNext(true)
         }
-
-        // Fallback: native HLS (untunable, shallow buffer). Only reached where
-        // MSE is unavailable; the watchdog's full recovery ladder covers it.
-        if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = src
-          video.play().catch(() => {})
-          return
+      },
+      onBuffered: (end, dur) => {
+        if (bufferedRef.current) bufferedRef.current.style.width = `${(end / dur) * 100}%`
+      },
+      onProgress: flushProgress,
+      onEnded: () => {
+        // The finished-tail rule has just marked this episode `finished` (or
+        // rolled the resume point to the next episode, if there is one).
+        if (nextEpRef.current != null) {
+          switchEpisodeRef.current(nextEpRef.current)
+        } else {
+          // Last episode: leave the player; focus restores in the detail layer.
+          window.dispatchEvent(new CustomEvent('tv-back'))
         }
-        fail('source') // no MSE and no native HLS
-      } catch {
-        if (!cancelled) fail('source')
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      // Flush the outgoing episode's progress before teardown — covers exit,
-      // retry, and episode switches alike.
-      clearInterval(flushTimer)
-      clearInterval(watchdog)
-      flushProgress()
-      video.removeEventListener('playing', onPlaying)
-      video.removeEventListener('loadedmetadata', onLoadedMeta)
-      video.removeEventListener('durationchange', onDurationChange)
-      video.removeEventListener('resize', onResize)
-      video.removeEventListener('error', onVideoError)
-      video.removeEventListener('play', onPlay)
-      video.removeEventListener('pause', onPause)
-      video.removeEventListener('timeupdate', onTime)
-      video.removeEventListener('progress', onProgress)
-      video.removeEventListener('ended', onEnded)
-      if (hls) hls.destroy()
-      // Drop the native source too so no segment request outlives the page.
-      video.removeAttribute('src')
-      video.load()
-    }
+      },
+    })
+    playbackRef.current = playback
+    return () => playback.destroy()
   }, [data, curEp, attempt, showBar])
 
   const trackText = fmtTrack(trackInfo)

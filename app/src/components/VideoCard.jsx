@@ -31,7 +31,7 @@ function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, prog
           (transparent) so focusing never shifts layout, and the radius is the
           image radius (12px) + the 3px ring so the outer edge stays rounded. */}
       <div className="relative aspect-2/3 w-full overflow-hidden rounded-[15px] border-3 border-transparent bg-elev focused:border-focus">
-        <Thumb pic={item.pic} alt={item.name} />
+        <Thumb pic={item.pic} picThumb={item.picThumb} alt={item.name} />
         {item.score > 0 && <span className={`${BADGE} top-2 left-2 bg-elev font-semibold text-accent`}>{item.score}</span>}
         {/* A marker (history's 管理 mode) takes the UHD corner: what OK does
             right now matters more than the source's tier. */}

@@ -47,6 +47,7 @@ function normalizeItem(raw) {
     id: raw.id,
     name: raw.name,
     pic: raw.pic, // raw relative path; sizing is imageUrl's job
+    picThumb: raw.picThumb || '', // the CDN's own thumbnail, '' when it has none
     score: raw.score,
     remarks: raw.remarks,
     year: raw.year,
@@ -187,6 +188,7 @@ export async function detail(id) {
     id: d.id,
     title: d.name,
     pic: d.pic,
+    picThumb: d.picThumb || '',
     rating: d.score,
     year: d.year,
     region: d.area,

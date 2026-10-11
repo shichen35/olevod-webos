@@ -581,6 +581,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
           id: data.id,
           name: data.title,
           pic: data.pic,
+          picThumb: data.picThumb,
           score: data.rating,
           remarks: data.remarks,
           year: data.year,

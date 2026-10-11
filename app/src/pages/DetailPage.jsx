@@ -232,6 +232,7 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
     id: data.id,
     name: data.title,
     pic: data.pic,
+    picThumb: data.picThumb,
     score: data.rating,
     remarks: data.remarks,
     year: data.year,
@@ -282,7 +283,7 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
           <div className="aspect-2/3 w-card shrink-0 overflow-hidden rounded-xl bg-elev">
             {/* Same sized asset as grid cards: usually already cached when
                 arriving from a poster grid, so it paints immediately. */}
-            <Thumb pic={data.pic} alt={data.title} />
+            <Thumb pic={data.pic} picThumb={data.picThumb} alt={data.title} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="mb-3 text-label text-fg-3">{eyebrow}</div>

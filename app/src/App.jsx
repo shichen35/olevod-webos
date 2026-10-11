@@ -51,6 +51,7 @@ export default function App() {
   const [stack, setStack] = useState([{ type: 'shell' }])
   // Per-tab refresh nonce — bumped on tab Enter/click; consumed by pages.
   const [refreshNonce, setRefreshNonce] = useState({})
+  const scrollersRef = useRef({}) // tab key -> its .tab-content scroller
   // Tabs mount on first activation and then stay mounted (state/scroll survive),
   // so switching back is instant and no tab fetches until it's first visited.
   const [activated, setActivated] = useState(() => new Set(['home']))
@@ -173,6 +174,10 @@ export default function App() {
           onCommitTab={(key) => {
             setActiveTab(key)
             setRefreshNonce((n) => ({ ...n, [key]: (n[key] || 0) + 1 }))
+            // OK on a tab refreshes it from the top: focus stays on the tab
+            // bar, so nothing else would bring a scrolled-down page back up
+            // to its filter row / first shelf.
+            scrollersRef.current[key]?.scrollTo({ top: 0 })
           }}
         />
         {/* Per-tab content areas (the sole scroll containers). Each starts at
@@ -186,6 +191,9 @@ export default function App() {
         {tabs.map((tab) => (
           <div
             key={tab.key}
+            ref={(el) => {
+              scrollersRef.current[tab.key] = el
+            }}
             className="tab-content absolute inset-0 overflow-y-auto px-safe pt-content-top pb-content-bottom scroll-py-focus-safe"
             style={{ display: tab.key === activeTab ? 'block' : 'none' }}
           >

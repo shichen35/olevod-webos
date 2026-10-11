@@ -5,7 +5,8 @@
  *
  * Pinned tabs keep their place and can't be hidden: 搜索 at the front and the
  * personal tabs at the end (收藏 / 历史 / 设置 / 账号) — 设置 holds the entry
- * that brings hidden tabs back. Tabs with an `icon` render as round icon
+ * that brings hidden tabs back. Tabs with an `icon` (a Material Symbols name,
+ * see components/Icon.jsx) render as round icon
  * buttons outside the tab bar's text capsule. 首页 stays first in the capsule
  * whenever it is shown; the categories after it are the user-orderable middle.
  */
@@ -22,9 +23,9 @@ export const TABS = [
     categoryId: c.id,
   })),
   { key: 'favorites', label: '收藏', kind: 'favorites', icon: 'bookmark', pinned: true },
-  { key: 'history', label: '历史', kind: 'history', icon: 'clock', pinned: true },
-  { key: 'settings', label: '设置', kind: 'settings', icon: 'gear', pinned: true },
-  { key: 'account', label: '账号', kind: 'account', icon: 'user', pinned: true },
+  { key: 'history', label: '历史', kind: 'history', icon: 'history', pinned: true },
+  { key: 'settings', label: '设置', kind: 'settings', icon: 'settings', pinned: true },
+  { key: 'account', label: '账号', kind: 'account', icon: 'person', pinned: true },
 ]
 
 export const HOME_TAB_KEY = 'home'

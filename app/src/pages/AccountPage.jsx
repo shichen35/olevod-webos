@@ -29,6 +29,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import Icon from '../components/Icon.jsx'
 import {
   useFocusable,
   useFocusFrame,
@@ -368,19 +369,7 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
           {signedIn ? (
             <>
               <div className="glass mb-7 flex size-36 items-center justify-center rounded-full border border-glass-edge text-fg">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="80"
-                  height="80"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="8" r="4" />
-                  <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
-                </svg>
+                <Icon name="person" size={80} />
               </div>
               <div className="mb-2 text-title font-bold text-fg">{session.name}</div>
               <div className={`mb-10 min-h-[35px] text-body ${member === 'vip' ? 'text-accent' : 'text-fg-2'}`}>

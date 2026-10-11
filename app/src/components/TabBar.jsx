@@ -25,35 +25,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import { getCurrentFocus, useFocusable } from '../hooks/useFocus.js'
 import { useSlidingCursor } from '../hooks/useSlidingCursor.js'
-
-// 24-grid line icons, keyed by tab.icon.
-const ICONS = {
-  search: (
-    <>
-      <circle cx="11" cy="11" r="7" />
-      <path d="m16.5 16.5 4.5 4.5" />
-    </>
-  ),
-  bookmark: <path d="M6 3h12v18l-6-4-6 4z" />,
-  clock: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3.5 2" />
-    </>
-  ),
-  gear: (
-    <>
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-      <circle cx="12" cy="12" r="3" />
-    </>
-  ),
-  user: (
-    <>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
-    </>
-  ),
-}
+import Icon from './Icon.jsx'
 
 function useTabFocus({ col, onHover, onSelect, onFocusChange }) {
   return useFocusable({
@@ -158,19 +130,7 @@ function IconTab({ tab, col, active, showSelection, onHover, onSelect }) {
       aria-label={tab.label}
       {...props}
     >
-      <svg
-        className="shrink-0"
-        viewBox="0 0 24 24"
-        width="26"
-        height="26"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {ICONS[tab.icon]}
-      </svg>
+      <Icon name={tab.icon} size={26} className="shrink-0" />
       <span ref={labelRef} className="shrink-0 whitespace-nowrap text-label opacity-0">
         {tab.label}
       </span>

@@ -36,7 +36,6 @@ import HistoryPage from './pages/HistoryPage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
 import SearchPage from './pages/SearchPage.jsx'
 import AccountPage from './pages/AccountPage.jsx'
-import { DEFAULT_FILTER, getFilter, setFilter } from './store/filters.js'
 import { settingsStore, getSetting } from './store/settings.js'
 import { sessionStore } from './store/session.js'
 import * as pageCache from './store/pageCache.js'
@@ -56,10 +55,9 @@ export default function App() {
   // Tabs mount on first activation and then stay mounted (state/scroll survive),
   // so switching back is instant and no tab fetches until it's first visited.
   const [activated, setActivated] = useState(() => new Set(['home']))
-  // Filter panel: which category's panel is open, and the applied filter
-  // override that pushes changes down into that CategoryPage.
+  // Filter panel: which category's panel is open. The selection itself lives in
+  // the filters store, shared with that CategoryPage.
   const [filterPanel, setFilterPanel] = useState({ open: false, category: null })
-  const [filterOverrides, setFilterOverrides] = useState({})
 
   // Tab bar order and visibility follow the user's saved preference (settings
   // 里可调整).
@@ -108,10 +106,6 @@ export default function App() {
 
   const openFilterFor = useCallback((category) => setFilterPanel({ open: true, category }), [])
   const closeFilter = useCallback(() => setFilterPanel({ open: false, category: null }), [])
-  const applyFilterFor = useCallback((category, f) => {
-    setFilter(category, f)
-    setFilterOverrides((prev) => ({ ...prev, [category]: f }))
-  }, [])
 
   useEffect(() => {
     initFocusEngine()
@@ -212,7 +206,6 @@ export default function App() {
                   group={contentGroup(tab.key)}
                   onOpenDetail={openDetail}
                   onOpenFilter={() => openFilterFor(tab.categoryId)}
-                  filterOverride={filterOverrides[tab.categoryId]}
                   refreshNonce={refreshNonce[tab.key]}
                 />
               ) : tab.kind === 'favorites' ? (
@@ -231,9 +224,6 @@ export default function App() {
       {filterPanel.open && (
         <FilterPanel
           category={filterPanel.category}
-          filter={filterOverrides[filterPanel.category] || getFilter(filterPanel.category) || DEFAULT_FILTER}
-          onChange={(f) => applyFilterFor(filterPanel.category, f)}
-          onReset={() => applyFilterFor(filterPanel.category, { ...DEFAULT_FILTER })}
           onClose={closeFilter}
         />
       )}

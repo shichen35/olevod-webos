@@ -15,7 +15,7 @@ import VideoCard from '../components/VideoCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
 import { categoryList } from '../api/olevod.js'
 import { loadCategoryFirstPage } from '../api/feeds.js'
-import { DEFAULT_FILTER, setFilter } from '../store/filters.js'
+import { useFilter, patchFilter } from '../store/filters.js'
 import { useFocusable } from '../hooks/useFocus.js'
 import * as pageCache from '../store/pageCache.js'
 
@@ -23,11 +23,10 @@ const COLS = 6
 const PAGE_SIZE = 24
 const FILTER_ROWS = 2 // genre chips (row 0) + sort chips and filter button line (row 1)
 
-export default function CategoryPage({ category, group = 'content', onOpenDetail, onOpenFilter, refreshNonce, filterOverride }) {
-  // Always opens at the category's default filter — selections are not persisted
-  // across launches. `setFilter` publishes the live selection to the session
-  // store so the shell's filter panel opens on what the page is actually showing.
-  const [filter, setFilterState] = useState(DEFAULT_FILTER)
+export default function CategoryPage({ category, group = 'content', onOpenDetail, onOpenFilter, refreshNonce }) {
+  // The filters store owns the selection; the chips here and the shell's filter
+  // panel both patch it, and the page reloads whenever it changes.
+  const filter = useFilter(category)
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
   const [status, setStatus] = useState('loading') // loading | ok | error
@@ -90,14 +89,14 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // A filter change pushed in from the panel via filterOverride.
+  // A filter change from the chips or the panel.
+  const firstFilter = useRef(filter)
   useEffect(() => {
-    if (!filterOverride) return
-    setFilterState(filterOverride)
-    setFilter(category, filterOverride)
-    load(filterOverride)
+    if (filter === firstFilter.current) return
+    firstFilter.current = filter
+    load(filter)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterOverride])
+  }, [filter])
 
   // refreshNonce bump (tab Enter): drop this category's cache and refetch.
   const firstNonce = useRef(refreshNonce)
@@ -126,17 +125,8 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
   }, [loadMore])
 
   // Genre and sort chips on the filter bar apply immediately.
-  const patchFilter = useCallback(
-    (patch) => {
-      const f = { ...filter, ...patch }
-      setFilterState(f)
-      setFilter(category, f)
-      load(f)
-    },
-    [filter, category, load],
-  )
-  const selectGenre = useCallback((genre) => patchFilter({ genre }), [patchFilter])
-  const selectSort = useCallback((sort) => patchFilter({ sort }), [patchFilter])
+  const selectGenre = useCallback((genre) => patchFilter(category, { genre }), [category])
+  const selectSort = useCallback((sort) => patchFilter(category, { sort }), [category])
 
   const fullyLoaded = status === 'ok' && items.length > 0 && items.length >= total
 

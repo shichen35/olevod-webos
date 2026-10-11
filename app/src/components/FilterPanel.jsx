@@ -4,8 +4,9 @@
  * no slide-in animation, no scrim over the content behind it (focus is on the
  * panel, so the grid underneath can't receive input anyway).
  *
- * Selecting any option applies immediately (the grid refreshes via the parent's
- * filter override). "Reset" restores this category's defaults; "Done" and the
+ * Selecting any option applies immediately: the panel patches the category's
+ * filter in the filters store and the grid refreshes from there. "Reset"
+ * restores this category's defaults; "Done" and the
  * back key both close the panel and return focus to the 额外筛选 button.
  *
  * Focus movement here is SPATIAL, not arithmetic. The chips flow in a
@@ -30,6 +31,7 @@ import {
   pushCustomKeyHandler,
 } from '../hooks/useFocus.js'
 import { getCategory, LETTERS } from '../config/taxonomy.js'
+import { useFilter, patchFilter, resetFilter } from '../store/filters.js'
 
 const LAYER = 'filter'
 const GROUP = 'panel'
@@ -164,8 +166,9 @@ function Group({ title, options, value, row, onPick }) {
   )
 }
 
-export default function FilterPanel({ category, filter, onChange, onReset, onClose }) {
+export default function FilterPanel({ category, onClose }) {
   const cfg = getCategory(category)
+  const filter = useFilter(category)
   const rootRef = useRef(null)
 
   useEffect(() => {
@@ -193,7 +196,7 @@ export default function FilterPanel({ category, filter, onChange, onReset, onClo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const reset = useFocusable({ layer: LAYER, group: GROUP, row: ACTION_ROW, col: 0, onSelect: onReset })
+  const reset = useFocusable({ layer: LAYER, group: GROUP, row: ACTION_ROW, col: 0, onSelect: () => resetFilter(category) })
   const done = useFocusable({ layer: LAYER, group: GROUP, row: ACTION_ROW, col: 1, onSelect: onClose })
 
   return (
@@ -201,9 +204,9 @@ export default function FilterPanel({ category, filter, onChange, onReset, onClo
       ref={rootRef}
       className="glass-strong fixed inset-y-0 right-0 z-10 w-[600px] overflow-y-auto border-l border-glass-edge px-10 py-12 scroll-py-focus-safe"
     >
-      <Group title="地区" options={cfg.areas} value={filter.area} row={AREA_ROW} onPick={(v) => onChange({ ...filter, area: v })} />
-      <Group title="年份" options={cfg.years} value={filter.year} row={YEAR_ROW} onPick={(v) => onChange({ ...filter, year: v })} />
-      <Group title="首字母" options={LETTERS} value={filter.letter} row={LETTER_ROW} onPick={(v) => onChange({ ...filter, letter: v })} />
+      <Group title="地区" options={cfg.areas} value={filter.area} row={AREA_ROW} onPick={(v) => patchFilter(category, { area: v })} />
+      <Group title="年份" options={cfg.years} value={filter.year} row={YEAR_ROW} onPick={(v) => patchFilter(category, { year: v })} />
+      <Group title="首字母" options={LETTERS} value={filter.letter} row={LETTER_ROW} onPick={(v) => patchFilter(category, { letter: v })} />
       <div className="mt-2 flex gap-4">
         <span className={`${PANEL_CHIP} text-fg`} {...reset.props}>
           重置

@@ -42,7 +42,3 @@ export function patchFilter(categoryId, patch) {
 export function resetFilter(categoryId) {
   filtersStore.set((s) => ({ ...s, [categoryId]: DEFAULT_FILTER }))
 }
-
-export function setFilter(categoryId, selection) {
-  filtersStore.set((s) => ({ ...s, [categoryId]: selection }))
-}

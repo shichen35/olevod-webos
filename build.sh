@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build + package .ipk into out/.
+# Build + package .ipk (and its Homebrew Channel manifest) into out/
 #
 #   bash build.sh                 # local build, placeholder version 1.0.0
 #   VERSION=1.0.2 bash build.sh   # what the release workflow runs
@@ -42,5 +42,32 @@ cp -r app/webos-meta/. app/dist/
 mkdir -p out
 app/node_modules/.bin/ares-package --no-minify app/dist service/com.olevod.app.service -o out
 
-IPK=$(ls -t out/*.ipk | head -1)
+IPK="out/com.olevod.app_${VERSION}_all.ipk"
 echo "packaged: ${IPK}"
+
+# 5. Homebrew Channel-style manifest, uploaded next to the .ipk by the release
+#    workflow. ipkUrl points at the release asset of tag v$VERSION.
+REPO="${GITHUB_REPOSITORY:-shichen35/olevod-webos}"
+node - "$IPK" "$VERSION" "$REPO" <<'EOF'
+const fs = require('fs');
+const crypto = require('crypto');
+const path = require('path');
+const [ipk, version, repo] = process.argv.slice(2);
+const app = JSON.parse(fs.readFileSync('app/webos-meta/appinfo.json', 'utf8'));
+const buf = fs.readFileSync(ipk);
+const manifest = {
+  id: app.id,
+  version,
+  type: app.type,
+  title: app.title,
+  iconUri: `https://raw.githubusercontent.com/${repo}/main/app/webos-meta/largeIcon.png`,
+  sourceUrl: `https://github.com/${repo}`,
+  rootRequired: false,
+  ipkUrl: `https://github.com/${repo}/releases/download/v${version}/${path.basename(ipk)}`,
+  ipkSize: buf.length,
+  ipkHash: { sha256: crypto.createHash('sha256').update(buf).digest('hex') },
+};
+const out = `out/${app.id}.manifest.json`;
+fs.writeFileSync(out, JSON.stringify(manifest, null, 2) + '\n');
+console.log(`manifest: ${out}`);
+EOF

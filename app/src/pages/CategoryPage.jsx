@@ -8,7 +8,9 @@
  *
  * A monotonically increasing genRef token invalidates in-flight requests: any
  * result that returns after the filter changed is discarded, so a slow stale
- * filter can never overwrite a newer one.
+ * filter can never overwrite a newer one. pageRef always describes the grid on
+ * screen: it resets only when a first page lands, and no next page is fetched
+ * while a first page is still in flight.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
@@ -30,6 +32,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
 
   const genRef = useRef(0)
   const pageRef = useRef(1)
+  const pendingRef = useRef(false) // a first-page load is in flight
   const loadingMoreRef = useRef(false)
   const rootRef = useRef(null)
   const sentinelRef = useRef(null)
@@ -40,7 +43,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
   const load = useCallback(
     (f, clear = true) => {
       const token = ++genRef.current
-      pageRef.current = 1
+      pendingRef.current = true
       if (clear) {
         setStatus('loading')
         setItems([])
@@ -48,19 +51,24 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
       loadCategoryPage(category, f)
         .then((res) => {
           if (token !== genRef.current) return // superseded by a newer filter
+          pendingRef.current = false
+          pageRef.current = 1
           setItems(res.items)
           setTotal(res.total)
           setStatus('ok')
         })
         .catch(() => {
-          if (token === genRef.current && clear) setStatus('error')
+          if (token !== genRef.current) return
+          // A failed refresh leaves the old grid (and its page count) in place.
+          pendingRef.current = false
+          if (clear) setStatus('error')
         })
     },
     [category],
   )
 
   const loadMore = useCallback(() => {
-    if (loadingMoreRef.current) return
+    if (loadingMoreRef.current || pendingRef.current) return
     setItems((cur) => {
       if (cur.length === 0 || cur.length >= total) return cur
       loadingMoreRef.current = true

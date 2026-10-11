@@ -2,6 +2,8 @@
  * Shared feed loaders + cache keys. Both the pages and the startup prefetch go
  * through these so they hit the SAME pageCache keys — a prefetch and a page's
  * own fetch dedupe into one request (first caller wins, the rest read cache).
+ * The cache keys live only here: pages load, page and invalidate a feed by its
+ * own arguments and never see a key.
  */
 import { categoryList, banners, detail } from './olevod.js'
 import { CATEGORIES } from '../config/taxonomy.js'
@@ -63,14 +65,23 @@ export function invalidateHome() {
   pageCache.invalidate('home:')
 }
 
-export function categoryFirstPageKey(category, f) {
-  return `cat:${category}:${f.genre}:${f.area}:${f.year}:${f.letter}:${f.sort}:p1`
+const CATEGORY_PAGE_SIZE = 24
+
+/**
+ * One page of a category listing at filter `f`. Only page 1 is cached — it is
+ * what a tab opens on and what the prefetch warms; later pages are
+ * infinite-scroll appends and always hit the network.
+ */
+export function loadCategoryPage(category, f, page = 1) {
+  const fetch = () => categoryList({ category, ...f, page, size: CATEGORY_PAGE_SIZE })
+  if (page !== 1) return fetch()
+  return pageCache.loadOnce(`cat:${category}:${f.genre}:${f.area}:${f.year}:${f.letter}:${f.sort}:p1`, fetch)
 }
 
-export function loadCategoryFirstPage(category, f, size = 24) {
-  return pageCache.loadOnce(categoryFirstPageKey(category, f), () =>
-    categoryList({ category, ...f, page: 1, size }),
-  )
+// Refresh: forget every cached filter of this category (other categories keep
+// theirs) so the page's next load refetches.
+export function invalidateCategory(category) {
+  pageCache.invalidate(`cat:${category}:`)
 }
 
 /**
@@ -98,7 +109,7 @@ export async function prefetchAll(shouldStop = () => false) {
   for (const c of CATEGORIES) {
     if (shouldStop()) return
     try {
-      await loadCategoryFirstPage(c.id, DEFAULT_FILTER)
+      await loadCategoryPage(c.id, DEFAULT_FILTER)
     } catch {
       /* silent */
     }

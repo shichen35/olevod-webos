@@ -13,14 +13,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
-import { categoryList } from '../api/olevod.js'
-import { loadCategoryFirstPage } from '../api/feeds.js'
+import { loadCategoryPage, invalidateCategory } from '../api/feeds.js'
 import { useFilter, patchFilter } from '../store/filters.js'
 import { useFocusable } from '../hooks/useFocus.js'
-import * as pageCache from '../store/pageCache.js'
 
 const COLS = 6
-const PAGE_SIZE = 24
 const FILTER_ROWS = 2 // genre chips (row 0) + sort chips and filter button line (row 1)
 
 export default function CategoryPage({ category, group = 'content', onOpenDetail, onOpenFilter, refreshNonce }) {
@@ -48,7 +45,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
         setStatus('loading')
         setItems([])
       }
-      loadCategoryFirstPage(category, f, PAGE_SIZE)
+      loadCategoryPage(category, f)
         .then((res) => {
           if (token !== genRef.current) return // superseded by a newer filter
           setItems(res.items)
@@ -69,7 +66,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
       loadingMoreRef.current = true
       const token = genRef.current
       const next = pageRef.current + 1
-      categoryList({ category, ...filter, page: next, size: PAGE_SIZE })
+      loadCategoryPage(category, filter, next)
         .then((res) => {
           loadingMoreRef.current = false
           if (token !== genRef.current) return // filter changed mid-flight
@@ -103,7 +100,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
   useEffect(() => {
     if (refreshNonce === firstNonce.current) return
     firstNonce.current = refreshNonce
-    pageCache.invalidate(`cat:${category}:`)
+    invalidateCategory(category)
     load(filter, false) // refresh without blanking the current grid
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshNonce])

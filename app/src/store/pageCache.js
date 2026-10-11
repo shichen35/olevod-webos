@@ -3,7 +3,8 @@
  *
  * Lets pages render instantly when revisited (switch tab and back with no
  * spinner) while `loadOnce` dedupes concurrent fetches for the same key, and
- * `invalidate(prefix)` lets a refresh force a refetch.
+ * `invalidate(prefix)` lets a refresh force a refetch. Keys are owned by
+ * api/feeds.js; pages never use this module directly.
  */
 const cache = new Map() // key -> resolved data
 const inflight = new Map() // key -> Promise (dedupe concurrent loads)

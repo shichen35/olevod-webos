@@ -59,13 +59,14 @@ function TabItem({ tab, col, active, showSelection, onHover, onSelect }) {
 }
 
 // Geometry of an icon pill, mirroring its classes below: the collapsed circle
-// is 1px border + 14px padding + 26px icon + 14px padding + 1px border, and
-// expanding adds the gap, the label at its natural width, and the extra right
-// padding that keeps the label off the pill's round end (the icon keeps the
-// circle's symmetric 14px; only the text side is widened).
-const PILL_SIZE = 56 // size-14
+// is 1px border + 16px padding + 28px icon + 16px padding + 1px border = 62px,
+// level with the text capsule beside it (a 48.4px tab + 6px padding + 1px
+// border, top and bottom). Expanding adds the gap, the label at its natural
+// width, and the extra right padding that keeps the label off the pill's round
+// end (the icon keeps the circle's symmetric 16px; only the text side widens).
+const PILL_SIZE = 62 // size-[62px]
 const PILL_GAP = 10 // gap-2.5
-const PILL_LABEL_PAD = 5 // pr-[19px] over the circle's own 14px
+const PILL_LABEL_PAD = 5 // pr-[21px] over the circle's own 16px
 const EXPAND_MS = 140
 
 // Size the pill around `label` for `expanded`, sliding there from wherever it
@@ -126,11 +127,11 @@ function IconTab({ tab, col, active, showSelection, onHover, onSelect }) {
 
   return (
     <div
-      className={`glass flex size-14 items-center gap-2.5 overflow-hidden rounded-full border border-glass-edge pr-[19px] pl-[14px] shadow-[0_8px_28px_rgba(0,0,0,0.35)] focused:bg-focus focused:text-inverse ${active && showSelection ? 'bg-glass-active text-fg' : 'text-fg-2'}`}
+      className={`glass flex size-[62px] items-center gap-2.5 overflow-hidden rounded-full border border-glass-edge pr-[21px] pl-[16px] shadow-[0_8px_28px_rgba(0,0,0,0.35)] focused:bg-focus focused:text-inverse ${active && showSelection ? 'bg-glass-active text-fg' : 'text-fg-2'}`}
       aria-label={tab.label}
       {...props}
     >
-      <Icon name={tab.icon} size={26} className="shrink-0" />
+      <Icon name={tab.icon} size={28} className="shrink-0" />
       <span ref={labelRef} className="shrink-0 whitespace-nowrap text-label opacity-0">
         {tab.label}
       </span>

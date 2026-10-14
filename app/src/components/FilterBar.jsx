@@ -39,7 +39,8 @@ function FilterBar({ category, group = 'content', filter, onSelectGenre, onSelec
 
   return (
     <div className="mb-6 flex flex-col gap-4">
-      <div className="flex gap-3 overflow-x-auto">
+      {/* Bleeds to the screen edge like a Shelf; the spacer + gap is the end margin. */}
+      <div className="-mx-safe flex gap-3 overflow-x-auto pl-safe">
         {genres.map((g, i) => (
           <Chip
             key={g.value}
@@ -50,6 +51,7 @@ function FilterBar({ category, group = 'content', filter, onSelectGenre, onSelec
             onSelect={() => onSelectGenre(g.value)}
           />
         ))}
+        <div className="w-18 shrink-0" aria-hidden="true" />
       </div>
       <div className="flex items-center gap-3">
         {SORTS.map((s, i) => (

@@ -292,7 +292,8 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
       {historyRow !== null && (
         <div className="mb-6 flex flex-col gap-3">
           <div className="text-caption text-fg-3">最近搜索</div>
-          <div className="flex gap-3 overflow-x-auto">
+          {/* Bleeds to the screen edge like a Shelf; the spacer + gap is the end margin. */}
+          <div className="-mx-safe flex gap-3 overflow-x-auto pl-safe">
             {history.map((word, i) => (
               <Chip key={word} group={group} row={historyRow} col={i} label={word} onSelect={() => pickHistory(word)} />
             ))}
@@ -306,6 +307,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
                 focusTo(`home/${group}-0-0`)
               }}
             />
+            <div className="w-18 shrink-0" aria-hidden="true" />
           </div>
         </div>
       )}
@@ -313,10 +315,11 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
       {chips.length > 0 && (
         <div className="mb-6 flex flex-col gap-3">
           {!keyword.trim() && <div className="text-caption text-fg-3">热门搜索</div>}
-          <div className="flex gap-3 overflow-x-auto">
+          <div className="-mx-safe flex gap-3 overflow-x-auto pl-safe">
             {chips.map((word, i) => (
               <Chip key={word} group={group} row={chipsRow} col={i} label={word} onSelect={() => pickWord(word, i)} />
             ))}
+            <div className="w-18 shrink-0" aria-hidden="true" />
           </div>
         </div>
       )}

@@ -31,6 +31,15 @@ let currentFocusId = null
 let lastScrollTs = 0
 const RAPID_MS = 220
 
+// A held arrow key: the remote's auto-repeat is throttled to one move per
+// REPEAT_MS (Enact's Spotlight does the same) so moves never queue up faster
+// than the TV can show them, and every held move scrolls instantly — RAPID_MS
+// alone let the first repeat after the ~0.5s initial delay still start a smooth
+// glide that the next repeat then cut short.
+const REPEAT_MS = 120
+let lastKeyMoveTs = -Infinity
+let keyRepeat = false // set only while a repeat keydown is being handled
+
 // Horizontal breathing room kept between a focused chip and the edges of its
 // scrolling strip — mirrors the inline scroll-margin in index.css (--spacing-safe).
 const STRIP_SAFE = 84
@@ -192,7 +201,7 @@ function applyFocus(newId) {
       const rapid = now - lastScrollTs < RAPID_MS
       lastScrollTs = now
       const behavior =
-        getSetting(settingsStore.get(), 'smoothScroll') && !rapid ? 'smooth' : 'auto'
+        getSetting(settingsStore.get(), 'smoothScroll') && !rapid && !keyRepeat ? 'smooth' : 'auto'
       if (rec && rec.row === 0 && rec.group !== 'tabbar') {
         // A top-row element sits in a horizontal strip (genre chips, a home
         // shelf). Drive its two scroll containers SEPARATELY: pull the page
@@ -499,7 +508,11 @@ export function initFocusEngine() {
 
     if (dir) {
       e.preventDefault()
+      if (e.repeat && e.timeStamp - lastKeyMoveTs < REPEAT_MS) return
+      lastKeyMoveTs = e.timeStamp
+      keyRepeat = e.repeat
       navigate(dir)
+      keyRepeat = false
       return
     }
 

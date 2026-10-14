@@ -147,8 +147,7 @@
 
 /* Cards: skip layout/paint work for off-screen entries. */
 @utility cv-auto {
-  content-visibility: auto;
-  contain: content;
+  content-visibility: auto; /* already implies layout/style/paint containment */
 }
 
 @layer base {

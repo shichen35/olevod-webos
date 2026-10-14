@@ -4,8 +4,8 @@
  *
  * Wrapped in React.memo so a parent re-render doesn't re-render a whole grid of
  * cards. Focus state is the border + title-color swap only — no scale, no
- * shadow, no transition. The root reserves layout via content-visibility +
- * contain-intrinsic-size (cv-auto) so off-screen cards are cheap.
+ * shadow, no transition. Grid cards skip off-screen rendering via
+ * content-visibility (cv-auto); shelf cards don't (see GRID_CARD).
  */
 import { memo } from 'react'
 import Thumb from './Thumb.jsx'
@@ -15,9 +15,15 @@ import { useFocusable } from '../hooks/useFocus.js'
 // Badge base: opaque pill pinned inside the poster.
 const BADGE = 'absolute rounded-sm px-2 py-[5px] text-caption leading-none'
 
+// Grid default: skip rendering rows far off screen (grids grow by a page at a
+// time), remembering each card's real size once laid out. Shelves stay fully
+// rendered: a row is capped at 12 cards and its strip is a composited scroller,
+// so its cards are painted ahead instead of being un-skipped mid-scroll.
+const GRID_CARD = 'cv-auto [contain-intrinsic-size:auto_var(--spacing-card)_auto_490px]'
+
 // `className` sets the sizing context: shelves pass "w-card shrink-0" (fixed
 // row of 6); grids pass nothing and the grid track sizes the card.
-function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, progress, timeLabel, marker, markerIcon, className = '' }) {
+function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, progress, timeLabel, marker, markerIcon, className = GRID_CARD }) {
   const { props } = useFocusable({ layer, group, row, col, onSelect })
 
   const uhd = /4k|uhd|蓝光/i.test(item.remarks || '')
@@ -27,7 +33,7 @@ function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, prog
       : 0
 
   return (
-    <div className={`cv-auto [contain-intrinsic-size:var(--spacing-card)_490px] ${className}`} {...props}>
+    <div className={className} {...props}>
       {/* The focus ring wraps only the poster: the border slot is reserved
           (transparent) so focusing never shifts layout, and the radius is the
           image radius (12px) + the 3px ring so the outer edge stays rounded. */}

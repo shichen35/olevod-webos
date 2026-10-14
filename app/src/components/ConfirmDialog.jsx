@@ -43,7 +43,7 @@ export default function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center">
-      {/* Centered frosted-glass alert card, no scrim. */}
+      {/* Centered glass alert card, no scrim. */}
       <div className="glass-strong w-[640px] rounded-3xl border border-glass-edge px-10 pt-11 pb-8">
         <div className="mb-4 text-title text-fg">{title}</div>
         {description && <div className="mb-8 text-body leading-normal text-fg-2">{description}</div>}

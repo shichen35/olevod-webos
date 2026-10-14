@@ -11,10 +11,10 @@
  *   - All colors are opaque hex. No rgba(), no opacity layering, no gradients.
  *   - No shadows, no blur, no translucency. A "dimmed" look is achieved with a
  *     darker opaque surface token, never with alpha.
- *   - Single sanctioned exception: the glass-* material (translucent fill +
- *     backdrop blur, Apple Liquid Glass style), reserved for chrome surfaces —
- *     tab bar / segment capsules, the settings group, the account page's
- *     captcha panel, the filter panel sheet, dialogs, and the player chrome.
+ *   - Single sanctioned exception: the glass-* material, a translucent fill
+ *     with no backdrop blur, reserved for chrome surfaces — tab bar / segment
+ *     capsules, the settings group, the account page's captcha panel, the
+ *     filter panel sheet, dialogs, and the player chrome.
  *     Content surfaces stay fully opaque.
  *   - No motion of any kind: the transition/animation ban is enforced in the
  *     base layer with !important. Focus border/color swaps are instant. Two
@@ -55,9 +55,9 @@
   --color-focus: #f5f5f7;   /* focus border / fill */
   --color-inverse: #111111; /* text on a focused (filled) button/chip */
 
-  /* Frosted-glass material (the one sanctioned alpha exception) */
-  --color-glass: rgba(28, 28, 34, 0.55);        /* capsule/group fill */
-  --color-glass-strong: rgba(24, 24, 30, 0.7);  /* denser: sheets and dialogs */
+  /* Glass material (the one sanctioned alpha exception) */
+  --color-glass: rgba(28, 28, 34, 0.85);        /* capsule/group fill */
+  --color-glass-strong: rgba(24, 24, 30, 0.85); /* darker: sheets and dialogs */
   --color-glass-edge: rgba(255, 255, 255, 0.14);   /* hairline highlight rim */
   --color-glass-active: rgba(255, 255, 255, 0.12); /* selected pill (unfocused) */
 
@@ -119,17 +119,18 @@
   }
 }
 
-/* Frosted-glass material. Border/radius stay per-site (`border
-   border-glass-edge`, `border-l` for the filter sheet, …). */
+/* Glass material: a translucent fill, deliberately without backdrop-filter.
+   A backdrop blur is its own render pass that re-reads and re-blurs whatever
+   sits behind it on every frame that content moves (scrolling under the tab
+   bar, a sheet scrolling itself); a plain alpha fill is one blended quad. The
+   0.85 alpha keeps text on top legible with the content behind left sharp.
+   Border/radius stay per-site (`border border-glass-edge`, `border-l` for the
+   filter sheet, …). */
 @utility glass {
   background: var(--color-glass);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  backdrop-filter: blur(24px) saturate(180%);
 }
 @utility glass-strong {
   background: var(--color-glass-strong);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  backdrop-filter: blur(40px) saturate(180%);
 }
 
 /*

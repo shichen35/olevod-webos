@@ -7,6 +7,7 @@
  *
  * Selecting a chip applies immediately (server-side filtering in CategoryPage).
  */
+import { memo } from 'react'
 import { useFocusable } from '../hooks/useFocus.js'
 import { IconLabel } from './Icon.jsx'
 import { getCategory, SORTS, DEFAULT_LETTER } from '../config/taxonomy.js'
@@ -32,7 +33,7 @@ function summaryText(cfg, filter) {
   return parts.join(' · ')
 }
 
-export default function FilterBar({ category, group = 'content', filter, onSelectGenre, onSelectSort, onOpenFilter }) {
+function FilterBar({ category, group = 'content', filter, onSelectGenre, onSelectSort, onOpenFilter }) {
   const cfg = getCategory(category)
   const genres = cfg.genres
 
@@ -68,3 +69,6 @@ export default function FilterBar({ category, group = 'content', filter, onSelec
     </div>
   )
 }
+
+// Memoized: a page append re-renders CategoryPage, not its ~18 filter chips.
+export default memo(FilterBar)

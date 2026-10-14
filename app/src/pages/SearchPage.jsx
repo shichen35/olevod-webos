@@ -19,7 +19,7 @@
  * Same stale-response discipline as CategoryPage: a monotonically increasing
  * token per fetch family (suggest / results), late responses are dropped.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
 import KeyboardPanel from '../components/KeyboardPanel.jsx'
 import { IconLabel } from '../components/Icon.jsx'
@@ -152,7 +152,8 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
           loadingMoreRef.current = false
           if (token !== genRef.current) return // a newer search took over
           pageRef.current = next
-          setItems((prev) => [...prev, ...res.items])
+          // A transition: mounting 24 cards yields to key input instead of blocking it.
+          startTransition(() => setItems((prev) => [...prev, ...res.items]))
         })
         .catch(() => {
           loadingMoreRef.current = false

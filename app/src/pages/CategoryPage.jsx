@@ -12,7 +12,7 @@
  * screen: it resets only when a first page lands, and no next page is fetched
  * while a first page is still in flight.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
 import { IconLabel } from '../components/Icon.jsx'
@@ -80,7 +80,8 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
           loadingMoreRef.current = false
           if (token !== genRef.current) return // filter changed mid-flight
           pageRef.current = next
-          setItems((prev) => [...prev, ...res.items])
+          // A transition: mounting 24 cards yields to key input instead of blocking it.
+          startTransition(() => setItems((prev) => [...prev, ...res.items]))
         })
         .catch(() => {
           loadingMoreRef.current = false

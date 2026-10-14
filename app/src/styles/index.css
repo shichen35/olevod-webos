@@ -22,8 +22,8 @@
  *     motion, not WAAPI or scroll behavior): (1) the white focus fill on the tab
  *     bar slides between cells as the D-pad cursor moves
  *     (hooks/useSlidingCursor.js, via the Web Animations API) — a single
- *     compositor-cheap node, no cell repaint; (2) focus moves scroll the target
- *     into view with smooth scrollIntoView (useFocus.js). Both leave the focus
+ *     compositor-cheap node, no cell repaint; (2) focus moves smooth-scroll the
+ *     target's scroll containers into view (useFocus.js). Both leave the focus
  *     engine untouched.
  *   - TV target is Chromium 108 (webOS 24): never use opacity modifiers like
  *     bg-x/50 (they compile to color-mix(), Chrome 111+) — every color an
@@ -134,7 +134,7 @@
 
 /*
  * Sanctioned motion exceptions live in JS, not here (the two below; the other
- * is smooth scrollIntoView in useFocus.js). The tab bar's white focus fill is
+ * is the smooth focus scroll in useFocus.js). The tab bar's white focus fill is
  * one pill that slides between cells as the D-pad cursor moves
  * (hooks/useSlidingCursor.js, via the Web Animations API).
  * WAAPI is used deliberately — it runs independently of the `transition/

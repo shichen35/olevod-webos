@@ -79,7 +79,8 @@ LG 的 Magic Remote 可以当鼠标用。`useFocusable` 给元素挂了 `onMouse
 - 平滑滚动设置：设置页的"平滑滚动"对应 `smoothScroll`（默认开，见 `app/src/store/settings.js`），关掉后所有焦点滚动都变成瞬时的 `auto`。
 - 快速连按：长按方向键时，自动重复的间隔（约 100–150ms）比原生平滑滚动的固定动画时长还短，每次按键都从一个没追上的位置重新起动画，结果光标跑出屏幕、松手后画面才追上来。所以两次焦点滚动间隔小于 `RAPID_MS = 220` 时强制用瞬时滚动，慢速单步仍然平滑。
 - 第 0 行特殊处理：tab 栏以外的第 0 行通常是一条横向滚动带（类型标签、首页第一排货架）。这里分别驱动两个滚动容器：把外层 `.tab-content` / `.overlay` 滚到顶部，让标题露出来；再用 `scrollStripIntoView()` 直接滚动横向带。不能用 `scrollIntoView` 加 `scrollTo` 的组合，因为对外层容器调 `scrollTo` 会打断横向带正在进行的平滑滚动，表现为第一行慢速左右移动时完全不滚。
-- 边距：横向安全边距放在元素的 `scroll-margin-inline` 上，`useFocus.js` 里的 `STRIP_SAFE = 84` 与之对应，改一处要同步另一处。纵向边距放在滚动容器的 `scroll-padding` 上（`scroll-py-focus-safe`），而不是元素的 `scroll-margin`：货架卡片外面套着一个和卡片等高的横向滚动容器，`scrollIntoView` 从内往外逐层裁剪目标矩形，元素上的纵向 margin 在传到页面滚动容器之前就被丢掉了，卡片会停在 tab 栏下面。详见 `app/src/styles/index.css` 中 `[data-focus-id]` 规则的注释。
+- 其余行同样分别驱动两个容器，不用 `scrollIntoView`：`scrollPageIntoView()` 只滚元素所在的 `.tab-content` / `.overlay`，`scrollStripIntoView()` 只滚横向带。原因是性能：Chromium 把 `scrollIntoView` 当作"序列化"滚动，平滑动画只能在主线程逐帧推进，主线程一忙就卡；对已合成的滚动容器直接 `scrollBy`，动画在合成器线程上跑。`.tab-content`、货架横条和详情页 `.overlay` 都带 `bg-bg will-change-scroll`，保证它们是合成滚动容器。元素不随这类容器滚动时（例如 DOM 挂在 `.tab-content` 里的 fixed 面板：屏幕键盘、对话框），`scrollPageIntoView()` 沿 `offsetParent` 链找不到该容器，就退回 `scrollIntoView`。
+- 边距：横向安全边距放在元素的 `scroll-margin-inline` 上，`useFocus.js` 里的 `STRIP_SAFE = 84` 与之对应，改一处要同步另一处。纵向边距放在滚动容器的 `scroll-padding` 上（`scroll-py-focus-safe`），`scrollPageIntoView()` 读取容器计算后的 `scroll-padding` 作为边距，所以只需改 CSS。之所以不放在元素的 `scroll-margin` 上，是因为退回 `scrollIntoView` 时，它会从内往外逐层裁剪目标矩形：货架卡片外面套着一个和卡片等高的横向滚动容器，元素上的纵向 margin 在传到页面滚动容器之前就被丢掉了，卡片会停在 tab 栏下面。详见 `app/src/styles/index.css` 中 `[data-focus-id]` 规则的注释。
 
 ## 改动时注意
 

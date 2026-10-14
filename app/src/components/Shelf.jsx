@@ -1,8 +1,8 @@
 /*
  * A titled horizontal row of VideoCards. The caller decides the focus
  * coordinates ({layer, group, row}); each card takes col = its index in the
- * row. Horizontal scrolling is driven entirely by the focus engine's
- * scrollIntoView({inline:'nearest'}) — no scroll handlers here.
+ * row. Horizontal scrolling is driven entirely by the focus engine
+ * (scrollStripIntoView in useFocus.js) — no scroll handlers here.
  *
  * `cardExtras(item)` lets a page inject per-card props (e.g. the Continue
  * Watching shelf passing watchedEp + progress).

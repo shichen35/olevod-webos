@@ -1,8 +1,8 @@
 /*
  * Zero-rerender D-pad focus engine.
  *
- * Focus movement touches the DOM directly (toggle a `.focused` class +
- * scrollIntoView) and NEVER calls setState — a grid of cards must not re-render
+ * Focus movement touches the DOM directly (toggle a `.focused` class + scroll
+ * it into view) and NEVER calls setState — a grid of cards must not re-render
  * on every arrow press or it feels laggy on weak TV silicon.
  *
  * Addressing: data-focus-id = "{layer}/{group}-{row}-{col}"
@@ -56,6 +56,32 @@ function scrollStripIntoView(el, behavior) {
   if (er.left < sr.left + STRIP_SAFE) delta = er.left - (sr.left + STRIP_SAFE)
   else if (er.right > sr.right - STRIP_SAFE) delta = er.right - (sr.right - STRIP_SAFE)
   if (delta !== 0) strip.scrollBy({ left: delta, behavior })
+}
+
+// The vertical counterpart: reveal `el` within the page scroller it scrolls with
+// (a .tab-content or an .overlay), keeping that scroller's scroll-padding as the
+// edge margin (scroll-py-focus-safe). Scrolling the container directly instead
+// of scrollIntoView matters for smoothness: Chromium runs scrollIntoView as a
+// "sequenced" scroll whose smooth animation is ticked on the main thread, while
+// a plain scrollBy on a composited scroller animates on the compositor thread.
+// Returns false when `el` doesn't scroll with such a container — e.g. a fixed
+// panel (keyboard, dialog) whose DOM sits inside .tab-content — so the caller
+// falls back to scrollIntoView.
+function scrollPageIntoView(el, behavior) {
+  const sc = el.closest('.tab-content, .overlay')
+  let p = el.offsetParent
+  while (p && p !== sc) p = p.offsetParent
+  if (!sc || !p) return false
+  const pad = getComputedStyle(sc)
+  const er = el.getBoundingClientRect()
+  const sr = sc.getBoundingClientRect()
+  const top = sr.top + (parseFloat(pad.scrollPaddingTop) || 0) // "auto" when unset
+  const bottom = sr.bottom - (parseFloat(pad.scrollPaddingBottom) || 0)
+  let delta = 0
+  if (er.top < top) delta = er.top - top
+  else if (er.bottom > bottom) delta = er.bottom - bottom
+  if (delta !== 0) sc.scrollBy({ top: delta, behavior })
+  return true
 }
 
 // The base layer is the root page (Home). Overlays open frames on top of it.
@@ -179,6 +205,8 @@ function applyFocus(newId) {
         // independent — neither cancels the other, both animate.
         const scroller = el.closest('.tab-content, .overlay')
         if (scroller) scroller.scrollTo({ top: 0, behavior })
+        scrollStripIntoView(el, behavior)
+      } else if (scrollPageIntoView(el, behavior)) {
         scrollStripIntoView(el, behavior)
       } else {
         el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior })

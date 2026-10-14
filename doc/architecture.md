@@ -55,7 +55,7 @@ graph LR
 
 ## 零重渲染焦点
 
-`app/src/hooks/useFocus.js` 让焦点移动完全绕开 React：切换一个 DOM class，再调 `scrollIntoView`。返回键、文本框按键透传、Magic Remote 指针也都在这里统一处理。见 [焦点引擎](dev/focus-engine.md)。
+`app/src/hooks/useFocus.js` 让焦点移动完全绕开 React：切换一个 DOM class，再直接滚动所在的滚动容器。返回键、文本框按键透传、Magic Remote 指针也都在这里统一处理。见 [焦点引擎](dev/focus-engine.md)。
 
 ## 账号会话
 

@@ -63,11 +63,14 @@ function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, prog
         )}
       </div>
       <div className="mt-2.5 truncate text-label text-fg-2 focused:text-fg">{item.name}</div>
-      <div className="mt-1 flex gap-3 text-caption text-fg-3">
-        {/* History cards lead with when the title was last watched. */}
-        {timeLabel ? <span>{timeLabel}</span> : null}
-        {item.year ? <span>{item.year}</span> : null}
-        {item.remarks ? <span>{item.remarks}</span> : null}
+      {/* One fixed-height line (22px × 1.35; Chromium 108 has no lh unit), so
+          every card in a row is the same height even with an empty or long meta. */}
+      <div className="mt-1 flex h-[30px] gap-3 overflow-hidden whitespace-nowrap text-caption text-fg-3">
+        {/* History cards lead with when the title was last watched, in place
+            of the year. */}
+        {timeLabel ? <span className="shrink-0">{timeLabel}</span> : null}
+        {item.year && !timeLabel ? <span className="shrink-0">{item.year}</span> : null}
+        {item.remarks ? <span className="min-w-0 truncate">{item.remarks}</span> : null}
       </div>
     </div>
   )

@@ -9,9 +9,11 @@
  *   row 0     action buttons (focus lands on Play once data resolves; landing
  *             here also snaps the overlay's scroller to the very top — see
  *             OVERLAY_ROOT — so the poster and title block are never clipped)
- *   row 1     playlist controls — the order toggle, plus range chips on long
- *             lists (omitted entirely for a single-episode title, i.e. a movie)
- *   row 2+    the episode grid (row 1+ when there are no playlist controls)
+ *   row 1     playlist controls after the 选集 heading — the order toggle, plus
+ *             range chips on long lists (omitted entirely for a single-episode
+ *             title, i.e. a movie)
+ *   row 2+    the episode grid, on the poster grid's 6 columns (row 1+ when
+ *             there are no playlist controls)
  *
  * Episode order is a DISPLAY concern only. `olevod.js::detail` returns episodes
  * newest-first and that canonical list is never reordered ("next episode" goes
@@ -99,10 +101,10 @@ function EpCell({ row, col, title, subtitle, isResume, vip, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col, onSelect })
   return (
     <div
-      className={`focusable relative rounded-md bg-elev-2 px-5 py-1.5 text-center text-label ${isResume ? 'text-fg' : 'text-fg-2'}`}
+      className={`focusable relative flex h-[72px] flex-col items-center justify-center rounded-[14px] bg-elev-2 px-5 text-center text-label ${isResume ? 'text-fg' : 'text-fg-2'}`}
       {...props}
     >
-      <div className="truncate leading-[1.25]">{title}</div>
+      <div className="w-full truncate leading-[1.25]">{title}</div>
       {/* Inherits the cell's current color (normal / focused / resume) and dims
           via opacity so every state keeps readable contrast. */}
       {subtitle && <div className="mt-0.5 text-caption leading-[1.25] opacity-65">{subtitle}</div>}
@@ -251,7 +253,8 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
 
   // Display list: a reversed COPY when ascending — `episodes` stays canonical.
   const ordered = ascending ? [...episodes].reverse() : episodes
-  const showControls = episodes.length > 1
+  // A movie: no playlist controls, and the play button drops its "第1集".
+  const single = episodes.length <= 1
   const chunks = episodes.length > RANGE_MIN ? chunkList(ordered, RANGE_SIZE) : [ordered]
   // The visible chunk is the one holding the anchor (a picked range, else the
   // resume episode); with neither, the head of the list — which follows the
@@ -260,7 +263,7 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
   const pinnedChunk = pinned == null ? -1 : chunks.findIndex((c) => c.some((e) => e.index === pinned))
   const activeChunk = pinnedChunk >= 0 ? pinnedChunk : 0
   const shown = chunks[activeChunk] || []
-  const epRow0 = showControls ? CONTROLS_ROW + 1 : CONTROLS_ROW
+  const epRow0 = single ? CONTROLS_ROW : CONTROLS_ROW + 1
 
   // Every play action goes through the VIP gate: an episode with no url that is
   // marked VIP never reaches the player.
@@ -311,7 +314,7 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
               <ActionButton
                 col={0}
                 icon={resumeIndex == null && caughtUp ? 'replay' : 'play_arrow'}
-                label={primaryLabel}
+                label={single ? primaryLabel.replace(/ 第\d+集$/, '') : primaryLabel}
                 primary
                 onSelect={() => playEpisode(primaryEp)}
               />
@@ -328,9 +331,12 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
         </div>
 
         <div>
-          {showControls && (
-            <div className="mb-6 flex items-center gap-3 overflow-x-auto">
-              <span className="shrink-0 pr-2 text-label text-fg-3">播放列表</span>
+          {/* Bleeds to the screen edges so STRIP_SAFE scrolling (useFocus.js)
+              keeps the chips on the 84px margin; the trailing spacer's 72px +
+              the 12px gap give the last chip the same margin on the right. */}
+          {!single && (
+            <div className="-mx-safe mb-6 flex items-center gap-3 overflow-x-auto pl-safe">
+              <span className="shrink-0 pr-2 text-heading font-semibold text-fg">选集</span>
               {/* One toggle showing the order it is IN, not the one it would
                   switch to — the arrow carries the direction so it reads at a
                   glance from across the room. */}
@@ -350,10 +356,11 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
                     onSelect={() => setAnchorEp(c[0].index)}
                   />
                 ))}
+              <div className="w-18 shrink-0" aria-hidden="true" />
             </div>
           )}
 
-          <div className="grid grid-cols-6 gap-3.5">
+          <div className="grid grid-cols-6 gap-gutter">
             {shown.map((ep, i) => {
               // Main line is the API's per-episode title; the ordinal drops to a
               // sub line. Dramas title episodes as the zero-padded ordinal

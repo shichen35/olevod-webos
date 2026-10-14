@@ -39,10 +39,10 @@ export default function KeyboardPanel({ value, onChange, onSubmit, onSystemKeybo
   useFocusFrame({ layer: LAYER, focus: `${LAYER}/${GROUP}-0-0`, onBack: onClose })
 
   return (
-    <div className="glass-strong fixed inset-y-0 right-0 z-10 w-[600px] overflow-y-auto border-l border-glass-edge px-10 py-12 scroll-py-focus-safe">
+    <div className="fixed inset-y-0 right-0 z-10 w-[600px] overflow-y-auto border-l border-glass-edge bg-elev px-10 py-12 scroll-py-focus-safe">
       <div className="mb-4 text-caption text-fg-3">屏幕键盘</div>
       {/* The query as typed so far; the search box is behind the panel. */}
-      <div className="mb-8 min-h-[64px] rounded-[14px] bg-elev px-6 py-3 text-heading text-fg">
+      <div className="mb-8 min-h-[64px] rounded-[14px] bg-bg px-6 py-3 text-heading text-fg">
         {value || <span className="text-fg-3">输入片名或拼音首字母</span>}
       </div>
 

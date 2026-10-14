@@ -13,8 +13,9 @@
  *     darker opaque surface token, never with alpha.
  *   - Single sanctioned exception: the glass-* material, a translucent fill
  *     with no backdrop blur, reserved for chrome surfaces — tab bar / segment
- *     capsules, the settings group, the account page's captcha panel, the
- *     filter panel sheet, dialogs, and the player chrome.
+ *     capsules, the settings group, the account page's captcha panel, dialogs,
+ *     and the player chrome. The filter and keyboard side sheets are opaque:
+ *     they cover a 600x1080 strip, where content showing through is clutter.
  *     Content surfaces stay fully opaque.
  *   - No motion of any kind: the transition/animation ban is enforced in the
  *     base layer with !important. Focus border/color swaps are instant. Two
@@ -122,10 +123,9 @@
 /* Glass material: a translucent fill, deliberately without backdrop-filter.
    A backdrop blur is its own render pass that re-reads and re-blurs whatever
    sits behind it on every frame that content moves (scrolling under the tab
-   bar, a sheet scrolling itself); a plain alpha fill is one blended quad. The
+   bar, a dialog over the player); a plain alpha fill is one blended quad. The
    0.85 alpha keeps text on top legible with the content behind left sharp.
-   Border/radius stay per-site (`border border-glass-edge`, `border-l` for the
-   filter sheet, …). */
+   Border/radius stay per-site (`border border-glass-edge`, …). */
 @utility glass {
   background: var(--color-glass);
 }

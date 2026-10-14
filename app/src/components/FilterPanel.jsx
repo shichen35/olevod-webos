@@ -195,7 +195,7 @@ export default function FilterPanel({ category, onClose }) {
   return (
     <div
       ref={rootRef}
-      className="glass-strong fixed inset-y-0 right-0 z-10 w-[600px] overflow-y-auto border-l border-glass-edge px-10 py-12 scroll-py-focus-safe"
+      className="fixed inset-y-0 right-0 z-10 w-[600px] overflow-y-auto border-l border-glass-edge bg-elev px-10 py-12 scroll-py-focus-safe"
     >
       <Group title="地区" options={cfg.areas} value={filter.area} row={AREA_ROW} onPick={(v) => patchFilter(category, { area: v })} />
       <Group title="年份" options={cfg.years} value={filter.year} row={YEAR_ROW} onPick={(v) => patchFilter(category, { year: v })} />

@@ -39,13 +39,16 @@ function RetryButton({ group, onRetry }) {
 function FeaturedCard({ item, group, col, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row: 0, col, onSelect })
   return (
-    <div className="min-w-0 flex-1" {...props}>
+    <div className="min-w-0" {...props}>
       <div className="h-[300px] overflow-hidden rounded-[15px] border-3 border-transparent bg-elev focused:border-focus">
         {/* Banner stills have no sized thumbnail form — request the original. */}
         <Thumb pic={item.pic} alt={item.title} size="" />
       </div>
-      <div className="mt-2.5 truncate text-heading text-fg-2 focused:text-fg">{item.title}</div>
-      <div className="mt-1 truncate text-caption text-fg-3">{item.remarks}</div>
+      {/* One caption line keeps the first shelf fully on the first screen. */}
+      <div className="mt-2.5 flex items-baseline gap-3 whitespace-nowrap">
+        <div className="min-w-0 truncate text-body text-fg-2 focused:text-fg">{item.title}</div>
+        {item.remarks && <div className="max-w-[50%] shrink-0 truncate text-caption text-fg-3">{item.remarks}</div>}
+      </div>
     </div>
   )
 }
@@ -110,8 +113,8 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
   // The featured row owns row 0 when it is there, pushing the shelves down one.
   const featuredRow = featured.length ? (
     <section className="mb-11">
-      <h2 className="mb-[18px] text-heading font-semibold text-fg">精选推荐</h2>
-      <div className="flex gap-gutter">
+      {/* Two columns even with one banner, so a lone banner keeps its half width. */}
+      <div className="grid grid-cols-2 gap-gutter">
         {featured.map((item, i) => (
           <FeaturedCard key={item.id} item={item} group={group} col={i} onSelect={() => onOpenDetail(item.id)} />
         ))}

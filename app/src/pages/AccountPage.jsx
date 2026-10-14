@@ -499,7 +499,7 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
                 <div className={`${WIDE_BTN} border-[3px] border-transparent bg-elev-2 text-fg-3`}>登录</div>
               )}
 
-              <div className={`mt-4 text-caption ${error ? 'text-uhd' : 'text-fg-3'}`}>
+              <div className={`mt-4 text-caption ${error ? 'text-uhd' : 'text-fg-2'}`}>
                 {error || '输入图中 4 位数字，遥控器数字键也可直接输入'}
               </div>
             </>

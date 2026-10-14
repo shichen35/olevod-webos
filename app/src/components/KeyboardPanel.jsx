@@ -66,7 +66,7 @@ export default function KeyboardPanel({ value, onChange, onSubmit, onSystemKeybo
         <Key row={ACTION_ROW0 + 1} col={0} label="系统键盘" wide onSelect={onSystemKeyboard} />
         <Key row={ACTION_ROW0 + 1} col={1} icon="search" label="搜索" wide onSelect={() => onSubmit(value)} />
       </div>
-      <div className="mt-6 text-caption text-fg-3">字母可输入拼音首字母，中文用系统键盘</div>
+      <div className="mt-6 text-caption text-fg-2">字母可输入拼音首字母，中文用系统键盘</div>
     </div>
   )
 }

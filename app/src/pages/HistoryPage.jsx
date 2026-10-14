@@ -81,7 +81,7 @@ export default function HistoryPage({ group = 'content', active = true, onOpenDe
         {manage && history.length > 0 && (
           <ActionChip group={group} row={ACTION_ROW} col={1} label="全部删除" onSelect={() => setConfirmClear(true)} />
         )}
-        <span className="text-caption text-fg-3">
+        <span className="text-caption text-fg-2">
           {manage ? '按 OK 删除该条记录，删完按「完成」退出' : '进入管理可逐条删除记录'}
         </span>
       </div>

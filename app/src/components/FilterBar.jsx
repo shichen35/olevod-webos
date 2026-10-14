@@ -64,7 +64,7 @@ function FilterBar({ category, group = 'content', filter, onSelectGenre, onSelec
           />
         ))}
         <Chip group={group} row={1} col={SORTS.length} icon="tune" label="额外筛选" onSelect={onOpenFilter} />
-        <div className="ml-3 shrink-0 whitespace-nowrap text-caption text-fg-3">{summaryText(cfg, filter)}</div>
+        <div className="ml-3 shrink-0 whitespace-nowrap text-caption text-fg-2">{summaryText(cfg, filter)}</div>
       </div>
     </div>
   )

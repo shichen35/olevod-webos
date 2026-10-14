@@ -95,14 +95,18 @@ export function useSlidingCursor({ containerRef, layer = 'home', group, row = 0,
       prevGeom.current = { left, width }
       if (!animate || !from || (from.left === left && from.width === width)) return
 
-      // The slide: transform + width only, on this one node, 100ms so the cursor
-      // stays snappy. Cancel any in-flight run so fast left/right presses chain
-      // into one motion instead of stacking.
+      // The slide: transform only, on this one node, 100ms so the cursor stays
+      // snappy. The width is already final; scaleX (origin left) stands in for
+      // the size change, so the whole effect runs on the compositor — a width
+      // keyframe would drag it onto the main thread with a layout per frame.
+      // The rounded ends stretch slightly mid-slide, unnoticeable at 100ms.
+      // Cancel any in-flight run so fast left/right presses chain into one
+      // motion instead of stacking.
       pill.getAnimations().forEach((a) => a.cancel())
       pill.animate(
         [
-          { transform: `translateX(${from.left}px)`, width: `${from.width}px` },
-          { transform: `translateX(${left}px)`, width: `${width}px` },
+          { transform: `translateX(${from.left}px) scaleX(${from.width / width})` },
+          { transform: `translateX(${left}px) scaleX(1)` },
         ],
         { duration: 100, easing: 'ease' },
       )
@@ -133,7 +137,7 @@ export function useSlidingCursor({ containerRef, layer = 'home', group, row = 0,
   const pillProps = {
     ref: pillRef,
     'aria-hidden': true,
-    className: 'pointer-events-none absolute left-0 top-0 z-0 rounded-full bg-focus opacity-0',
+    className: 'pointer-events-none absolute left-0 top-0 z-0 origin-left rounded-full bg-focus opacity-0',
   }
   return { pillProps, cursorOnBar }
 }

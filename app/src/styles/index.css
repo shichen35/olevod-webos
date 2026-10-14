@@ -140,8 +140,9 @@
  * (hooks/useSlidingCursor.js, via the Web Animations API).
  * WAAPI is used deliberately — it runs independently of the `transition/
  * animation: none !important` ban above (which only governs CSS-declared
- * motion), so no cascade-layer fight is needed. The motion is one `transform` +
- * `width` animation on a single absolutely-positioned node; cells never repaint
+ * motion), so no cascade-layer fight is needed. The motion is one transform-only
+ * (translateX + scaleX) animation on a single absolutely-positioned node, so
+ * it runs on the compositor; cells never repaint
  * and the focus engine is untouched. The look at rest is identical to the
  * pre-animation solid white fill — only the cursor now glides.
  */

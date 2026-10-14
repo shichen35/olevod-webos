@@ -16,6 +16,12 @@
  * back at exactly the box size, so that is treated as untrustworthy and the
  * original loads instead. The thumbnail stays invisible until it passes, so a
  * stretched frame never flashes up.
+ *
+ * Loads eagerly: every list here is small or paginated, and in Chromium <= 120
+ * (webOS 24/25) loading="lazy" inside a nested scroller only starts the fetch
+ * once the image is on screen, so fetch, decode and the onLoad render all land
+ * mid-scroll. decoding="async" lets a large original decode off the raster path
+ * instead of stalling its tile.
  */
 import { useState } from 'react'
 import { imageUrl } from '../api/olevod.js'
@@ -43,7 +49,7 @@ export default function Thumb({ pic, picThumb, alt = '', size = '384x560' }) {
       className={`h-full w-full object-cover ${checkFit && !fitOk ? 'invisible' : ''}`}
       src={src}
       alt={alt}
-      loading="lazy"
+      decoding="async"
       onLoad={(e) => {
         if (!checkFit) return
         const { naturalWidth: w, naturalHeight: h } = e.currentTarget

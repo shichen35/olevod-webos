@@ -16,7 +16,7 @@
 import { useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { settingsStore, getSetting } from '../store/settings.js'
 
-// id -> { layer, group, row, col, onSelect, onFocusChange }
+// id -> { ref, layer, group, row, col, onSelect, onFocusChange }
 const registry = new Map()
 
 let currentFocusId = null
@@ -150,6 +150,14 @@ function buildId(layer, group, row, col) {
   return `${layer}/${group}-${row}-${col}`
 }
 
+// The DOM node for a focus id: the ref the cell registered, so a keypress costs
+// a Map lookup instead of a document-wide attribute-selector scan (and that
+// scan only grows as pages stay mounted). The selector covers an id whose cell
+// is unregistered or whose ref is unset (e.g. a component that overrode it).
+function elementOf(id) {
+  return registry.get(id)?.ref.current ?? document.querySelector(`[data-focus-id="${id}"]`)
+}
+
 function topLayerFrame() {
   for (let i = frames.length - 1; i >= 0; i--) {
     if (frames[i].layer) return frames[i]
@@ -169,7 +177,7 @@ function applyFocus(newId) {
   if (prevId === newId) return
 
   if (prevId) {
-    const prevEl = document.querySelector(`[data-focus-id="${prevId}"]`)
+    const prevEl = elementOf(prevId)
     if (prevEl) prevEl.classList.remove('focused')
     registry.get(prevId)?.onFocusChange?.(false)
   }
@@ -184,7 +192,7 @@ function applyFocus(newId) {
       lastFocusByGroup.set(`${rec.layer}/${rec.group}`, newId)
       rowMemory.set(`${rec.layer}/${rec.group}-${rec.row}`, rec.col)
     }
-    const el = document.querySelector(`[data-focus-id="${newId}"]`)
+    const el = elementOf(newId)
     if (el) {
       el.classList.add('focused')
       // Smooth scroll on every focus move — the app's sole scroll animation.
@@ -320,7 +328,7 @@ function geometryColInRow(layer, group, row, centerX) {
   for (let c = 0; c <= PROBE_LIMIT; c++) {
     const id = buildId(layer, group, row, c)
     if (!registry.has(id)) continue
-    const el = document.querySelector(`[data-focus-id="${id}"]`)
+    const el = elementOf(id)
     if (!el) continue
     const r = el.getBoundingClientRect()
     const dx = Math.abs(r.left + r.width / 2 - centerX)
@@ -356,7 +364,7 @@ function navigate(dir) {
     let within = null
     if (tr >= 0) {
       if (geometryVerticalGroups.has(`${layer}/${group}`)) {
-        const el = document.querySelector(`[data-focus-id="${currentFocusId}"]`)
+        const el = elementOf(currentFocusId)
         const cr = el?.getBoundingClientRect()
         within = cr
           ? geometryColInRow(layer, group, tr, cr.left + cr.width / 2)
@@ -540,6 +548,7 @@ export function useFocusable({ layer = DEFAULT_LAYER, group = 'content', row = 0
 
   useEffect(() => {
     registry.set(id, {
+      ref: elRef,
       layer,
       group,
       row,

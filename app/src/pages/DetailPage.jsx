@@ -2,8 +2,8 @@
  * Full-screen detail overlay (the "detail" focus layer).
  *
  * No blown-up-poster-with-scrim treatment (that violates the performance red
- * lines): a solid info column on the left and a plain poster <img> on the right,
- * with all text on opaque backgrounds.
+ * lines): a plain poster <img> in the first grid column and a solid info column
+ * from the second, with all text on opaque backgrounds.
  *
  * Focus rows in the content group:
  *   row 0     action buttons (focus lands on Play once data resolves; landing
@@ -224,7 +224,16 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
   const watch = history.find((x) => x.id === id)?.watch || null
   const { resumeIndex, caughtUp, playIndex: primaryEp, label: primaryLabel } = primaryAction(episodes, watch)
 
-  const eyebrow = [data.genreName, data.year, data.region, data.remarks].filter(Boolean).join(' · ')
+  // Remarks usually carry the episode count ("更新至第06集"); only without them
+  // does the line say how many episodes there are.
+  const eyebrow = [
+    data.genreName,
+    data.year,
+    data.region,
+    data.remarks || (episodes.length > 1 && `共 ${episodes.length} 集`),
+  ]
+    .filter(Boolean)
+    .join(' · ')
   const crew = [data.director && `导演：${data.director}`, data.cast && `主演：${data.cast}`]
     .filter(Boolean)
     .join('　')
@@ -279,23 +288,26 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
 
   return (
     <div className={OVERLAY_ROOT} style={style}>
-      <div className="flex min-h-full flex-col gap-10">
-        <div className="flex gap-14">
-          <div className="aspect-2/3 w-card shrink-0 overflow-hidden rounded-xl bg-elev">
+      {/* pt-4: content starts at y=108, the same line as the tab pages. */}
+      <div className="flex min-h-full flex-col gap-10 pt-4">
+        <div className="flex gap-gutter">
+          {/* self-start: the stretched row would otherwise pull the poster off 2:3. */}
+          <div className="aspect-2/3 w-card shrink-0 self-start overflow-hidden rounded-xl bg-elev">
             {/* Same sized asset as grid cards: usually already cached when
                 arriving from a poster grid, so it paints immediately. */}
             <Thumb pic={data.pic} picThumb={data.picThumb} alt={data.title} />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="mb-3 text-label text-fg-3">{eyebrow}</div>
-            <h1 className="mb-5 text-display font-bold text-fg">{data.title}</h1>
-            <div className="mb-6 flex items-center gap-4">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <h1 className="mb-3 line-clamp-2 text-display font-bold text-fg">{data.title}</h1>
+            <div className="mb-6 flex min-w-0 items-center gap-4">
               {data.rating > 0 && <span className="text-heading font-bold text-accent">{data.rating}</span>}
-              <span className="text-label text-fg-2">全 {episodes.length} 集</span>
+              <span className="min-w-0 truncate text-label text-fg-2">{eyebrow}</span>
             </div>
-            <p className="mb-5 line-clamp-3 text-body leading-normal text-fg-2">{data.synopsis}</p>
-            <div className="mb-8 truncate text-caption text-fg-3">{crew}</div>
-            <div className="flex gap-5">
+            {/* 1104px ≈ 42 characters, the same measure as SynopsisDialog's body. */}
+            <p className="mb-3 line-clamp-3 max-w-[1104px] text-body leading-normal text-fg-2">{data.synopsis}</p>
+            <div className="mb-5 truncate text-label text-fg-2">{crew}</div>
+            {/* mt-auto: a column shorter than the poster ends level with its bottom. */}
+            <div className="mt-auto flex gap-5">
               <ActionButton
                 col={0}
                 icon={resumeIndex == null && caughtUp ? 'replay' : 'play_arrow'}

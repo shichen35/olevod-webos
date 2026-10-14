@@ -14,10 +14,11 @@ export default function Shelf({ title, items, layer, group, row, onSelectItem, c
 
   // Exactly 6 fixed-width cards fill the content width, so the row's resting
   // state is symmetric; the scrollbar is hidden (focus drives scrolling).
+  // bg-bg + will-change-scroll: composited scrolling, same as .tab-content (App.jsx).
   return (
     <section className="mb-11">
       <h2 className="mb-[18px] text-heading font-semibold text-fg">{title}</h2>
-      <div className="flex gap-gutter overflow-x-auto overflow-y-hidden">
+      <div className="flex gap-gutter overflow-x-auto overflow-y-hidden bg-bg will-change-scroll">
         {items.map((item, i) => (
           <VideoCard
             className="w-card shrink-0"

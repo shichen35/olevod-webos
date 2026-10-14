@@ -187,14 +187,16 @@ export default function App() {
             under the bar — it must be scroll-padding here rather than
             scroll-margin on the card, see the [data-focus-id] rule in index.css.
             The literal `tab-content` class is a marker for CategoryPage's
-            closest(). */}
+            closest(). bg-bg + will-change-scroll get it composited scrolling:
+            Chromium at DSF 1 with LCD text keeps a transparent scroller on the
+            main thread, repainting every scroll frame. */}
         {tabs.map((tab) => (
           <div
             key={tab.key}
             ref={(el) => {
               scrollersRef.current[tab.key] = el
             }}
-            className="tab-content absolute inset-0 overflow-y-auto px-safe pt-content-top pb-content-bottom scroll-py-focus-safe"
+            className="tab-content absolute inset-0 overflow-y-auto bg-bg will-change-scroll px-safe pt-content-top pb-content-bottom scroll-py-focus-safe"
             style={{ display: tab.key === activeTab ? 'block' : 'none' }}
           >
             {activated.has(tab.key) &&

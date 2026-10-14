@@ -56,7 +56,7 @@ const RANGE_SIZE = 50
 // to the action row only scrolls the minimum needed to reveal the buttons, which
 // leaves the poster and the title block clipped above the viewport.
 const OVERLAY_ROOT =
-  'overlay fixed inset-0 overflow-y-auto bg-bg px-safe pt-content-top pb-content-bottom scroll-py-focus-safe'
+  'overlay fixed inset-0 overflow-y-auto bg-bg will-change-scroll px-safe pt-content-top pb-content-bottom scroll-py-focus-safe'
 
 // Primary (play) action: accent fill at rest; `focusable`'s .focused rules
 // still win, so the white focus fill overrides it instantly.

@@ -15,7 +15,7 @@ const SCROLL_STEP = 160
 function CloseButton({ onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col: 0, onSelect })
   return (
-    <button className="focusable w-full rounded-[14px] bg-glass-active py-[18px] text-label text-fg" {...props}>
+    <button className="focusable w-full rounded-[14px] bg-elev-2 py-[18px] text-label text-fg" {...props}>
       关闭
     </button>
   )
@@ -40,7 +40,7 @@ export default function SynopsisDialog({ title, text, onClose }) {
 
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center">
-      <div className="glass-strong flex max-h-[820px] w-[1200px] flex-col rounded-3xl border border-glass-edge px-12 pt-11 pb-8">
+      <div className="flex max-h-[820px] w-[1200px] flex-col rounded-3xl border border-elev-2 bg-elev px-12 pt-11 pb-8">
         <div className="mb-6 shrink-0 text-title text-fg">{title}</div>
         <div
           ref={bodyRef}

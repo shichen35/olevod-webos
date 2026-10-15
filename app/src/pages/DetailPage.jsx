@@ -105,9 +105,8 @@ function EpCell({ row, col, title, subtitle, isResume, vip, onSelect }) {
       {...props}
     >
       <div className="w-full truncate leading-[1.25]">{title}</div>
-      {/* Inherits the cell's current color (normal / focused / resume) and dims
-          via opacity so every state keeps readable contrast. */}
-      {subtitle && <div className="mt-0.5 text-caption leading-[1.25] opacity-65">{subtitle}</div>}
+      {/* One tier dimmer than the title; dark on the white focus fill. */}
+      {subtitle && <div className="mt-0.5 text-caption leading-[1.25] text-fg-3 focused:text-inverse">{subtitle}</div>}
       {isResume && (
         <span className="absolute -top-2 -right-1.5 rounded-[10px] bg-accent px-2 py-0.5 text-caption text-inverse">继续</span>
       )}

@@ -29,7 +29,7 @@ function RowButton({ row, col, icon, label, disabled, wide = false, onSelect }) 
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col, onSelect })
   return (
     <div
-      className={`focusable rounded-xl bg-elev-2 py-3 text-center text-label text-fg-2 ${wide ? 'px-6' : 'w-21'} ${disabled ? 'opacity-35' : ''}`}
+      className={`focusable rounded-xl bg-elev-2 py-3 text-center text-label ${wide ? 'px-6' : 'w-21'} ${disabled ? 'text-fg-3' : 'text-fg-2'}`}
       {...props}
     >
       {/* 30px + 2×1.2px = 32.4px, a line of text-label, so icon and text rows match. */}
@@ -41,7 +41,7 @@ function RowButton({ row, col, icon, label, disabled, wide = false, onSelect }) 
 function DialogButton({ row, label, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col: 0, onSelect })
   return (
-    <button className="focusable w-full rounded-[14px] bg-glass-active py-[18px] text-label text-fg" {...props}>
+    <button className="focusable w-full rounded-[14px] bg-elev-2 py-[18px] text-label text-fg" {...props}>
       {label}
     </button>
   )
@@ -99,7 +99,7 @@ export default function TabOrderDialog({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center">
-      <div className="glass-strong flex max-h-[900px] w-[720px] flex-col rounded-3xl border border-glass-edge px-10 pt-11 pb-8">
+      <div className="flex max-h-[900px] w-[720px] flex-col rounded-3xl border border-elev-2 bg-elev px-10 pt-11 pb-8">
         <div className="mb-4 shrink-0 text-title text-fg">标签栏</div>
         <div className="mb-6 shrink-0 text-body leading-normal text-fg-2">
           首页固定在最前，可上下调整其余标签，也可以隐藏任意标签。两侧的搜索、收藏、历史、设置、账号图标始终显示。
@@ -111,7 +111,7 @@ export default function TabOrderDialog({ onClose }) {
               keyed DOM move would carry the imperative .focused class along
               with the node while its id changes underneath it. */}
           {shown.map(({ tab, canUp, canDown }, i) => (
-            <div className="flex items-center gap-3 rounded-[14px] bg-glass-active py-2.5 pr-2.5 pl-6" key={i}>
+            <div className="flex items-center gap-3 rounded-[14px] bg-bg py-2.5 pr-2.5 pl-6" key={i}>
               <span className="flex-1 truncate text-body text-fg">{tab.label}</span>
               <RowButton row={i} col={0} icon="keyboard_arrow_up" disabled={!canUp} onSelect={() => move(tab.key, -1)} />
               <RowButton row={i} col={1} icon="keyboard_arrow_down" disabled={!canDown} onSelect={() => move(tab.key, 1)} />
@@ -121,7 +121,7 @@ export default function TabOrderDialog({ onClose }) {
 
           {hiddenTabs.length > 0 && <div className="mt-4 text-caption text-fg-3">已隐藏</div>}
           {hiddenTabs.map((tab, j) => (
-            <div className="flex items-center gap-3 rounded-[14px] bg-elev py-2.5 pr-2.5 pl-6" key={`hidden-${j}`}>
+            <div className="flex items-center gap-3 rounded-[14px] bg-bg py-2.5 pr-2.5 pl-6" key={`hidden-${j}`}>
               <span className="flex-1 truncate text-body text-fg-2">{tab.label}</span>
               <RowButton row={shown.length + j} col={0} label="显示" wide onSelect={() => show(tab.key)} />
             </div>

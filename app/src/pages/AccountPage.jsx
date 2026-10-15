@@ -10,7 +10,7 @@
  * keyboard, same pattern as SearchPage) or the remembered login already filled
  * in; signed in, an avatar, the nickname, the membership line (pub/user/info)
  * and 退出登录 / 清除已保存信息.
- * The right glass panel is the captcha: the image (160x80 source shown at 2x
+ * The right panel is the captcha: the image (160x80 source shown at 2x
  * on a light token, since the PNG is transparent with dark strokes), four
  * digit slots, an on-screen 3x4 keypad and 登录. Remote/keyboard digit keys
  * type straight into the slots. Filling the fourth digit moves focus to 登录;
@@ -368,7 +368,7 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
         <div className="flex w-[720px] shrink-0 flex-col">
           {signedIn ? (
             <>
-              <div className="glass mb-7 flex size-36 items-center justify-center rounded-full border border-glass-edge text-fg">
+              <div className="mb-7 flex size-36 items-center justify-center rounded-full border border-elev-2 bg-elev text-fg">
                 <Icon name="person" size={80} />
               </div>
               <div className="mb-2 text-title font-semibold text-fg">{session.name}</div>
@@ -451,7 +451,7 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
         </div>
 
         {/* Right: captcha + keypad, or a note when signed in */}
-        <div className="glass h-fit w-[680px] shrink-0 rounded-[20px] border border-glass-edge p-8">
+        <div className="h-fit w-[680px] shrink-0 rounded-[20px] border border-elev-2 bg-elev p-8">
           {signedIn ? (
             <div className="text-body leading-normal text-fg-2">已登录，可以播放账号有权限的会员内容。</div>
           ) : (
@@ -473,7 +473,7 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
                 {Array.from({ length: CODE_LENGTH }, (_, i) => (
                   <div
                     key={i}
-                    className={`flex h-[88px] flex-1 items-center justify-center rounded-[14px] border-[3px] bg-elev text-title text-fg ${i === code.length ? 'border-fg-3' : 'border-transparent'}`}
+                    className={`flex h-[88px] flex-1 items-center justify-center rounded-[14px] border-[3px] bg-bg text-title text-fg ${i === code.length ? 'border-fg-3' : 'border-transparent'}`}
                   >
                     {code[i] || ''}
                   </div>

@@ -37,7 +37,7 @@ function SettingsToggle({ group, row, label, on, onToggle }) {
       {/* Apple-style switch: opaque track (accent when on), knob slides via
           margin. The focused: shades keep it readable on the white focused row. */}
       <span
-        className={`flex h-11 w-19 items-center rounded-full p-1 ${on ? 'bg-accent' : 'bg-elev-2 focused:bg-[#c9c9ce]'}`}
+        className={`flex h-11 w-19 items-center rounded-full p-1 ${on ? 'bg-accent' : 'bg-elev-2 focused:bg-track-focus'}`}
       >
         <span className={`size-9 rounded-full bg-fg focused:bg-white ${on ? 'ml-auto' : ''}`} />
       </span>
@@ -54,7 +54,7 @@ export default function SettingsPage({ group = 'content' }) {
     <div className="mx-auto w-span-3 pt-4">
       <PageTitle>设置</PageTitle>
       {/* iOS-style inset grouped list + version caption below. */}
-      <div className="glass rounded-[20px] border border-glass-edge p-1.5">
+      <div className="rounded-[20px] border border-elev-2 bg-elev p-1.5">
         <SettingsToggle
           group={group}
           row={0}

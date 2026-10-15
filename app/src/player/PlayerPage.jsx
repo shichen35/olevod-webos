@@ -121,7 +121,7 @@ function ErrorButton({ col, icon, label, primary, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: 0, col, onSelect })
   return (
     <span
-      className={`focusable rounded-lg px-8 py-3.5 text-label ${primary ? 'bg-accent text-inverse' : 'bg-elev-2 text-fg'}`}
+      className={`focusable tile-btn ${primary ? 'bg-accent text-inverse' : 'bg-elev-2 text-fg'}`}
       {...props}
     >
       {icon ? <IconLabel icon={icon}>{label}</IconLabel> : label}
@@ -139,7 +139,7 @@ function StripCell({ col, label, isCurrent, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'episodes', row: 0, col, onSelect })
   return (
     <div
-      className={`focusable shrink-0 max-w-[240px] truncate h-[72px] rounded-[14px] bg-glass-active px-6 text-center text-label leading-[66px] ${isCurrent ? 'text-accent' : 'text-fg-2'}`}
+      className={`focusable shrink-0 max-w-[240px] truncate h-[72px] rounded-tile bg-glass-active px-6 text-center text-label leading-[66px] ${isCurrent ? 'text-accent' : 'text-fg-2'}`}
       {...props}
     >
       {label}
@@ -675,7 +675,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
       <div className="absolute bottom-12 left-safe right-safe flex flex-col gap-5">
         {/* Control bar — always mounted so the DOM refs stay stable; visibility
             is an instant display toggle. */}
-        <div className="glass-strong border border-glass-edge rounded-[20px] px-7 pt-6 pb-4" style={{ display: barVisible ? 'block' : 'none' }}>
+        <div className="glass-strong border border-glass-edge rounded-surface px-7 pt-6 pb-4" style={{ display: barVisible ? 'block' : 'none' }}>
           <div className="relative mb-3 h-2 overflow-hidden rounded-full bg-glass-active">
             <div ref={bufferedRef} className="absolute inset-y-0 left-0 w-0 bg-fg-3" />
             <div ref={playedRef} className="absolute inset-y-0 left-0 w-0 bg-accent" />
@@ -694,7 +694,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
             a second Down from it. Cells are real focusables so the engine
             scrolls the row and clicking jumps to that episode. */}
         {stripVisible && episodes.length > 1 && (
-          <div className="glass-strong border border-glass-edge rounded-[20px] px-7 py-5">
+          <div className="glass-strong border border-glass-edge rounded-surface px-7 py-5">
             <div className="mb-3 text-caption text-fg-2">选集</div>
             <div className="flex gap-gutter overflow-x-auto">
               {stripList.map((ep, i) => {
@@ -726,7 +726,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
         {/* Up Next: glass card, right-aligned; OK switches immediately. Hidden
             while the strip is open, since the strip owns OK then. */}
         {upNext && nextEpIndex != null && !stripVisible && (
-          <div className="glass-strong border border-glass-edge absolute bottom-full mb-5 right-0 rounded-[20px] px-9 py-6 text-center">
+          <div className="glass-strong border border-glass-edge absolute bottom-full mb-5 right-0 rounded-surface px-9 py-6 text-center">
             <div className="mb-2 text-caption text-fg-2">即将播放</div>
             <div className="mb-2 max-w-[560px] truncate text-heading text-fg">{nextEp.title || `第${nextEpIndex}集`}</div>
             <div className="text-caption text-fg-2">按 OK 立即播放</div>
@@ -737,7 +737,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
       {toast && <div className="glass-strong border border-glass-edge absolute top-12 right-safe rounded-full px-7 py-3.5 text-label text-fg">{toast}</div>}
 
       {hint && (
-        <div className="glass-strong border border-glass-edge absolute top-30 left-1/2 -translate-x-1/2 rounded-[20px] px-10 py-6 text-center text-label text-fg-2">
+        <div className="glass-strong border border-glass-edge absolute top-30 left-1/2 -translate-x-1/2 rounded-surface px-10 py-6 text-center text-label text-fg-2">
           <div className="mb-3 text-heading text-fg">遥控键位</div>
           <div>OK 播放 / 暂停 · 左右键快退快进（长按加速）</div>
           <div className="mt-1.5">下键调出控制条 · 控制条上再按下键选集</div>

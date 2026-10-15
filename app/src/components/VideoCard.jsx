@@ -13,7 +13,7 @@ import { IconLabel } from './Icon.jsx'
 import { useFocusable } from '../hooks/useFocus.js'
 
 // Badge base: opaque pill pinned inside the poster.
-const BADGE = 'absolute rounded-sm px-2 py-[5px] text-caption leading-none'
+export const BADGE = 'absolute rounded-sm px-2 py-[5px] text-caption leading-none'
 
 // Grid default: skip rendering rows far off screen (grids grow by a page at a
 // time), remembering each card's real size once laid out. Shelves stay fully

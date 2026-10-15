@@ -65,8 +65,8 @@ function makeIds(layer, group) {
 // the focus engine snap row-0 focus back to the top).
 const OVERLAY_ROOT = 'overlay fixed inset-0 overflow-y-auto bg-bg px-safe pt-content-top pb-content-bottom'
 
-const BTN = 'focusable rounded-lg bg-elev-2 px-8 py-3.5 text-label text-fg'
-const WIDE_BTN = 'flex h-[72px] w-full items-center justify-center rounded-[14px] text-label'
+const BTN = 'focusable tile-btn bg-elev-2 text-fg'
+const WIDE_BTN = 'flex h-[72px] w-full items-center justify-center rounded-tile text-label'
 
 function ActionButton({ ids, row, col, label, onSelect }) {
   const { props } = useFocusable({ layer: ids.layer, group: ids.group, row, col, onSelect })
@@ -81,7 +81,7 @@ function InputBox({ ids, row, inputRef, value, onChange, placeholder, type = 'te
   // OK on the box hands DOM focus to the input, which opens the system keyboard.
   const { props } = useFocusable({ layer: ids.layer, group: ids.group, row, col: 0, onSelect: () => inputRef.current?.focus() })
   return (
-    <div className="focusable flex w-full items-center rounded-[14px] bg-elev-2 px-7 py-4" {...props}>
+    <div className="focusable flex h-[72px] w-full items-center rounded-tile bg-elev-2 px-7" {...props}>
       <input
         ref={inputRef}
         type={type}
@@ -113,7 +113,7 @@ function KeyButton({ ids, row, col, label, onPress }) {
   const isDigit = /^\d$/.test(label)
   return (
     <div
-      className={`focusable flex h-[72px] items-center justify-center rounded-[14px] bg-elev-2 text-fg ${isDigit ? 'text-heading' : 'text-label'}`}
+      className={`focusable flex h-[72px] items-center justify-center rounded-tile bg-elev-2 text-fg ${isDigit ? 'text-heading' : 'text-label'}`}
       {...props}
     >
       {label === '退格' ? <IconLabel icon="backspace">{label}</IconLabel> : label}
@@ -451,13 +451,13 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
         </div>
 
         {/* Right: captcha + keypad, or a note when signed in */}
-        <div className="h-fit w-[680px] shrink-0 rounded-[20px] border border-elev-2 bg-elev p-8">
+        <div className="h-fit w-[680px] shrink-0 rounded-surface border border-elev-2 bg-elev p-8">
           {signedIn ? (
             <div className="text-body leading-normal text-fg-2">已登录，可以播放账号有权限的会员内容。</div>
           ) : (
             <>
               <div className="mb-6 flex items-center gap-6">
-                <div className="flex h-[160px] w-[320px] items-center justify-center overflow-hidden rounded-[14px] bg-captcha-bg">
+                <div className="flex h-[160px] w-[320px] items-center justify-center overflow-hidden rounded-tile bg-captcha-bg">
                   {challenge.status === 'ok' ? (
                     <img src={challenge.image} alt="验证码" className="size-full object-contain" />
                   ) : (
@@ -473,7 +473,7 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
                 {Array.from({ length: CODE_LENGTH }, (_, i) => (
                   <div
                     key={i}
-                    className={`flex h-[88px] flex-1 items-center justify-center rounded-[14px] border-[3px] bg-bg text-title text-fg ${i === code.length ? 'border-fg-3' : 'border-transparent'}`}
+                    className={`flex h-[88px] flex-1 items-center justify-center rounded-tile border-[3px] bg-bg text-title text-fg ${i === code.length ? 'border-fg-3' : 'border-transparent'}`}
                   >
                     {code[i] || ''}
                   </div>

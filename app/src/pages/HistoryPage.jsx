@@ -23,7 +23,7 @@ const GRID_ROW0 = 1
 function ActionChip({ group, row, col, label, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row, col, onSelect })
   return (
-    <span className="focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label text-fg" {...props}>
+    <span className="focusable chip text-fg" {...props}>
       {label}
     </span>
   )

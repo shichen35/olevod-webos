@@ -26,7 +26,7 @@ function Key({ row, col, icon, label, onSelect, wide = false }) {
   const { props } = useFocusable({ layer: LAYER, group: GROUP, row, col, onSelect })
   return (
     <div
-      className={`focusable flex items-center justify-center h-[72px] rounded-[14px] bg-elev-2 text-fg ${wide ? 'text-label' : 'text-heading'}`}
+      className={`focusable flex items-center justify-center h-[72px] rounded-tile bg-elev-2 text-fg ${wide ? 'text-label' : 'text-heading'}`}
       {...props}
     >
       {icon ? <IconLabel icon={icon}>{label}</IconLabel> : label}
@@ -42,7 +42,7 @@ export default function KeyboardPanel({ value, onChange, onSubmit, onSystemKeybo
     <div className="fixed inset-y-0 right-0 z-10 w-sheet overflow-y-auto border-l border-elev-2 bg-elev pl-10 pr-safe pt-[108px] pb-12 scroll-py-focus-safe">
       <div className="mb-6 text-heading font-semibold text-fg">屏幕键盘</div>
       {/* The query as typed so far; the search box is behind the panel. */}
-      <div className="mb-8 min-h-[64px] rounded-[14px] bg-bg px-6 py-3 text-heading text-fg">
+      <div className="mb-8 flex h-[72px] items-center rounded-tile bg-bg px-6 text-heading text-fg">
         {value || <span className="text-fg-3">输入片名或拼音首字母</span>}
       </div>
 

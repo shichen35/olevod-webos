@@ -181,7 +181,7 @@ function RetryRow({ group, onRetry }) {
   const { props } = useFocusable({ layer: 'home', group, row: FILTER_ROWS, col: 0, onSelect: onRetry })
   return (
     <div className="py-8 text-body text-fg-2">
-      <span className="focusable inline-block rounded-full bg-elev-2 px-[22px] py-2 text-label text-fg" {...props}>
+      <span className="focusable tile-btn bg-elev-2 text-fg" {...props}>
         <IconLabel icon="refresh">
           加载失败，重试
         </IconLabel>

@@ -33,6 +33,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { userInfo } from '../api/olevod.js'
 import { loadDetail } from '../api/feeds.js'
 import Thumb from '../components/Thumb.jsx'
+import { BADGE } from '../components/VideoCard.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import SynopsisDialog from '../components/SynopsisDialog.jsx'
 import { sessionStore } from '../store/session.js'
@@ -62,7 +63,7 @@ const OVERLAY_ROOT =
 
 // Primary (play) action: accent fill at rest; `focusable`'s .focused rules
 // still win, so the white focus fill overrides it instantly.
-const DETAIL_BTN = 'focusable rounded-lg px-8 py-3.5 text-label'
+const DETAIL_BTN = 'focusable tile-btn'
 
 // Single-button notices for a signed-in session that still can't play a VIP
 // episode.
@@ -89,7 +90,7 @@ function ControlChip({ col, icon, label, selected = false, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: CONTROLS_ROW, col, onSelect })
   return (
     <span
-      className={`focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label ${selected ? 'text-accent [&:not(.focused)]:border-accent' : 'text-fg'}`}
+      className={`focusable chip ${selected ? 'text-accent [&:not(.focused)]:border-accent' : 'text-fg'}`}
       {...props}
     >
       {icon ? <IconLabel icon={icon}>{label}</IconLabel> : label}
@@ -101,17 +102,17 @@ function EpCell({ row, col, title, subtitle, isResume, vip, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row, col, onSelect })
   return (
     <div
-      className={`focusable relative flex h-[72px] flex-col items-center justify-center rounded-[14px] bg-elev-2 px-5 text-center text-label ${isResume ? 'text-fg' : 'text-fg-2'}`}
+      className={`focusable relative flex h-[72px] flex-col items-center justify-center rounded-tile bg-elev-2 px-5 text-center text-label ${isResume ? 'text-fg' : 'text-fg-2'}`}
       {...props}
     >
       <div className="w-full truncate leading-[1.25]">{title}</div>
       {/* One tier dimmer than the title; dark on the white focus fill. */}
       {subtitle && <div className="mt-0.5 text-caption leading-[1.25] text-fg-3 focused:text-inverse">{subtitle}</div>}
       {isResume && (
-        <span className="absolute -top-2 -right-1.5 rounded-[10px] bg-accent px-2 py-0.5 text-caption text-inverse">继续</span>
+        <span className={`${BADGE} -top-2 -right-1.5 bg-accent text-inverse`}>继续</span>
       )}
       {vip && (
-        <span className="absolute -top-2 -left-1.5 rounded-[10px] bg-uhd px-2 py-0.5 text-caption text-inverse">VIP</span>
+        <span className={`${BADGE} -top-2 -left-1.5 bg-uhd text-inverse`}>VIP</span>
       )}
     </div>
   )

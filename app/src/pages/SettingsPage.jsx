@@ -14,7 +14,7 @@ import { settingsStore, getSetting, toggleSetting } from '../store/settings.js'
 
 // tvOS-style list row: transparent at rest, solid white fill + dark text when
 // focused (from `focusable`).
-const SETTINGS_ROW = 'focusable rounded-[14px] px-6 py-5 text-body text-fg'
+const SETTINGS_ROW = 'focusable rounded-tile px-6 py-5 text-body text-fg'
 
 function SettingsRow({ group, row, label, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row, col: 0, onSelect })
@@ -54,7 +54,7 @@ export default function SettingsPage({ group = 'content' }) {
     <div className="mx-auto w-span-3 pt-4">
       <PageTitle>设置</PageTitle>
       {/* iOS-style inset grouped list + version caption below. */}
-      <div className="rounded-[20px] border border-elev-2 bg-elev p-1.5">
+      <div className="rounded-surface border border-elev-2 bg-elev p-1.5">
         <SettingsToggle
           group={group}
           row={0}

@@ -18,7 +18,7 @@ function Chip({ group, row = 0, col, icon, label, selected, onSelect }) {
   // ring in focusable's reserved border, so selecting never changes the width.
   return (
     <span
-      className={`focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label ${selected ? 'text-accent [&:not(.focused)]:border-accent' : 'text-fg'}`}
+      className={`focusable chip ${selected ? 'text-accent [&:not(.focused)]:border-accent' : 'text-fg'}`}
       {...props}
     >
       {icon ? <IconLabel icon={icon}>{label}</IconLabel> : label}

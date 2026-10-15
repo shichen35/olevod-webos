@@ -111,6 +111,12 @@
      a gutter + the right safe margin, a side sheet whose left edge is column 5's. */
   --spacing-span-3: calc(3 * var(--spacing-card) + 2 * var(--spacing-gutter));
   --spacing-sheet: calc(2 * var(--spacing-card) + var(--spacing-gutter) + var(--spacing-safe));
+
+  /* Radius roles (media keeps rounded-xl 12, its focus frame 15; pills are
+     rounded-full; badges rounded-sm): tile = buttons, keys, inputs, episode
+     cells, list rows; surface = dialogs, panels, grouped lists, player chrome. */
+  --radius-tile: 14px;
+  --radius-surface: 20px;
 }
 
 /*
@@ -132,6 +138,17 @@
     border-color: var(--color-focus);
     color: var(--color-inverse);
   }
+}
+
+/* Shared control shapes. A chip is a pill option or action inside a strip or a
+   control row (54px tall with focusable's border); a tile button is a 72px
+   standalone button (primary: add bg-accent text-inverse, secondary: bg-elev-2
+   text-fg — retry is always secondary). Pair both with `focusable`. */
+@utility chip {
+  @apply shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label;
+}
+@utility tile-btn {
+  @apply inline-flex h-[72px] items-center justify-center rounded-tile px-8 text-label;
 }
 
 /* Glass material: a translucent fill, deliberately without backdrop-filter.

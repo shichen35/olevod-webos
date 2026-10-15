@@ -36,7 +36,7 @@ const HOT_LIMIT = 10
 function Chip({ group, row, col, label, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row, col, onSelect })
   return (
-    <span className="focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label text-fg" {...props}>
+    <span className="focusable chip text-fg" {...props}>
       {label}
     </span>
   )
@@ -257,7 +257,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
     <div className="pt-4" ref={rootRef}>
       <div className="mb-6 flex items-center gap-gutter">
         <div
-          className="focusable flex h-[72px] w-span-3 shrink-0 items-center rounded-[14px] bg-elev-2 px-7"
+          className="focusable flex h-[72px] w-span-3 shrink-0 items-center rounded-tile bg-elev-2 px-7"
           {...box.props}
         >
           <input
@@ -292,7 +292,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
             className="w-full bg-transparent text-body text-fg outline-none placeholder:text-fg-3 focused:text-inverse"
           />
         </div>
-        <span className="focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label text-fg" {...keyboardButton.props}>
+        <span className="focusable chip text-fg" {...keyboardButton.props}>
           屏幕键盘
         </span>
         {submitted && status === 'ok' && total > 0 && <span className="ml-3 min-w-0 truncate text-caption text-fg-2">「{submitted}」· 共 {total} 部</span>}
@@ -396,7 +396,7 @@ function RetryRow({ group, row, onRetry }) {
   const { props } = useFocusable({ layer: 'home', group, row, col: 0, onSelect: onRetry })
   return (
     <div className="py-8 text-body text-fg-2">
-      <span className="focusable inline-block rounded-full bg-elev-2 px-[22px] py-2 text-label text-fg" {...props}>
+      <span className="focusable tile-btn bg-elev-2 text-fg" {...props}>
         <IconLabel icon="refresh">
           搜索失败，重试
         </IconLabel>

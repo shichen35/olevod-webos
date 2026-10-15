@@ -124,7 +124,7 @@ function moveByGeometry(dir, root) {
   if (target) setFocus(target.getAttribute('data-focus-id'))
 }
 
-const PANEL_CHIP = 'focusable rounded-full bg-elev-2 px-[18px] py-2 text-label'
+const PANEL_CHIP = 'focusable chip'
 
 // A grid cell: PANEL_CHIP's shape minus its padding (Tailwind emits px-[18px]
 // after px-0, so appending px-0 would lose). Selected is distinct from focus

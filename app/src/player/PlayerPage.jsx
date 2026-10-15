@@ -46,7 +46,7 @@
  * lazy() (see App.jsx) and the session pulls hls.js in with import(), so
  * neither enters the startup bundle.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { streamUrl } from '../api/olevod.js'
 import { loadDetail } from '../api/feeds.js'
 import { createPlayback } from './playbackSession.js'
@@ -68,6 +68,16 @@ const BADGE_LINGER_MS = 800 // keep the target badge up briefly after committing
 const BAR_HIDE_MS = 5000
 
 const TOAST_MS = 3000
+const HINT_MS = 6000 // the key table is longer than a toast; any key closes it sooner
+
+const HINT_ROWS = [
+  ['OK', '播放 / 暂停'],
+  ['左 / 右', '快退 / 快进 15 秒，长按加速'],
+  ['下', '调出控制条，再按下键选集'],
+  ['上', '查看本提示'],
+  ['返回', '退出播放'],
+  ['媒体键', '播放暂停、快进快退 30 秒、停止退出'],
+]
 
 const UP_NEXT_S = 30 // remaining time that surfaces the Up Next card
 
@@ -318,12 +328,12 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
   )
 
   // Key hint: every video opened with no saved watch progress shows it, and
-  // Up with the bar hidden recalls it any time; any key or 3s ends it.
+  // Up with the bar hidden recalls it any time; any key or 6s ends it.
   const hintTimerRef = useRef(null)
   const showHint = useCallback(() => {
     setHint(true)
     clearTimeout(hintTimerRef.current)
-    hintTimerRef.current = setTimeout(() => setHint(false), TOAST_MS)
+    hintTimerRef.current = setTimeout(() => setHint(false), HINT_MS)
   }, [])
   useEffect(() => {
     const w = getWatchState(id)
@@ -651,19 +661,17 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
     <div className="fixed inset-0 bg-black">
       <video ref={videoRef} className="h-full w-full bg-black object-contain" />
 
-      {/* Title chip — top-left, shows/hides together with the control bar.
-          The quality chip under it is dropped entirely when nothing is known
-          yet, rather than showing a placeholder that reads as noise from the
-          couch. */}
+      {/* Title card — top-left, shows/hides together with the control bar.
+          The quality line under the title is a quieter caption, dropped
+          entirely when nothing is known yet rather than showing a placeholder
+          that reads as noise from the couch. */}
       {barVisible && (
-        <div className="absolute top-12 left-safe flex flex-col items-start gap-3">
-          <div className="glass-strong border border-glass-edge flex items-baseline gap-5 rounded-full px-8 py-3.5">
-            <span className="text-heading text-fg">{data?.title || ''}</span>
-            {epLabel && <span className="text-label text-fg-2">{epLabel}</span>}
+        <div className="glass-strong border border-glass-edge absolute top-12 left-safe max-w-[1100px] rounded-surface px-7 py-4">
+          <div className="flex items-baseline gap-5">
+            <span className="min-w-0 truncate text-heading text-fg">{data?.title || ''}</span>
+            {epLabel && <span className="shrink-0 text-label text-fg-2">{epLabel}</span>}
           </div>
-          {trackText && (
-            <div className="glass-strong border border-glass-edge rounded-full px-6 py-2.5 text-label text-fg-2">{trackText}</div>
-          )}
+          {trackText && <div className="mt-1 text-caption text-fg-2">{trackText}</div>}
         </div>
       )}
 
@@ -731,12 +739,17 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
       {toast && <div className="glass-strong border border-glass-edge absolute top-12 right-safe rounded-full px-7 py-3.5 text-label text-fg">{toast}</div>}
 
       {hint && (
-        <div className="glass-strong border border-glass-edge absolute top-30 left-1/2 -translate-x-1/2 rounded-surface px-10 py-6 text-center text-label text-fg-2">
-          <div className="mb-3 text-heading text-fg">遥控键位</div>
-          <div>OK 播放 / 暂停 · 左右键快退快进（长按加速）</div>
-          <div className="mt-1.5">下键调出控制条 · 控制条上再按下键选集</div>
-          <div className="mt-1.5">上键查看本提示 · 返回键退出</div>
-          <div className="mt-1.5">遥控媒体键：播放 / 暂停 · 快进快退 30 秒 · 停止键退出</div>
+        <div className="glass-strong border border-glass-edge absolute top-30 left-1/2 -translate-x-1/2 rounded-surface px-10 py-6 text-label">
+          <div className="mb-4 text-heading text-fg">遥控键位</div>
+          {/* Key | action table: the key column scans faster than a sentence. */}
+          <div className="grid grid-cols-[auto_1fr] gap-x-8 gap-y-2">
+            {HINT_ROWS.map(([key, action]) => (
+              <Fragment key={key}>
+                <span className="text-fg">{key}</span>
+                <span className="text-fg-2">{action}</span>
+              </Fragment>
+            ))}
+          </div>
         </div>
       )}
 

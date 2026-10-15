@@ -31,7 +31,7 @@ flowchart LR
 
 ### 为什么版本号要先同步
 
-仓库里 `appinfo.json`、`app/package.json`、服务的 `package.json` 三处的 `version` 都是占位值 `1.0.0`，真正的版本只存在于 git tag 上。打包前统一写入，是为了让三个地方显示的版本永远一致：`.ipk` 文件名（取自 `appinfo.json`）、电视系统里看到的应用版本、以及设置页底部的「版本」标签。最后这个标签来自 `app/vite.config.js` 里的 `define: { __APP_VERSION__: ... }`，它在构建时读取 `app/package.json` 的 `version`，在 `app/src/pages/SettingsPage.jsx` 中渲染。
+仓库里 `appinfo.json`、`app/package.json`、服务的 `package.json` 三处的 `version` 都是占位值 `1.0.0`，真正的版本只存在于 git tag 上。打包前统一写入，是为了让三个地方显示的版本永远一致：`.ipk` 文件名（取自 `appinfo.json`）、电视系统里看到的应用版本、以及设置页列表下方的「版本」标签。最后这个标签来自 `app/vite.config.js` 里的 `define: { __APP_VERSION__: ... }`，它在构建时读取 `app/package.json` 的 `version`，在 `app/src/pages/SettingsPage.jsx` 中渲染。
 
 所以本地跑 `build.sh` 会改动这几个文件的 `version` 字段。用默认的 `1.0.0` 时内容不变；如果本地传了别的 `VERSION`，提交前记得改回去，别把真实版本号提交进仓库。
 

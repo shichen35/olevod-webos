@@ -49,11 +49,12 @@ export default function SettingsPage({ group = 'content' }) {
   const [tabOrderOpen, setTabOrderOpen] = useState(false)
   const settings = useStoreValue(settingsStore)
 
+  // Three grid columns wide and centered, on the same axis as the tab capsule.
   return (
-    <div className="pt-4">
+    <div className="mx-auto w-span-3 pt-4">
       <PageTitle>设置</PageTitle>
       {/* iOS-style inset grouped list + version caption below. */}
-      <div className="glass max-w-[900px] rounded-[20px] border border-glass-edge p-1.5">
+      <div className="glass rounded-[20px] border border-glass-edge p-1.5">
         <SettingsToggle
           group={group}
           row={0}
@@ -77,7 +78,8 @@ export default function SettingsPage({ group = 'content' }) {
         />
         <SettingsRow group={group} row={3} label="标签栏顺序与显示" onSelect={() => setTabOrderOpen(true)} />
       </div>
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 text-center text-caption text-fg-3">版本 {__APP_VERSION__}</div>
+      {/* 34px = group p-1.5 + border + row focus border + px-6: lines up with the row labels. */}
+      <div className="mt-5 pl-[34px] text-caption text-fg-3">版本 {__APP_VERSION__}</div>
 
       {tabOrderOpen && <TabOrderDialog onClose={() => setTabOrderOpen(false)} />}
     </div>

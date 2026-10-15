@@ -363,7 +363,7 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
     <div className={isTab ? undefined : OVERLAY_ROOT} style={style}>
       {/* 720 + 64 + 680: the pair is a fixed block centered in the content
           width, rather than two columns stretched to whatever is left. */}
-      <div className="mx-auto flex w-[1464px] gap-16 pt-2">
+      <div className="mx-auto flex w-[1464px] gap-16 pt-4">
         {/* Left: the account */}
         <div className="flex w-[720px] shrink-0 flex-col">
           {signedIn ? (
@@ -371,7 +371,7 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
               <div className="glass mb-7 flex size-36 items-center justify-center rounded-full border border-glass-edge text-fg">
                 <Icon name="person" size={80} />
               </div>
-              <div className="mb-2 text-title font-bold text-fg">{session.name}</div>
+              <div className="mb-2 text-title font-semibold text-fg">{session.name}</div>
               <div className={`mb-10 min-h-[35px] text-body ${member === 'vip' ? 'text-accent' : 'text-fg-2'}`}>
                 {member === 'vip' ? 'VIP 会员' : member === 'normal' ? '普通用户' : ''}
               </div>
@@ -384,7 +384,7 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
             </>
           ) : (
             <>
-              <div className="mb-3 text-title font-bold text-fg">登录欧乐账号</div>
+              <div className="mb-3 text-heading font-semibold text-fg">登录欧乐账号</div>
               <div className="mb-12 text-body text-fg-2">
                 {editing ? '登录后即可播放账号有权限的会员内容' : '这次只需输入验证码'}
               </div>

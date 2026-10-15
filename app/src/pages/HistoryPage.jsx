@@ -1,5 +1,5 @@
 /*
- * 历史 tab: the page title, then the 管理 chip on its own line (row 0), then a
+ * 历史 tab: the page title with the 管理 chip beside it (row 0), then a
  * 6-column card grid from row 1, fed live from the history store.
  *
  * 管理 mode turns the cards into 删除 targets (see CardGrid); OK removes that
@@ -69,22 +69,25 @@ export default function HistoryPage({ group = 'content', active = true, onOpenDe
 
   return (
     <div className="pt-4">
-      <PageTitle>观看历史</PageTitle>
-      <div className="mb-6 flex items-center gap-5">
-        <ActionChip
-          group={group}
-          row={ACTION_ROW}
-          col={0}
-          label={manage ? '完成' : '管理'}
-          onSelect={() => setManage((on) => !on)}
-        />
-        {manage && history.length > 0 && (
-          <ActionChip group={group} row={ACTION_ROW} col={1} label="全部删除" onSelect={() => setConfirmClear(true)} />
-        )}
-        <span className="text-caption text-fg-2">
-          {manage ? '按 OK 删除该条记录，删完按「完成」退出' : '进入管理可逐条删除记录'}
-        </span>
-      </div>
+      <PageTitle
+        actions={
+          <>
+            <ActionChip
+              group={group}
+              row={ACTION_ROW}
+              col={0}
+              label={manage ? '完成' : '管理'}
+              onSelect={() => setManage((on) => !on)}
+            />
+            {manage && history.length > 0 && (
+              <ActionChip group={group} row={ACTION_ROW} col={1} label="全部删除" onSelect={() => setConfirmClear(true)} />
+            )}
+            {manage && <span className="text-caption text-fg-2">按 OK 删除该条记录，删完按「完成」退出</span>}
+          </>
+        }
+      >
+        观看历史
+      </PageTitle>
       <CardGrid
         items={history}
         group={group}

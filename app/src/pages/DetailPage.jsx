@@ -41,7 +41,7 @@ import { useFocusable, useFocusFrame, focusTo } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { favoritesStore, toggle as toggleFavorite } from '../store/favorites.js'
 import { historyStore } from '../store/history.js'
-import { primaryAction } from '../store/watchState.js'
+import { primaryAction, episodeTitle } from '../store/watchState.js'
 import { IconLabel } from '../components/Icon.jsx'
 import { episodeOrderStore, setAscending } from '../store/episodeOrder.js'
 
@@ -362,19 +362,17 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
 
           <div className="grid grid-cols-6 gap-gutter">
             {shown.map((ep, i) => {
-              // Main line is the API's per-episode title; the ordinal drops to a
-              // sub line. Dramas title episodes as the zero-padded ordinal
-              // ("第06集"), which would just echo the sub line — omit it then.
+              // Main line is the episode's title; the ordinal drops to a sub
+              // line unless the title already is the ordinal.
               const ordinal = `第${ep.index}集`
-              const title = ep.title || ordinal
-              const titleIsOrdinal = new RegExp(`^第0*${ep.index}集$`).test(title)
+              const title = episodeTitle(ep)
               return (
                 <EpCell
                   key={ep.index}
                   row={epRow0 + Math.floor(i / EP_COLS)}
                   col={i % EP_COLS}
                   title={title}
-                  subtitle={titleIsOrdinal ? null : ordinal}
+                  subtitle={title === ordinal ? null : ordinal}
                   isResume={ep.index === resumeIndex}
                   vip={!!ep.vip}
                   onSelect={() => playEpisode(ep.index)}

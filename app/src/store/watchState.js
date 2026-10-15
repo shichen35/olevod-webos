@@ -46,6 +46,16 @@ export function progressEntry(episodes, index, pos, dur) {
 }
 
 /**
+ * An episode's display title: the API's own title, except that a bare ordinal
+ * (dramas send "第06集") reads 第6集, so every screen spells an episode the same.
+ */
+export function episodeTitle(ep) {
+  const ordinal = `第${ep.index}集`
+  const title = ep.title || ordinal
+  return new RegExp(`^第0*${ep.index}集$`).test(title) ? ordinal : title
+}
+
+/**
  * The detail page's primary button.
  *   resumeIndex  the episode to continue (also marked in the list), or null
  *   caughtUp     the last episode was finished and nothing newer has aired

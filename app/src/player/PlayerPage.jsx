@@ -52,7 +52,7 @@ import { loadDetail } from '../api/feeds.js'
 import { createPlayback } from './playbackSession.js'
 import Icon, { IconLabel } from '../components/Icon.jsx'
 import { recordHistory, recordProgress, getWatchState } from '../store/history.js'
-import { nextEpisode, resumePosition } from '../store/watchState.js'
+import { nextEpisode, resumePosition, episodeTitle } from '../store/watchState.js'
 import { sessionStore } from '../store/session.js'
 import { episodeOrderStore } from '../store/episodeOrder.js'
 import { useStoreValue } from '../hooks/useStore.js'
@@ -644,9 +644,8 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
 
   const trackText = fmtTrack(trackInfo)
   const episodes = data?.episodes || []
-  // Per-episode API title (as on the detail grid), ordinal as fallback.
-  const epLabel =
-    episodes.length > 1 ? epList[curIdx]?.title || `第${curEp}集` : ''
+  // Same episode title as the detail grid and the strip.
+  const epLabel = episodes.length > 1 ? (epList[curIdx] ? episodeTitle(epList[curIdx]) : `第${curEp}集`) : ''
 
   return (
     <div className="fixed inset-0 bg-black">
@@ -697,20 +696,15 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
           <div className="glass-strong border border-glass-edge rounded-surface px-7 py-5">
             <div className="mb-3 text-caption text-fg-2">选集</div>
             <div className="flex gap-gutter overflow-x-auto">
-              {stripList.map((ep, i) => {
-                const ordinal = `第${ep.index}集`
-                const title = ep.title || ordinal
-                const titleIsOrdinal = new RegExp(`^第0*${ep.index}集$`).test(title)
-                return (
-                  <StripCell
-                    key={ep.index}
-                    col={i}
-                    label={titleIsOrdinal ? ordinal : title}
-                    isCurrent={ep.index === curEp}
-                    onSelect={() => switchEpisode(ep.index, { keepUi: true })}
-                  />
-                )
-              })}
+              {stripList.map((ep, i) => (
+                <StripCell
+                  key={ep.index}
+                  col={i}
+                  label={episodeTitle(ep)}
+                  isCurrent={ep.index === curEp}
+                  onSelect={() => switchEpisode(ep.index, { keepUi: true })}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -728,7 +722,7 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
         {upNext && nextEpIndex != null && !stripVisible && (
           <div className="glass-strong border border-glass-edge absolute bottom-full mb-5 right-0 rounded-surface px-9 py-6 text-center">
             <div className="mb-2 text-caption text-fg-2">即将播放</div>
-            <div className="mb-2 max-w-[560px] truncate text-heading text-fg">{nextEp.title || `第${nextEpIndex}集`}</div>
+            <div className="mb-2 max-w-[560px] truncate text-heading text-fg">{episodeTitle(nextEp)}</div>
             <div className="text-caption text-fg-2">按 OK 立即播放</div>
           </div>
         )}

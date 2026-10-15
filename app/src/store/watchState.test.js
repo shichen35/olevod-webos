@@ -1,7 +1,7 @@
 // node --test app/src/store/watchState.test.js
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { nextEpisode, resumePosition, progressEntry, primaryAction, continueWatching } from './watchState.js'
+import { nextEpisode, resumePosition, progressEntry, primaryAction, continueWatching, episodeTitle } from './watchState.js'
 
 // Newest-first, like olevod.js::detail returns them.
 const eps = (...idx) => idx.map((index) => ({ index }))
@@ -53,4 +53,13 @@ test('what to record when playback stops', () => {
 test('continue shelf keeps queued and finished entries, drops bare opens', () => {
   const entries = [{ id: 1, watch: w(3, 0) }, { id: 2, watch: null }, { id: 3, watch: w(3, 1200, true) }]
   assert.deepEqual(continueWatching(entries).map((h) => h.id), [1, 3])
+})
+
+test('episode titles normalize bare ordinals and keep real titles', () => {
+  assert.equal(episodeTitle({ index: 6, title: '第06集' }), '第6集')
+  assert.equal(episodeTitle({ index: 6, title: '第6集' }), '第6集')
+  assert.equal(episodeTitle({ index: 6 }), '第6集')
+  assert.equal(episodeTitle({ index: 6, title: '' }), '第6集')
+  assert.equal(episodeTitle({ index: 16, title: '第6集' }), '第6集') // another episode's ordinal is a title
+  assert.equal(episodeTitle({ index: 3, title: '上期' }), '上期')
 })

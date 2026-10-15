@@ -349,7 +349,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
       {status === 'error' ? (
         <RetryRow group={group} row={resultRow} onRetry={() => runSearch(submitted)} />
       ) : status === 'ok' && items.length === 0 ? (
-        <div className="py-8 text-body text-fg-2">没有找到相关内容，换个关键词试试</div>
+        <div className="py-20 text-center text-body text-fg-2">没有找到相关内容，换个关键词试试</div>
       ) : (
         <div className="grid grid-cols-6 gap-x-gutter gap-y-6">
           {items.map((item, i) => (
@@ -386,8 +386,8 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
       )}
 
       <div ref={sentinelRef} className="h-px w-full" />
-      {status === 'loading' && <div className="py-8 text-body text-fg-2">搜索中…</div>}
-      {fullyLoaded && <div className="py-8 text-body text-fg-2">已加载全部 {total} 部</div>}
+      {status === 'loading' && <div className={items.length ? 'py-8 text-center text-caption text-fg-3' : 'py-20 text-center text-body text-fg-2'}>搜索中…</div>}
+      {fullyLoaded && <div className="py-8 text-center text-caption text-fg-3">已加载全部 {total} 部</div>}
     </div>
   )
 }
@@ -395,7 +395,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
 function RetryRow({ group, row, onRetry }) {
   const { props } = useFocusable({ layer: 'home', group, row, col: 0, onSelect: onRetry })
   return (
-    <div className="py-8 text-body text-fg-2">
+    <div className="py-20 text-center">
       <span className="focusable tile-btn bg-elev-2 text-fg" {...props}>
         <IconLabel icon="refresh">
           搜索失败，重试

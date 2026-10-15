@@ -89,6 +89,7 @@ export default function HistoryPage({ group = 'content', active = true, onOpenDe
         观看历史
       </PageTitle>
       <CardGrid
+        emptyText="还没有观看记录"
         items={history}
         group={group}
         onOpenDetail={onOpenDetail}

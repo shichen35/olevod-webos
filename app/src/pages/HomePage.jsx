@@ -132,13 +132,13 @@ export default function HomePage({ group = 'content', onOpenDetail, refreshNonce
     return (
       <div className="pt-4">
         {featuredRow}
-        <div className="py-15 text-body text-fg-2">加载中…</div>
+        <div className="py-20 text-center text-body text-fg-2">加载中…</div>
       </div>
     )
   }
   if (popular !== null && rows.length === 0 && !featuredRow) {
     return (
-      <div className="flex h-[640px] flex-col items-center justify-center gap-7 text-heading text-fg-2">
+      <div className="flex h-[860px] flex-col items-center justify-center gap-7 text-heading text-fg-2">
         <div>内容加载失败</div>
         <RetryButton group={group} onRetry={retry} />
       </div>

@@ -11,8 +11,8 @@ import { formatWatchedAt } from '../store/history.js'
 
 export const GRID_COLS = 6
 
-export default function CardGrid({ items, group, onOpenDetail, withEp, rowStart = 0, manage = false, onDelete }) {
-  if (!items.length) return <div className="py-20 text-center text-body text-fg-3">这里还没有内容</div>
+export default function CardGrid({ items, group, onOpenDetail, withEp, rowStart = 0, manage = false, onDelete, emptyText = '这里还没有内容' }) {
+  if (!items.length) return <div className="py-20 text-center text-body text-fg-2">{emptyText}</div>
   return (
     <div className="grid grid-cols-6 gap-x-gutter gap-y-6">
       {items.map((item, i) => (

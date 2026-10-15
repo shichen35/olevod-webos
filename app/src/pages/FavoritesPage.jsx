@@ -12,7 +12,7 @@ export default function FavoritesPage({ group = 'content', onOpenDetail }) {
   return (
     <div className="pt-4">
       <PageTitle>收藏</PageTitle>
-      <CardGrid items={favorites} group={group} onOpenDetail={onOpenDetail} />
+      <CardGrid items={favorites} group={group} onOpenDetail={onOpenDetail} emptyText="还没有收藏" />
     </div>
   )
 }

@@ -150,6 +150,8 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
 
       {status === 'error' && items.length === 0 ? (
         <RetryRow group={group} onRetry={() => load(filter)} />
+      ) : status === 'ok' && items.length === 0 ? (
+        <div className="py-20 text-center text-body text-fg-2">没有符合条件的内容，试试调整筛选</div>
       ) : (
         // grid-cols-6 = repeat(6, minmax(0,1fr)): the 0 minimum stops poster
         // images inflating their track, keeping the columns equal. Track count
@@ -171,8 +173,9 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
       )}
 
       <div ref={sentinelRef} className="h-px w-full" />
-      {status === 'loading' && <div className="py-8 text-body text-fg-2">加载中…</div>}
-      {fullyLoaded && <div className="py-8 text-body text-fg-2">已加载全部 {total} 部</div>}
+      {/* Page states sit centered in the content area; list-tail notes are quieter. */}
+      {status === 'loading' && <div className={items.length ? 'py-8 text-center text-caption text-fg-3' : 'py-20 text-center text-body text-fg-2'}>加载中…</div>}
+      {fullyLoaded && <div className="py-8 text-center text-caption text-fg-3">已加载全部 {total} 部</div>}
     </div>
   )
 }
@@ -180,7 +183,7 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
 function RetryRow({ group, onRetry }) {
   const { props } = useFocusable({ layer: 'home', group, row: FILTER_ROWS, col: 0, onSelect: onRetry })
   return (
-    <div className="py-8 text-body text-fg-2">
+    <div className="py-20 text-center">
       <span className="focusable tile-btn bg-elev-2 text-fg" {...props}>
         <IconLabel icon="refresh">
           加载失败，重试

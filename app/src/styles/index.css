@@ -3,7 +3,7 @@
  *
  * The design system lives in @theme (colors, type scale, layout tokens);
  * pages compose utility classes in JSX. Shared cross-page patterns are the
- * custom utilities below (`focusable`, `glass`, `glass-strong`, …) and the
+ * custom utilities below (`focusable`, `chip`, `tile-btn`, `glass-strong`, …) and the
  * `focused:` variant, which mirrors the imperative `.focused` class the focus
  * engine toggles (useFocus.js) — no React re-render on focus moves.
  *
@@ -11,12 +11,12 @@
  *   - All colors are opaque hex. No rgba(), no opacity layering, no gradients.
  *   - No shadows, no blur, no translucency. A "dimmed" look is achieved with a
  *     darker opaque surface token, never with alpha.
- *   - Single sanctioned exception: the glass-* material, a translucent fill
- *     with no backdrop blur, reserved for chrome that floats over moving
- *     content — the tab bar's capsule and icon buttons, and the player chrome
- *     over video. Every other surface is opaque bg-elev with a border-elev-2
- *     rim: dialogs, side sheets, the settings group and the account panels sit
- *     on still backgrounds, where a 0.85 fill read the same as elev anyway.
+ *   - Single sanctioned exception: the glass-strong material, a translucent
+ *     fill with no backdrop blur, reserved for the player chrome over video.
+ *     Every other surface is opaque bg-elev with a border-elev-2 rim: the tab
+ *     bar's capsule and buttons, dialogs, side sheets, the settings group and
+ *     the account panels (a 0.85 fill over the dark page read the same as elev
+ *     anyway).
  *   - No motion of any kind: the transition/animation ban is enforced in the
  *     base layer with !important. Focus border/color swaps are instant. Three
  *     sanctioned exceptions, all in JS (this CSS ban governs only CSS-declared
@@ -63,8 +63,7 @@
   --color-inverse: #111111; /* text on a focused (filled) button/chip */
 
   /* Glass material (the one sanctioned alpha exception) */
-  --color-glass: rgba(28, 28, 34, 0.85);        /* capsule/group fill */
-  --color-glass-strong: rgba(24, 24, 30, 0.85); /* darker: sheets and dialogs */
+  --color-glass-strong: rgba(24, 24, 30, 0.85); /* player chrome over video */
   --color-glass-edge: rgba(255, 255, 255, 0.14);   /* hairline highlight rim */
   --color-glass-active: rgba(255, 255, 255, 0.12); /* selected pill (unfocused) */
 
@@ -129,7 +128,7 @@
  * Focusable chrome: reserves an invisible border slot so focusing never
  * shifts layout, and inverts to the solid white fill / dark text instantly.
  * &.focused (0,2,0) outranks single utilities, so focus wins over selected
- * looks like text-accent or bg-glass-active.
+ * looks like text-accent or bg-elev-2.
  */
 @utility focusable {
   border: 3px solid transparent;
@@ -153,13 +152,10 @@
 
 /* Glass material: a translucent fill, deliberately without backdrop-filter.
    A backdrop blur is its own render pass that re-reads and re-blurs whatever
-   sits behind it on every frame that content moves (scrolling under the tab
-   bar, a dialog over the player); a plain alpha fill is one blended quad. The
+   sits behind it on every frame that content moves (video under the player
+   chrome); a plain alpha fill is one blended quad. The
    0.85 alpha keeps text on top legible with the content behind left sharp.
    Border/radius stay per-site (`border border-glass-edge`, …). */
-@utility glass {
-  background: var(--color-glass);
-}
 @utility glass-strong {
   background: var(--color-glass-strong);
 }

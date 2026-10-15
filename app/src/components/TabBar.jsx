@@ -2,10 +2,10 @@
  * Top tab bar. Renders the shell's ordered tabs (nav.js orderedTabs, applied in
  * App.jsx) as focus group "tabbar" (row 0, col=index) in the "home" focus layer.
  *
- * Three zones on one focus row: tabs with an icon render as round glass
+ * Three zones on one focus row: tabs with an icon render as round opaque
  * buttons — the ones before 首页 (搜索) hug the left safe margin, the ones after
  * the last text tab (收藏 / 历史 / 设置 / 账号) hug the right — and the text tabs
- * sit in the centered glass capsule between them. Because col is the index in
+ * sit in the centered capsule between them. Because col is the index in
  * the full list, Left/Right walk straight across all three zones.
  *
  * Hover-switching: moving focus left/right across tabs switches the content area
@@ -48,11 +48,11 @@ function TabItem({ tab, col, active, showSelection, onHover, onSelect }) {
   // The sliding white pill IS the focus fill, so the focused tab clears its own
   // background to let the pill show through and flips its label to dark text —
   // the same white-fill/dark-text look the old instant `.focused` state had.
-  // The active tab's glass selection mark shows only when focus is off the bar
+  // The active tab's selection mark (a lighter fill) shows only when focus is off the bar
   // (showSelection), so it never trails the moving cursor.
   return (
     <div
-      className={`relative z-1 rounded-full px-7 py-2 text-label focused:bg-transparent focused:text-inverse ${active && showSelection ? 'bg-glass-active text-fg' : 'text-fg-2'}`}
+      className={`relative z-1 rounded-full px-7 py-2 text-label focused:bg-transparent focused:text-inverse ${active && showSelection ? 'bg-elev-2 text-fg' : 'text-fg-2'}`}
       {...props}
     >
       {tab.label}
@@ -101,10 +101,10 @@ function sizePill(label, expanded, animate) {
   label.animate([{ opacity: 1 - opacity }, { opacity }], { duration: EXPAND_MS, easing: 'ease' })
 }
 
-// Glass pill: the same material and lift as the capsule, the instant white
-// fill on focus, and the glass selection mark when it is the active tab and
-// the cursor is elsewhere. A circle showing just the icon until focus expands
-// it into icon + label.
+// Icon pill: the capsule's opaque fill and rim, the instant white fill on
+// focus, and the lighter selection fill when it is the active tab and the
+// cursor is elsewhere. A circle showing just the icon until focus expands it
+// into icon + label.
 function IconTab({ tab, col, active, showSelection, onHover, onSelect }) {
   const labelRef = useRef(null)
   const expandedRef = useRef(false)
@@ -129,7 +129,7 @@ function IconTab({ tab, col, active, showSelection, onHover, onSelect }) {
 
   return (
     <div
-      className={`glass flex size-[62px] items-center gap-2.5 overflow-hidden rounded-full border border-glass-edge pr-[21px] pl-[16px] shadow-[0_8px_28px_rgba(0,0,0,0.35)] focused:bg-focus focused:text-inverse ${active && showSelection ? 'bg-glass-active text-fg' : 'text-fg-2'}`}
+      className={`flex size-[62px] items-center gap-2.5 overflow-hidden rounded-full border border-elev-2 pr-[21px] pl-[16px] focused:bg-focus focused:text-inverse ${active && showSelection ? 'bg-elev-2 text-fg' : 'bg-elev text-fg-2'}`}
       aria-label={tab.label}
       {...props}
     >
@@ -182,15 +182,14 @@ export default function TabBar({ tabs, activeTab, onHoverTab, onCommitTab }) {
 
   return (
     // The bar itself is fully transparent (z-1 keeps it above the tab-content
-    // scrollers that extend beneath it); the glass lives on the capsule and the
-    // round buttons so content scrolling past shows through around them. The
-    // 1fr side columns keep the capsule centered however many buttons flank
-    // it. The shadow is a static lift, painted once.
+    // scrollers that extend beneath it), so content scrolling past shows
+    // through around the opaque capsule and round buttons. The 1fr side
+    // columns keep the capsule centered however many buttons flank it.
     <div className="absolute inset-x-0 top-0 z-1 grid h-21 grid-cols-[1fr_auto_1fr] items-center px-safe pt-5">
       <div className="flex gap-3 justify-self-start">{inZone('leading')}</div>
       <div
         ref={capsuleRef}
-        className="glass relative flex items-center gap-2 rounded-full border border-glass-edge px-2.5 py-1.5 shadow-[0_8px_28px_rgba(0,0,0,0.35)]"
+        className="relative flex items-center gap-2 rounded-full border border-elev-2 bg-elev px-2.5 py-1.5"
       >
         {/* The single sliding white focus pill, behind the tabs (z-0). */}
         <div {...pillProps} />

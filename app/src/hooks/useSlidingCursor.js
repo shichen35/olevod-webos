@@ -11,12 +11,12 @@
  * motion runs via the Web Animations API, which is independent of the CSS
  * `transition/animation: none` ban (see styles/index.css header).
  *
- * Cursor vs. selection: the pill (cursor) tracks focus; a cell's glass mark
+ * Cursor vs. selection: the pill (cursor) tracks focus; a cell's selection mark
  * (selection) tracks the caller's active index, which lags by the 150ms hover
  * debounce. Showing both while navigating looks like the selection trailing the
- * cursor, so the returned `cursorOnBar` lets the caller HIDE the glass mark
+ * cursor, so the returned `cursorOnBar` lets the caller HIDE the selection mark
  * while focus is on the bar — on the bar you see only the sliding cursor; once
- * focus leaves, the cursor hides and the glass mark appears on the active cell.
+ * focus leaves, the cursor hides and the selection mark appears on the active cell.
  *
  * Reads the focus engine (getCurrentFocus/onFocusChange) but never writes it —
  * the zero-rerender focus path is untouched.

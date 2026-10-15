@@ -229,7 +229,7 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
   // Remarks usually carry the episode count ("更新至第06集"); only without them
   // does the line say how many episodes there are.
   const eyebrow = [
-    data.genreName,
+    data.genreName?.replace(/片$/, ''), // 动作片 → 动作, as on the category chips
     data.year,
     data.region,
     data.remarks || (episodes.length > 1 && `共 ${episodes.length} 集`),

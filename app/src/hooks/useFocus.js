@@ -67,20 +67,27 @@ function scrollStripIntoView(el, behavior) {
   if (delta !== 0) strip.scrollBy({ left: delta, behavior })
 }
 
+// The .tab-content / .overlay that `el` actually scrolls with, or null. The
+// offsetParent walk matters: a fixed panel (keyboard, dialog) can sit inside a
+// .tab-content in the DOM without scrolling with it.
+function pageScroller(el) {
+  const sc = el.closest('.tab-content, .overlay')
+  let p = el.offsetParent
+  while (p && p !== sc) p = p.offsetParent
+  return sc && p ? sc : null
+}
+
 // The vertical counterpart: reveal `el` within the page scroller it scrolls with
 // (a .tab-content or an .overlay), keeping that scroller's scroll-padding as the
 // edge margin (scroll-py-focus-safe). Scrolling the container directly instead
 // of scrollIntoView matters for smoothness: Chromium runs scrollIntoView as a
 // "sequenced" scroll whose smooth animation is ticked on the main thread, while
 // a plain scrollBy on a composited scroller animates on the compositor thread.
-// Returns false when `el` doesn't scroll with such a container — e.g. a fixed
-// panel (keyboard, dialog) whose DOM sits inside .tab-content — so the caller
+// Returns false when `el` doesn't scroll with such a container, so the caller
 // falls back to scrollIntoView.
 function scrollPageIntoView(el, behavior) {
-  const sc = el.closest('.tab-content, .overlay')
-  let p = el.offsetParent
-  while (p && p !== sc) p = p.offsetParent
-  if (!sc || !p) return false
+  const sc = pageScroller(el)
+  if (!sc) return false
   const pad = getComputedStyle(sc)
   const er = el.getBoundingClientRect()
   const sr = sc.getBoundingClientRect()
@@ -211,7 +218,8 @@ function applyFocus(newId) {
       lastScrollTs = now
       const behavior =
         getSetting(settingsStore.get(), 'smoothScroll') && !rapid && !keyRepeat ? 'smooth' : 'auto'
-      if (rec && rec.row === 0 && rec.group !== 'tabbar') {
+      const topScroller = rec && rec.row === 0 && rec.group !== 'tabbar' ? pageScroller(el) : null
+      if (topScroller) {
         // A top-row element sits in a horizontal strip (genre chips, a home
         // shelf). Drive its two scroll containers SEPARATELY: pull the page
         // scroller all the way up so the heading above row 0 shows (block:'nearest'
@@ -220,9 +228,10 @@ function applyFocus(newId) {
         // the vertical ancestor cancels scrollIntoView's in-flight smooth scroll
         // on the strip, so slow (smooth) horizontal moves along a top row weren't
         // scrolling at all. Targeting each container directly keeps them
-        // independent — neither cancels the other, both animate.
-        const scroller = el.closest('.tab-content, .overlay')
-        if (scroller) scroller.scrollTo({ top: 0, behavior })
+        // independent — neither cancels the other, both animate. Row 0 of a
+        // side sheet or dialog has no page scroller and takes the
+        // scrollIntoView fallback below, which scrolls the sheet itself.
+        topScroller.scrollTo({ top: 0, behavior })
         scrollStripIntoView(el, behavior)
       } else if (scrollPageIntoView(el, behavior)) {
         scrollStripIntoView(el, behavior)

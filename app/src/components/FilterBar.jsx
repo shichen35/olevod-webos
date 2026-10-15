@@ -66,7 +66,8 @@ function FilterBar({ category, group = 'content', filter, onSelectGenre, onSelec
             onSelect={() => onSelectSort(s.value)}
           />
         ))}
-        <Chip group={group} row={1} col={SORTS.length} icon="tune" label="额外筛选" onSelect={onOpenFilter} />
+        {/* Selected while any extra filter is on, like the genre and sort chips. */}
+        <Chip group={group} row={1} col={SORTS.length} icon="tune" label="额外筛选" selected={!!summaryText(cfg, filter)} onSelect={onOpenFilter} />
         <div className="ml-3 shrink-0 whitespace-nowrap text-caption text-fg-2">{summaryText(cfg, filter)}</div>
       </div>
     </div>

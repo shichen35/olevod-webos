@@ -14,10 +14,11 @@ import { getCategory, SORTS, DEFAULT_LETTER } from '../config/taxonomy.js'
 
 function Chip({ group, row = 0, col, icon, label, selected, onSelect }) {
   const { props } = useFocusable({ layer: 'home', group, row, col, onSelect })
-  // Selected is distinct from focus (white fill): accent-tinted text.
+  // Selected is distinct from focus (white fill): accent text plus an accent
+  // ring in focusable's reserved border, so selecting never changes the width.
   return (
     <span
-      className={`focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label ${selected ? 'text-accent' : 'text-fg'}`}
+      className={`focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label ${selected ? 'text-accent [&:not(.focused)]:border-accent' : 'text-fg'}`}
       {...props}
     >
       {icon ? <IconLabel icon={icon}>{label}</IconLabel> : label}

@@ -82,14 +82,14 @@ function ActionButton({ col, icon, label, primary, onSelect }) {
 }
 
 // Playlist control chip (row 1). Same shape as the category page's chips, and
-// the same vocabulary: accent text marks a SELECTED one (the range chips),
+// the same vocabulary: accent text and ring mark a SELECTED one (the range chips),
 // while a plain chip is an action (the order toggle) — both distinct from the
 // white focus fill.
 function ControlChip({ col, icon, label, selected = false, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'content', row: CONTROLS_ROW, col, onSelect })
   return (
     <span
-      className={`focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label ${selected ? 'text-accent' : 'text-fg'}`}
+      className={`focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label ${selected ? 'text-accent [&:not(.focused)]:border-accent' : 'text-fg'}`}
       {...props}
     >
       {icon ? <IconLabel icon={icon}>{label}</IconLabel> : label}

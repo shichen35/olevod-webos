@@ -11,14 +11,12 @@
  * and Done sit in the header beside the title, one Up from the first row of
  * chips.
  *
- * Focus movement here is SPATIAL, not arithmetic. The chips flow in a
- * `flex-wrap` container, so how many land on a visual row depends on their pixel
- * widths ("全部" vs "2024" etc.), not a fixed column count — the rest of the app
- * navigates real CSS grids where logical col == visual col, but this panel
- * cannot. Rather than guess a column count (which drifts out of sync with the
- * wrapping and sends the cursor to the wrong chip), we read the chips' live DOM
- * rectangles on each key press and move to the nearest chip in the pressed
- * direction. The shared focus engine still owns painting, selection, scrolling
+ * Focus movement here is SPATIAL, not arithmetic. Each option group is ONE
+ * focus row (col = option index) laid out as a 4- or 8-column grid, with the
+ * header's Reset/Done above them all, so a visual step up or down inside a
+ * group is not a row ±1 move. Rather than map option indices onto grid cells,
+ * we read the chips' live DOM rectangles on each key press and move to the
+ * nearest chip in the pressed direction. The shared focus engine still owns painting, selection, scrolling
  * and the layer stack; only the directional step is overridden, via the custom
  * key handler this layer already installs.
  */
@@ -29,9 +27,8 @@ import {
   setFocus,
   getCurrentFocus,
 } from '../hooks/useFocus.js'
-import { getCategory, LETTERS } from '../config/taxonomy.js'
+import { getCategory, LETTERS, DEFAULT_LETTER } from '../config/taxonomy.js'
 import { useFilter, patchFilter, resetFilter } from '../store/filters.js'
-import Icon from './Icon.jsx'
 
 const LAYER = 'filter'
 const GROUP = 'panel'
@@ -127,32 +124,30 @@ function moveByGeometry(dir, root) {
   if (target) setFocus(target.getAttribute('data-focus-id'))
 }
 
-// Selected is distinct from focus (white fill): an accent check + accent text
-// on the elevated fill. Focus still overrides the text to dark instantly; the
-// check keeps its explicit accent color either way.
 const PANEL_CHIP = 'focusable rounded-full bg-elev-2 px-[18px] py-2 text-label'
 
-function OptChip({ row, col, label, selected, onSelect }) {
+// A grid cell: PANEL_CHIP's shape minus its padding (Tailwind emits px-[18px]
+// after px-0, so appending px-0 would lose). Selected is distinct from focus
+// (white fill): accent text plus an accent ring drawn in focusable's reserved
+// border, so selecting never changes a chip's width. The :not(.focused) form
+// yields to the white focus border by not matching, not by cascade order.
+function OptChip({ row, col, label, selected, className = '', onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: GROUP, row, col, onSelect })
   return (
-    <span className={`${PANEL_CHIP} ${selected ? 'text-accent' : 'text-fg'}`} {...props}>
-      {selected ? (
-        <span className="inline-flex items-center gap-1.5 align-top">
-          <Icon name="check" size={26} className="text-accent" />
-          {label}
-        </span>
-      ) : (
-        label
-      )}
+    <span
+      className={`focusable rounded-full bg-elev-2 py-2 text-center text-label ${className} ${selected ? 'text-accent [&:not(.focused)]:border-accent' : 'text-fg'}`}
+      {...props}
+    >
+      {label}
     </span>
   )
 }
 
-function Group({ title, options, value, row, onPick }) {
+function Group({ title, options, value, row, cols, onPick }) {
   return (
     <div className="mb-8">
-      <div className="mb-4 text-heading text-fg">{title}</div>
-      <div className="flex flex-wrap gap-3">
+      <div className="mb-3 text-caption text-fg-2">{title}</div>
+      <div className={`grid gap-3 ${cols}`}>
         {options.map((o, i) => (
           <OptChip
             key={o.value}
@@ -160,6 +155,7 @@ function Group({ title, options, value, row, onPick }) {
             col={i}
             label={o.label}
             selected={value === o.value}
+            className={options === LETTERS && o.value === DEFAULT_LETTER ? 'col-span-2' : ''}
             onSelect={() => onPick(o.value)}
           />
         ))}
@@ -210,9 +206,9 @@ export default function FilterPanel({ category, onClose }) {
           </span>
         </div>
       </div>
-      <Group title="地区" options={cfg.areas} value={filter.area} row={AREA_ROW} onPick={(v) => patchFilter(category, { area: v })} />
-      <Group title="年份" options={cfg.years} value={filter.year} row={YEAR_ROW} onPick={(v) => patchFilter(category, { year: v })} />
-      <Group title="首字母" options={LETTERS} value={filter.letter} row={LETTER_ROW} onPick={(v) => patchFilter(category, { letter: v })} />
+      <Group title="地区" options={cfg.areas} value={filter.area} row={AREA_ROW} cols="grid-cols-4" onPick={(v) => patchFilter(category, { area: v })} />
+      <Group title="年份" options={cfg.years} value={filter.year} row={YEAR_ROW} cols="grid-cols-4" onPick={(v) => patchFilter(category, { year: v })} />
+      <Group title="首字母" options={LETTERS} value={filter.letter} row={LETTER_ROW} cols="grid-cols-8" onPick={(v) => patchFilter(category, { letter: v })} />
     </div>
   )
 }

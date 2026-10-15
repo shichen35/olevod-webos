@@ -9,7 +9,7 @@
  * (useFocus.js input guard) — the VKB owns the arrows, Enter commits the
  * search via the input's own onKeyDown, Back just closes the keyboard.
  *
- * Focus rows in the content group: row 0 = the (centered) search box, then the
+ * Focus rows in the content group: row 0 = the search box, then the
  * recent-search strip (only while the box is empty and something was searched
  * before), then suggestion chips (hot keywords until the user types,
  * autocomplete after, debounced), then results. Rows stay contiguous — an
@@ -24,7 +24,7 @@ import VideoCard from '../components/VideoCard.jsx'
 import KeyboardPanel from '../components/KeyboardPanel.jsx'
 import { IconLabel } from '../components/Icon.jsx'
 import { searchList, searchSuggest, searchHotKeywords } from '../api/olevod.js'
-import { useFocusable, focusTo } from '../hooks/useFocus.js'
+import { useFocusable, focusTo, setGeometryVerticalGroup } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { searchHistoryStore, remember, clear as clearSearchHistory } from '../store/searchHistory.js'
 
@@ -227,6 +227,14 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
     [group, runSearch],
   )
 
+  // The chip strips scroll on their own and their chips vary in width, so a
+  // column index says nothing about screen position: up/down move by geometry
+  // (nearest horizontal center), as on Home.
+  useEffect(() => {
+    setGeometryVerticalGroup('home', group)
+    return () => setGeometryVerticalGroup('home', group, false)
+  }, [group])
+
   // OK on the box hands DOM focus to the input, which opens the VKB.
   const box = useFocusable({
     layer: 'home',
@@ -247,9 +255,9 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
 
   return (
     <div className="pt-4" ref={rootRef}>
-      <div className="mb-6 flex items-center gap-4">
+      <div className="mb-6 flex items-center gap-gutter">
         <div
-          className="focusable flex w-[720px] items-center rounded-full bg-elev-2 px-7 py-2"
+          className="focusable flex h-[72px] w-span-3 shrink-0 items-center rounded-[14px] bg-elev-2 px-7"
           {...box.props}
         >
           <input
@@ -281,12 +289,13 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
               if (!wasCommit && keyword.trim()) focusTo(`home/${group}-1-0`)
             }}
             placeholder="输入片名、演员或导演"
-            className="w-full bg-transparent text-label text-fg outline-none placeholder:text-fg-3 focused:text-inverse"
+            className="w-full bg-transparent text-body text-fg outline-none placeholder:text-fg-3 focused:text-inverse"
           />
         </div>
         <span className="focusable shrink-0 rounded-full bg-elev-2 px-[22px] py-2 text-label text-fg" {...keyboardButton.props}>
           屏幕键盘
         </span>
+        {submitted && status === 'ok' && total > 0 && <span className="ml-3 min-w-0 truncate text-caption text-fg-2">「{submitted}」· 共 {total} 部</span>}
       </div>
 
       {historyRow !== null && (
@@ -314,7 +323,7 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
 
       {chips.length > 0 && (
         <div className="mb-6 flex flex-col gap-3">
-          {!keyword.trim() && <div className="text-caption text-fg-3">热门搜索</div>}
+          <div className="text-caption text-fg-3">{keyword.trim() ? '相关搜索' : '热门搜索'}</div>
           <div className="-mx-safe flex gap-3 overflow-x-auto pl-safe">
             {chips.map((word, i) => (
               <Chip key={word} group={group} row={chipsRow} col={i} label={word} onSelect={() => pickWord(word, i)} />
@@ -334,12 +343,6 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
             label={<IconLabel icon="refresh">重试联想</IconLabel>}
             onSelect={() => setSuggestRetry((n) => n + 1)}
           />
-        </div>
-      )}
-
-      {submitted && status === 'ok' && (
-        <div className="mb-6 text-body text-fg-2">
-          「{submitted}」的搜索结果{total > 0 ? ` · 共 ${total} 部` : ''}
         </div>
       )}
 

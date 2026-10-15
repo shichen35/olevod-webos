@@ -132,10 +132,11 @@ export function setRowCursorGroup(layer, group, on = true) {
 
 // Groups whose vertical (up/down) moves are resolved by SCREEN GEOMETRY instead
 // of column arithmetic: land on the card in the adjacent row whose horizontal
-// center is closest to the current one. Home shelves scroll independently, so a
-// remembered/carried column index doesn't line up with what the eye sees —
-// picking by pixel position does. Horizontal moves stay arithmetic (col +/- 1),
-// which for a single shelf already equals the visual order.
+// center is closest to the current one. Home shelves and the chip strips on
+// Search/Category scroll independently, so a remembered/carried column index
+// doesn't line up with what the eye sees — picking by pixel position does.
+// Horizontal moves stay arithmetic (col +/- 1), which within one row already
+// equals the visual order.
 const geometryVerticalGroups = new Set() // "{layer}/{group}"
 export function setGeometryVerticalGroup(layer, group, on = true) {
   const key = `${layer}/${group}`
@@ -359,7 +360,7 @@ function navigate(dir) {
 
   if (dir === 'up' || dir === 'down') {
     const tr = dir === 'up' ? row - 1 : row + 1
-    // Geometry-vertical groups (home shelves) land on the adjacent row's card
+    // Geometry-vertical groups (Home, Search, Category) land on the adjacent row's card
     // nearest the current horizontal center; everyone else honors column memory.
     let within = null
     if (tr >= 0) {

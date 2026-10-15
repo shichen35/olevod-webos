@@ -49,7 +49,7 @@ flowchart TD
 
 - 左右：同组同行 `col ± 1`，不存在就不动，不会跨组。
 - 上下：默认保持当前列，目标行没有这一列时向两侧就近探测（上限 `PROBE_LIMIT = 32`），这样在网格里能沿一列直上直下。
-- 几何模式：首页的各行货架是各自横向滚动的，同一个列号在屏幕上可能差得很远。`app/src/pages/HomePage.jsx` 用 `setGeometryVerticalGroup()` 把自己的 group 标记为几何模式，上下移动时改为在相邻行里挑水平中心离当前卡片最近的那张（`geometryColInRow()`）。
+- 几何模式：首页的各行货架、搜索页和分类页的标签条都是各自横向滚动的，同一个列号在屏幕上可能差得很远。`app/src/pages/HomePage.jsx`、`SearchPage.jsx` 和 `CategoryPage.jsx` 都用 `setGeometryVerticalGroup()` 把自己的 group 标记为几何模式，上下移动时改为在相邻行里挑水平中心离当前卡片最近的那张（`geometryColInRow()`）。
 - 跨组：只在纵向撞到组边界时发生。内容区最上一行按上进入 `tabbar`，`tabbar` 按下回到当前 tab 的内容组，并恢复该组上次停留的格子。每个 tab 的内容用独立 group `content:{tabKey}`（`app/src/App.jsx` 的 `contentGroup()`），所以所有 tab 可以同时挂载而 id 不冲突；切 tab 时 `App.jsx` 调 `setActiveContentGroup()` 把这座"桥"指向当前 tab。
 
 `setRowCursorGroup()` 是另一种"每行独立记忆列"的模式，目前没有页面在用，首页已改为几何模式。

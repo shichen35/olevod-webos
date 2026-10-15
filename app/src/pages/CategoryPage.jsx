@@ -18,7 +18,7 @@ import FilterBar from '../components/FilterBar.jsx'
 import { IconLabel } from '../components/Icon.jsx'
 import { loadCategoryPage, invalidateCategory } from '../api/feeds.js'
 import { useFilter, patchFilter } from '../store/filters.js'
-import { useFocusable } from '../hooks/useFocus.js'
+import { useFocusable, setGeometryVerticalGroup } from '../hooks/useFocus.js'
 
 const COLS = 6
 const FILTER_ROWS = 2 // genre chips (row 0) + sort chips and filter button line (row 1)
@@ -130,6 +130,13 @@ export default function CategoryPage({ category, group = 'content', onOpenDetail
     io.observe(sentinel)
     return () => io.disconnect()
   }, [loadMore])
+
+  // The genre strip scrolls on its own, so a column index says nothing about
+  // screen position: up/down move by geometry (nearest horizontal center), as on Home.
+  useEffect(() => {
+    setGeometryVerticalGroup('home', group)
+    return () => setGeometryVerticalGroup('home', group, false)
+  }, [group])
 
   // Genre and sort chips on the filter bar apply immediately.
   const selectGenre = useCallback((genre) => patchFilter(category, { genre }), [category])

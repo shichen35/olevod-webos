@@ -39,6 +39,10 @@ const RAPID_MS = 220
 const REPEAT_MS = 120
 let lastKeyMoveTs = -Infinity
 let keyRepeat = false // set only while a repeat keydown is being handled
+let pointerMove = false // set only while a pointer hover is moving focus
+
+// The tab bar (TabBar's h-21) floats over the top of every .tab-content.
+const TAB_BAR_H = 84
 
 // Horizontal breathing room kept between a focused chip and the edges of its
 // scrolling strip — mirrors the inline scroll-margin in index.css (--spacing-safe).
@@ -49,7 +53,8 @@ const STRIP_SAFE = 84
 // horizontal strip, so a separate vertical scroll on a different ancestor (a top
 // row's snap-to-top) can neither cancel it nor be cancelled by it. Returns
 // silently when the element isn't inside a horizontal scroller (e.g. grid cards).
-function scrollStripIntoView(el, behavior) {
+// `safe` is the edge margin; pointer focus passes 0 (see applyFocus).
+function scrollStripIntoView(el, behavior, safe = STRIP_SAFE) {
   let strip = el.parentElement
   while (strip) {
     if (strip.scrollWidth > strip.clientWidth + 1) {
@@ -62,8 +67,8 @@ function scrollStripIntoView(el, behavior) {
   const er = el.getBoundingClientRect()
   const sr = strip.getBoundingClientRect()
   let delta = 0
-  if (er.left < sr.left + STRIP_SAFE) delta = er.left - (sr.left + STRIP_SAFE)
-  else if (er.right > sr.right - STRIP_SAFE) delta = er.right - (sr.right - STRIP_SAFE)
+  if (er.left < sr.left + safe) delta = er.left - (sr.left + safe)
+  else if (er.right > sr.right - safe) delta = er.right - (sr.right - safe)
   if (delta !== 0) strip.scrollBy({ left: delta, behavior })
 }
 
@@ -84,15 +89,23 @@ function pageScroller(el) {
 // "sequenced" scroll whose smooth animation is ticked on the main thread, while
 // a plain scrollBy on a composited scroller animates on the compositor thread.
 // Returns false when `el` doesn't scroll with such a container, so the caller
-// falls back to scrollIntoView.
-function scrollPageIntoView(el, behavior) {
+// falls back to scrollIntoView. `padded` false drops the scroll-padding for the
+// bare visible box — below the tab bar on a tab page (pointer focus, see
+// applyFocus; any larger inset could slide the row above under the pointer).
+function scrollPageIntoView(el, behavior, padded = true) {
   const sc = pageScroller(el)
   if (!sc) return false
-  const pad = getComputedStyle(sc)
   const er = el.getBoundingClientRect()
   const sr = sc.getBoundingClientRect()
-  const top = sr.top + (parseFloat(pad.scrollPaddingTop) || 0) // "auto" when unset
-  const bottom = sr.bottom - (parseFloat(pad.scrollPaddingBottom) || 0)
+  let top = sr.top
+  let bottom = sr.bottom
+  if (padded) {
+    const pad = getComputedStyle(sc)
+    top += parseFloat(pad.scrollPaddingTop) || 0 // "auto" when unset
+    bottom -= parseFloat(pad.scrollPaddingBottom) || 0
+  } else if (sc.classList.contains('tab-content')) {
+    top += TAB_BAR_H
+  }
   let delta = 0
   if (er.top < top) delta = er.top - top
   else if (er.bottom > bottom) delta = er.bottom - bottom
@@ -219,7 +232,17 @@ function applyFocus(newId) {
       const behavior =
         getSetting(settingsStore.get(), 'smoothScroll') && !rapid && !keyRepeat ? 'smooth' : 'auto'
       const topScroller = rec && rec.row === 0 && rec.group !== 'tabbar' ? pageScroller(el) : null
-      if (topScroller) {
+      if (pointerMove) {
+        // Magic Remote focus only reveals what is clipped, with no margins: the
+        // hovered element ends fully visible in its page scroller and strip,
+        // still under the pointer. The D-pad margins (scroll-padding,
+        // STRIP_SAFE) would slide the next row or card under a pointer that
+        // hasn't moved; it would take focus in turn and run the page away to
+        // its end. Side sheets and dialogs aren't page scrollers, so hover
+        // leaves their vertical scroll to the remote's wheel.
+        scrollPageIntoView(el, behavior, false)
+        scrollStripIntoView(el, behavior, 0)
+      } else if (topScroller) {
         // A top-row element sits in a horizontal strip (genre chips, a home
         // shelf). Drive its two scroll containers SEPARATELY: pull the page
         // scroller all the way up so the heading above row 0 shows (block:'nearest'
@@ -254,6 +277,17 @@ export function setFocus(id) {
   if (!id || !registry.has(id) || id === currentFocusId) return false
   applyFocus(id)
   return true
+}
+
+// Focus moved by the Magic Remote pointer (hover or click): applyFocus reveals
+// it without the D-pad margins.
+function pointerFocus(id) {
+  pointerMove = true
+  try {
+    setFocus(id)
+  } finally {
+    pointerMove = false
+  }
 }
 
 // focusTo is the deterministic entry point pages use once their data lands.
@@ -529,8 +563,11 @@ export function initFocusEngine() {
       if (e.repeat && e.timeStamp - lastKeyMoveTs < REPEAT_MS) return
       lastKeyMoveTs = e.timeStamp
       keyRepeat = e.repeat
-      navigate(dir)
-      keyRepeat = false
+      try {
+        navigate(dir)
+      } finally {
+        keyRepeat = false
+      }
       return
     }
 
@@ -589,16 +626,17 @@ export function useFocusable({ layer = DEFAULT_LAYER, group = 'content', row = 0
     }
   })
 
+  // Pointer mode (webOS magic remote): hover highlights, click commits. Both
+  // move focus under pointer rules (see applyFocus).
   const handleClick = useCallback(
     (e) => {
       e.preventDefault()
-      setFocus(id)
+      pointerFocus(id)
       onSelectRef.current?.()
     },
     [id],
   )
-  // Pointer mode (webOS magic remote): highlight on hover, do not commit.
-  const handleMouseEnter = useCallback(() => setFocus(id), [id])
+  const handleMouseEnter = useCallback(() => pointerFocus(id), [id])
 
   return {
     id,

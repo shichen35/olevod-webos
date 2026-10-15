@@ -132,12 +132,14 @@ function ErrorButton({ col, icon, label, primary, onSelect }) {
 // One cell in the episode strip. A real focusable (group 'episodes', single row)
 // so the focus engine drives horizontal navigation + scrollIntoView for free,
 // and a click jumps straight to that episode. The currently-playing cell is
-// tinted with the accent so it reads even before focus lands on it.
+// tinted with the accent so it reads even before focus lands on it. The 66px
+// line-height is the 72px cell minus the focusable's 3px borders: it centers
+// the label without flex, which would break the truncate ellipsis.
 function StripCell({ col, label, isCurrent, onSelect }) {
   const { props } = useFocusable({ layer: LAYER, group: 'episodes', row: 0, col, onSelect })
   return (
     <div
-      className={`focusable shrink-0 max-w-[240px] truncate rounded-lg bg-glass-active px-6 py-2.5 text-label ${isCurrent ? 'text-accent' : 'text-fg-2'}`}
+      className={`focusable shrink-0 max-w-[240px] truncate h-[72px] rounded-[14px] bg-glass-active px-6 text-center text-label leading-[66px] ${isCurrent ? 'text-accent' : 'text-fg-2'}`}
       {...props}
     >
       {label}
@@ -666,67 +668,73 @@ export default function PlayerPage({ id, episodeIndex, onRequireLogin }) {
         </div>
       )}
 
-      {/* Control bar — always mounted so the DOM refs stay stable; visibility
-          is an instant display toggle. Rides up above the episode strip when
-          that's open. */}
-      <div className={`glass-strong border border-glass-edge absolute ${stripVisible ? 'bottom-52' : 'bottom-12'} left-[33%] w-[34%] rounded-[28px] px-9 pt-6 pb-4`} style={{ display: barVisible ? 'block' : 'none' }}>
-        <div className="relative mb-3 h-2 overflow-hidden rounded-full bg-glass-active">
-          <div ref={bufferedRef} className="absolute inset-y-0 left-0 w-0 bg-fg-3" />
-          <div ref={playedRef} className="absolute inset-y-0 left-0 w-0 bg-focus" />
-        </div>
-        {/* Times row: current | play-pause icon centered | remaining */}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center">
-          <span ref={curTimeRef} className="text-label text-fg-2">00:00</span>
-          <span className="flex items-center text-fg">
-            {paused ? <Icon name="play_arrow" size={40} aria-label="播放" /> : <Icon name="pause" size={40} aria-label="暂停" />}
-          </span>
-          <span ref={remainRef} className="text-right text-label text-fg-2">-00:00</span>
-        </div>
-      </div>
-
-      {/* Episode strip — full-width horizontal scroller pinned to the bottom,
-          shown by a second Down from the control bar. Cells are real focusables
-          so the engine scrolls the row and clicking jumps to that episode. */}
-      {stripVisible && episodes.length > 1 && (
-        <div className="glass-strong border border-glass-edge absolute bottom-8 left-safe right-safe rounded-[20px] px-7 py-5">
-          <div className="mb-3 text-caption text-fg-2">选集</div>
-          <div className="flex gap-3 overflow-x-auto">
-            {stripList.map((ep, i) => {
-              const ordinal = `第${ep.index}集`
-              const title = ep.title || ordinal
-              const titleIsOrdinal = new RegExp(`^第0*${ep.index}集$`).test(title)
-              return (
-                <StripCell
-                  key={ep.index}
-                  col={i}
-                  label={titleIsOrdinal ? ordinal : title}
-                  isCurrent={ep.index === curEp}
-                  onSelect={() => switchEpisode(ep.index, { keepUi: true })}
-                />
-              )
-            })}
+      {/* Bottom chrome anchor, spanning the safe margins: the control bar and
+          the episode strip stack in one column (opening the strip pushes the
+          bar up), and the seek badge and Up Next card hang just above whatever
+          of it is showing — or above the bottom edge when nothing is. */}
+      <div className="absolute bottom-12 left-safe right-safe flex flex-col gap-5">
+        {/* Control bar — always mounted so the DOM refs stay stable; visibility
+            is an instant display toggle. */}
+        <div className="glass-strong border border-glass-edge rounded-[20px] px-7 pt-6 pb-4" style={{ display: barVisible ? 'block' : 'none' }}>
+          <div className="relative mb-3 h-2 overflow-hidden rounded-full bg-glass-active">
+            <div ref={bufferedRef} className="absolute inset-y-0 left-0 w-0 bg-fg-3" />
+            <div ref={playedRef} className="absolute inset-y-0 left-0 w-0 bg-accent" />
+          </div>
+          {/* Times row: current | play-pause icon centered | remaining */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+            <span ref={curTimeRef} className="text-label text-fg-2">00:00</span>
+            <span className="flex items-center text-fg">
+              {paused ? <Icon name="play_arrow" size={40} aria-label="播放" /> : <Icon name="pause" size={40} aria-label="暂停" />}
+            </span>
+            <span ref={remainRef} className="text-right text-label text-fg-2">-00:00</span>
           </div>
         </div>
-      )}
 
-      {/* Seek target badge (rewind / fast-forward icon + mm:ss), shared by both
-          seek modes; showBadge picks the icon and writes the time. */}
-      <div ref={badgeRef} className="glass-strong border border-glass-edge absolute bottom-55 left-1/2 -translate-x-1/2 items-center gap-2 rounded-full px-8 py-2.5 text-heading text-fg" style={{ display: 'none' }}>
-        <Icon name="fast_rewind" size={36} />
-        <Icon name="fast_forward" size={36} />
-        <span />
+        {/* Episode strip — horizontal scroller under the control bar, shown by
+            a second Down from it. Cells are real focusables so the engine
+            scrolls the row and clicking jumps to that episode. */}
+        {stripVisible && episodes.length > 1 && (
+          <div className="glass-strong border border-glass-edge rounded-[20px] px-7 py-5">
+            <div className="mb-3 text-caption text-fg-2">选集</div>
+            <div className="flex gap-gutter overflow-x-auto">
+              {stripList.map((ep, i) => {
+                const ordinal = `第${ep.index}集`
+                const title = ep.title || ordinal
+                const titleIsOrdinal = new RegExp(`^第0*${ep.index}集$`).test(title)
+                return (
+                  <StripCell
+                    key={ep.index}
+                    col={i}
+                    label={titleIsOrdinal ? ordinal : title}
+                    isCurrent={ep.index === curEp}
+                    onSelect={() => switchEpisode(ep.index, { keepUi: true })}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Seek target badge (rewind / fast-forward icon + mm:ss), shared by both
+            seek modes; showBadge picks the icon and writes the time. */}
+        <div ref={badgeRef} className="glass-strong border border-glass-edge absolute bottom-full mb-5 left-1/2 -translate-x-1/2 items-center gap-2 rounded-full px-8 py-2.5 text-heading text-fg" style={{ display: 'none' }}>
+          <Icon name="fast_rewind" size={36} />
+          <Icon name="fast_forward" size={36} />
+          <span />
+        </div>
+
+        {/* Up Next: glass card, right-aligned; OK switches immediately. Hidden
+            while the strip is open, since the strip owns OK then. */}
+        {upNext && nextEpIndex != null && !stripVisible && (
+          <div className="glass-strong border border-glass-edge absolute bottom-full mb-5 right-0 rounded-[20px] px-9 py-6 text-center">
+            <div className="mb-2 text-caption text-fg-2">即将播放</div>
+            <div className="mb-2 max-w-[560px] truncate text-heading text-fg">{nextEp.title || `第${nextEpIndex}集`}</div>
+            <div className="text-caption text-fg-2">按 OK 立即播放</div>
+          </div>
+        )}
       </div>
 
       {toast && <div className="glass-strong border border-glass-edge absolute top-12 right-safe rounded-full px-7 py-3.5 text-label text-fg">{toast}</div>}
-
-      {/* Up Next: glass card, bottom-right; OK switches immediately. */}
-      {upNext && nextEpIndex != null && (
-        <div className="glass-strong border border-glass-edge absolute right-safe bottom-55 rounded-[20px] px-9 py-6 text-center">
-          <div className="mb-2 text-caption text-fg-2">即将播放</div>
-          <div className="mb-2 text-heading text-fg">{nextEp.title || `第${nextEpIndex}集`}</div>
-          <div className="text-caption text-fg-2">按 OK 立即播放</div>
-        </div>
-      )}
 
       {hint && (
         <div className="glass-strong border border-glass-edge absolute top-30 left-1/2 -translate-x-1/2 rounded-[20px] px-10 py-6 text-center text-label text-fg-2">

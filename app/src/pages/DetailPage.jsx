@@ -251,11 +251,14 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
     area: data.region,
   }
 
-  // Display list: a reversed COPY when ascending — `episodes` stays canonical.
-  const ordered = ascending ? [...episodes].reverse() : episodes
   // A movie: no playlist controls, and the play button drops its "第1集".
   const single = episodes.length <= 1
-  const chunks = episodes.length > RANGE_MIN ? chunkList(ordered, RANGE_SIZE) : [ordered]
+  // Ranges are cut from episode 1 up (1-50, 51-100, …, 201-233) whatever the
+  // sort, so descending only flips the order of the ranges and of each range's
+  // cells — the same episodes stay together. Copies: `episodes` stays canonical.
+  const asc = [...episodes].reverse()
+  let chunks = episodes.length > RANGE_MIN ? chunkList(asc, RANGE_SIZE) : [asc]
+  if (!ascending) chunks = chunks.map((c) => [...c].reverse()).reverse()
   // The visible chunk is the one holding the anchor (a picked range, else the
   // resume episode); with neither, the head of the list — which follows the
   // sort, so it is the newest episode descending and episode 1 ascending.

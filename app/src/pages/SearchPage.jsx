@@ -12,7 +12,8 @@
  * Focus rows in the content group: row 0 = the search box, then the
  * recent-search strip (only while the box is empty and something was searched
  * before), then suggestion chips (hot keywords until the user types,
- * autocomplete after, debounced), then results. Rows stay contiguous — an
+ * autocomplete after, debounced), then results — or, before any search is
+ * submitted, a 大家都在看 shelf in the results' place. Rows stay contiguous — an
  * absent strip shifts everything below it up, because navigate() only probes
  * the adjacent row.
  *
@@ -21,9 +22,11 @@
  */
 import { startTransition, useCallback, useEffect, useRef, useState } from 'react'
 import VideoCard from '../components/VideoCard.jsx'
+import Shelf from '../components/Shelf.jsx'
 import KeyboardPanel from '../components/KeyboardPanel.jsx'
 import { IconLabel } from '../components/Icon.jsx'
 import { searchList, searchSuggest, searchHotKeywords } from '../api/olevod.js'
+import { loadHomePopular } from '../api/feeds.js'
 import { useFocusable, focusTo, setGeometryVerticalGroup } from '../hooks/useFocus.js'
 import { useStoreValue } from '../hooks/useStore.js'
 import { searchHistoryStore, remember, clear as clearSearchHistory } from '../store/searchHistory.js'
@@ -50,6 +53,14 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
   const [status, setStatus] = useState('idle') // idle | loading | ok | error
+  // Idle filler: Home's first popular row (usually cached already), so the page
+  // isn't two-thirds empty before a search. Failure just leaves it out.
+  const [popular, setPopular] = useState([])
+  useEffect(() => {
+    loadHomePopular()
+      .then((rows) => setPopular(rows.find((r) => r.items.length)?.items || []))
+      .catch(() => {})
+  }, [])
   const [suggestStatus, setSuggestStatus] = useState('idle') // idle | ok | error
   const [suggestRetry, setSuggestRetry] = useState(0)
   const history = useStoreValue(searchHistoryStore)
@@ -346,7 +357,9 @@ export default function SearchPage({ group = 'content', onOpenDetail }) {
         </div>
       )}
 
-      {status === 'error' ? (
+      {!submitted ? (
+        <Shelf title="大家都在看" items={popular} layer="home" group={group} row={resultRow} onSelectItem={(it) => onOpenDetail(it.id)} />
+      ) : status === 'error' ? (
         <RetryRow group={group} row={resultRow} onRetry={() => runSearch(submitted)} />
       ) : status === 'ok' && items.length === 0 ? (
         <div className="py-20 text-center text-body text-fg-2">没有找到相关内容，换个关键词试试</div>

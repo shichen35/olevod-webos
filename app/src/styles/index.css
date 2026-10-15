@@ -15,7 +15,7 @@
  *     with no backdrop blur, reserved for chrome surfaces — tab bar / segment
  *     capsules, the settings group, the account page's captcha panel, dialogs,
  *     and the player chrome. The filter and keyboard side sheets are opaque:
- *     they cover a 600x1080 strip, where content showing through is clutter.
+ *     they cover a 655x1080 strip, where content showing through is clutter.
  *     Content surfaces stay fully opaque.
  *   - No motion of any kind: the transition/animation ban is enforced in the
  *     base layer with !important. Focus border/color swaps are instant. Three

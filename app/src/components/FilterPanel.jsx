@@ -7,7 +7,9 @@
  * Selecting any option applies immediately: the panel patches the category's
  * filter in the filters store and the grid refreshes from there. "Reset"
  * restores this category's defaults; "Done" and the
- * back key both close the panel and return focus to the 额外筛选 button.
+ * back key both close the panel and return focus to the 额外筛选 button. Reset
+ * and Done sit in the header beside the title, one Up from the first row of
+ * chips.
  *
  * Focus movement here is SPATIAL, not arithmetic. The chips flow in a
  * `flex-wrap` container, so how many land on a visual row depends on their pixel
@@ -195,19 +197,22 @@ export default function FilterPanel({ category, onClose }) {
   return (
     <div
       ref={rootRef}
-      className="fixed inset-y-0 right-0 z-10 w-[600px] overflow-y-auto border-l border-glass-edge bg-elev px-10 py-12 scroll-py-focus-safe"
+      className="fixed inset-y-0 right-0 z-10 w-sheet overflow-y-auto border-l border-elev-2 bg-elev pl-10 pr-safe pt-[108px] pb-12 scroll-py-focus-safe"
     >
+      <div className="mb-6 flex items-center justify-between">
+        <div className="text-heading font-semibold text-fg">筛选 · {cfg.name}</div>
+        <div className="flex gap-4">
+          <span className={`${PANEL_CHIP} text-fg`} {...reset.props}>
+            重置
+          </span>
+          <span className={`${PANEL_CHIP} text-fg`} {...done.props}>
+            完成
+          </span>
+        </div>
+      </div>
       <Group title="地区" options={cfg.areas} value={filter.area} row={AREA_ROW} onPick={(v) => patchFilter(category, { area: v })} />
       <Group title="年份" options={cfg.years} value={filter.year} row={YEAR_ROW} onPick={(v) => patchFilter(category, { year: v })} />
       <Group title="首字母" options={LETTERS} value={filter.letter} row={LETTER_ROW} onPick={(v) => patchFilter(category, { letter: v })} />
-      <div className="mt-2 flex gap-4">
-        <span className={`${PANEL_CHIP} text-fg`} {...reset.props}>
-          重置
-        </span>
-        <span className={`${PANEL_CHIP} text-fg`} {...done.props}>
-          完成
-        </span>
-      </div>
     </div>
   )
 }

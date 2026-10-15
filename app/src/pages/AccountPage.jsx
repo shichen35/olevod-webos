@@ -10,7 +10,8 @@
  * keyboard, same pattern as SearchPage) or the remembered login already filled
  * in; signed in, an avatar, the nickname, the membership line (pub/user/info)
  * and 退出登录 / 清除已保存信息.
- * The right panel is the captcha: the image (160x80 source shown at 2x
+ * Signed out, a right panel holds the captcha (signed in, the account column
+ * stands alone, centered): the image (160x80 source shown at 2x
  * on a light token, since the PNG is transparent with dark strokes), four
  * digit slots, an on-screen 3x4 keypad and 登录. Remote/keyboard digit keys
  * type straight into the slots. Filling the fourth digit moves focus to 登录;
@@ -362,8 +363,9 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
   return (
     <div className={isTab ? undefined : OVERLAY_ROOT} style={style}>
       {/* 720 + 64 + 680: the pair is a fixed block centered in the content
-          width, rather than two columns stretched to whatever is left. */}
-      <div className="mx-auto flex w-[1464px] gap-16 pt-4">
+          width, rather than two columns stretched to whatever is left. Signed
+          in there is no captcha, so the account column stands alone, centered. */}
+      <div className={`mx-auto flex gap-16 pt-4 ${signedIn ? 'w-[720px]' : 'w-[1464px]'}`}>
         {/* Left: the account */}
         <div className="flex w-[720px] shrink-0 flex-col">
           {signedIn ? (
@@ -450,61 +452,58 @@ export default function AccountPage({ host = 'overlay', group = 'content', from 
           {persistError && <div className="mt-3 text-caption text-uhd">{persistError}</div>}
         </div>
 
-        {/* Right: captcha + keypad, or a note when signed in */}
-        <div className="h-fit w-[680px] shrink-0 rounded-surface border border-elev-2 bg-elev p-8">
-          {signedIn ? (
-            <div className="text-body leading-normal text-fg-2">已登录，可以播放账号有权限的会员内容。</div>
-          ) : (
-            <>
-              <div className="mb-6 flex items-center gap-6">
-                <div className="flex h-[160px] w-[320px] items-center justify-center overflow-hidden rounded-tile bg-captcha-bg">
-                  {challenge.status === 'ok' ? (
-                    <img src={challenge.image} alt="验证码" className="size-full object-contain" />
-                  ) : (
-                    <span className="text-caption text-inverse">
-                      {challenge.status === 'loading' ? '正在加载…' : '验证码加载失败'}
-                    </span>
-                  )}
+        {/* Right: captcha + keypad (signed out only) */}
+        {!signedIn && (
+          <div className="h-fit w-[680px] shrink-0 rounded-surface border border-elev-2 bg-elev p-8">
+            {/* On the keypad's 3 columns: the image spans two, 换一张 the third. */}
+            <div className="mb-6 grid grid-cols-3 items-center gap-3.5">
+              <div className="col-span-2 flex h-[160px] items-center justify-center overflow-hidden rounded-tile bg-captcha-bg">
+                {challenge.status === 'ok' ? (
+                  <img src={challenge.image} alt="验证码" className="size-full object-contain" />
+                ) : (
+                  <span className="text-caption text-inverse">
+                    {challenge.status === 'loading' ? '正在加载…' : '验证码加载失败'}
+                  </span>
+                )}
+              </div>
+              <ActionButton ids={ids} row={CAPTCHA_ROW} col={1} label="换一张" onSelect={refreshCaptcha} />
+            </div>
+
+            <div className="mb-6 flex gap-3.5">
+              {Array.from({ length: CODE_LENGTH }, (_, i) => (
+                <div
+                  key={i}
+                  className={`flex h-[88px] flex-1 items-center justify-center rounded-tile border-[3px] bg-bg text-title text-fg ${i === code.length ? 'border-fg-3' : 'border-transparent'}`}
+                >
+                  {code[i] || ''}
                 </div>
-                <ActionButton ids={ids} row={CAPTCHA_ROW} col={1} label="换一张" onSelect={refreshCaptcha} />
-              </div>
+              ))}
+            </div>
 
-              <div className="mb-6 flex gap-3.5">
-                {Array.from({ length: CODE_LENGTH }, (_, i) => (
-                  <div
-                    key={i}
-                    className={`flex h-[88px] flex-1 items-center justify-center rounded-tile border-[3px] bg-bg text-title text-fg ${i === code.length ? 'border-fg-3' : 'border-transparent'}`}
-                  >
-                    {code[i] || ''}
-                  </div>
-                ))}
-              </div>
+            <div className="mb-6 grid grid-cols-3 gap-3.5">
+              {KEYS.map((label, i) => (
+                <KeyButton
+                  ids={ids}
+                  key={label}
+                  row={KEYPAD_ROW0 + Math.floor(i / 3)}
+                  col={1 + (i % 3)}
+                  label={label}
+                  onPress={() => pressKey(label)}
+                />
+              ))}
+            </div>
 
-              <div className="mb-6 grid grid-cols-3 gap-3.5">
-                {KEYS.map((label, i) => (
-                  <KeyButton
-                    ids={ids}
-                    key={label}
-                    row={KEYPAD_ROW0 + Math.floor(i / 3)}
-                    col={1 + (i % 3)}
-                    label={label}
-                    onPress={() => pressKey(label)}
-                  />
-                ))}
-              </div>
+            {canSubmit || busy ? (
+              <LoginButton ids={ids} label={busy ? '登录中…' : '登录'} onSelect={submit} />
+            ) : (
+              <div className={`${WIDE_BTN} border-[3px] border-transparent bg-elev-2 text-fg-3`}>登录</div>
+            )}
 
-              {canSubmit || busy ? (
-                <LoginButton ids={ids} label={busy ? '登录中…' : '登录'} onSelect={submit} />
-              ) : (
-                <div className={`${WIDE_BTN} border-[3px] border-transparent bg-elev-2 text-fg-3`}>登录</div>
-              )}
-
-              <div className={`mt-4 text-caption ${error ? 'text-uhd' : 'text-fg-2'}`}>
-                {error || '输入图中 4 位数字，遥控器数字键也可直接输入'}
-              </div>
-            </>
-          )}
-        </div>
+            <div className={`mt-4 text-caption ${error ? 'text-uhd' : 'text-fg-2'}`}>
+              {error || '输入图中 4 位数字，遥控器数字键也可直接输入'}
+            </div>
+          </div>
+        )}
       </div>
 
       {confirm === 'logout' && (

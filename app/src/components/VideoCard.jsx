@@ -39,7 +39,11 @@ function VideoCardImpl({ item, layer, group, row, col, onSelect, watchedEp, prog
           image radius (12px) + the 3px ring so the outer edge stays rounded. */}
       <div className="relative aspect-2/3 w-full overflow-hidden rounded-[15px] border-3 border-transparent bg-elev focused:border-focus">
         <Thumb pic={item.pic} picThumb={item.picThumb} alt={item.name} />
-        {item.score > 0 && <span className={`${BADGE} top-2 left-2 bg-elev font-semibold text-accent`}>{item.score}</span>}
+        {/* One decimal everywhere (9 → 9.0) so a row of badges reads evenly; cards
+            already carrying watch progress drop it to keep the poster calm. */}
+        {item.score > 0 && watchedEp == null && (
+          <span className={`${BADGE} top-2 left-2 bg-elev font-semibold text-accent`}>{Number(item.score).toFixed(1)}</span>
+        )}
         {/* A marker (history's 管理 mode) takes the UHD corner: what OK does
             right now matters more than the source's tier. */}
         {marker ? (

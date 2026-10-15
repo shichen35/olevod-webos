@@ -303,7 +303,7 @@ export default function DetailPage({ id, onPlay, onRequireLogin, style }) {
           <div className="flex min-w-0 flex-1 flex-col">
             <h1 className="mb-3 line-clamp-2 text-display font-bold text-fg">{data.title}</h1>
             <div className="mb-6 flex min-w-0 items-center gap-4">
-              {data.rating > 0 && <span className="text-heading font-bold text-accent">{data.rating}</span>}
+              {data.rating > 0 && <span className="text-heading font-bold text-accent">{Number(data.rating).toFixed(1)}</span>}
               <span className="min-w-0 truncate text-label text-fg-2">{eyebrow}</span>
             </div>
             {/* 1104px ≈ 42 characters, the same measure as SynopsisDialog's body. */}

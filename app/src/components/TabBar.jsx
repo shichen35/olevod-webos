@@ -20,7 +20,9 @@
  * to show its label beside the icon and shrinks back when the cursor leaves.
  * Both directions animate through the Web Animations API, the same sanctioned
  * mechanism as the sliding pill (the CSS transition/animation ban does not
- * cover WAAPI, see styles/index.css).
+ * cover WAAPI, see styles/index.css). In the right-aligned trailing group a
+ * button grows leftward, so its neighbours shift over while it is open; that is
+ * intended, as on Google TV's top bar.
  */
 import { useLayoutEffect, useRef } from 'react'
 import { getCurrentFocus, useFocusable } from '../hooks/useFocus.js'

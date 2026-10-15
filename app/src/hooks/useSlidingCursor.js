@@ -1,8 +1,8 @@
 /*
  * useSlidingCursor — the sliding white focus "pill" of the top tab bar
  * (TabBar): a horizontal capsule of focusable pills on row 0 of some focus
- * group. This hook gives it the app's one sanctioned animation without the
- * caller owning the tricky part.
+ * group. This hook gives it one of the app's sanctioned animations (listed in
+ * the styles/index.css header) without the caller owning the tricky part.
  *
  * The pill is a SINGLE white node that slides between cells as the D-pad cursor
  * moves (100ms). It's the focus fill itself: the focused cell clears its own

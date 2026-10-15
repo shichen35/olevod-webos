@@ -18,14 +18,20 @@
  *     they cover a 600x1080 strip, where content showing through is clutter.
  *     Content surfaces stay fully opaque.
  *   - No motion of any kind: the transition/animation ban is enforced in the
- *     base layer with !important. Focus border/color swaps are instant. Two
- *     sanctioned exceptions, both in JS (this CSS ban governs only CSS-declared
- *     motion, not WAAPI or scroll behavior): (1) the white focus fill on the tab
- *     bar slides between cells as the D-pad cursor moves
+ *     base layer with !important. Focus border/color swaps are instant. Three
+ *     sanctioned exceptions, all in JS (this CSS ban governs only CSS-declared
+ *     motion, not WAAPI or scroll behavior): (1) the white focus fill in the tab
+ *     bar's capsule slides between cells as the D-pad cursor moves
  *     (hooks/useSlidingCursor.js, via the Web Animations API) — a single
- *     compositor-cheap node, no cell repaint; (2) focus moves smooth-scroll the
- *     target's scroll containers into view (useFocus.js). Both leave the focus
- *     engine untouched.
+ *     compositor-cheap node, no cell repaint; (2) the tab bar's round icon
+ *     buttons grow from a circle into icon + label on focus and shrink back
+ *     when it leaves (components/TabBar.jsx, WAAPI on the width and the label's
+ *     opacity, 140ms). The label rests at opacity-0 (hidden, never
+ *     translucent), like the sliding pill's opacity-0 while focus is off the
+ *     bar. In the right-aligned trailing group the neighbours shift
+ *     left while one button is expanded — accepted, Google TV's top bar does
+ *     the same; (3) focus moves smooth-scroll the target's scroll containers
+ *     into view (useFocus.js). All three leave the focus engine untouched.
  *   - TV target is Chromium 108 (webOS 24): never use opacity modifiers like
  *     bg-x/50 (they compile to color-mix(), Chrome 111+) — every color an
  *     element needs must be its own token here.
@@ -139,9 +145,11 @@
 }
 
 /*
- * Sanctioned motion exceptions live in JS, not here (the two below; the other
- * is the smooth focus scroll in useFocus.js). The tab bar's white focus fill is
- * one pill that slides between cells as the D-pad cursor moves
+ * Sanctioned motion exceptions live in JS, not here (all three are listed in
+ * the header; this note covers the sliding pill — the icon buttons' growth is
+ * in components/TabBar.jsx, the smooth focus scroll in useFocus.js). The tab
+ * bar's white focus fill is one pill that slides between cells as the D-pad
+ * cursor moves
  * (hooks/useSlidingCursor.js, via the Web Animations API).
  * WAAPI is used deliberately — it runs independently of the `transition/
  * animation: none !important` ban above (which only governs CSS-declared
